@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Access | AssiScan</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* PAREHONG-PAREHO SA MAIN CSS MO */
+        :root {
+            --gold: #d4af37;
+            --bg-color: #050101;
+            --card-bg: rgba(20, 5, 5, 0.95);
+            --border-color: #331010;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 50%, #1a0505 0%, #000 100%);
+            color: var(--gold);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* LOGIN CARD DESIGN */
+        .login-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        /* LOGO / TITLE */
+        .brand-title {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .brand-subtitle {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #888;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #331010;
+            padding-bottom: 15px;
+        }
+
+        /* INPUT FIELDS */
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            box-sizing: border-box; /* Para hindi lumampas sa box */
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--gold);
+            outline: none;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+        }
+
+        /* BUTTON STYLE */
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #d4af37, #b4941f);
+            color: #000;
+            font-weight: 700;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* ERROR MESSAGE */
+        .error-msg {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff4444;
+            color: #ff6b6b;
+            font-size: 12px;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* FOOTER */
+        .footer-text {
+            margin-top: 25px;
+            font-size: 11px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="brand-title">ASSISCAN</div>
+        <div class="brand-subtitle">Admin Clearance</div>
+
+        {% if error %}
+            <div class="error-msg">
+                <span>⚠️</span> {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="text" name="username" placeholder="Agent ID / Username" required autocomplete="off">
+            <input type="password" name="password" placeholder="Passcode" required>
+            <button type="submit">Authenticate</button>
+        </form>
+
+        <div class="footer-text">
+            Restricted Access. Authorized Personnel Only.
+        </div>
+    </div>
+
+</body>
+</html>
