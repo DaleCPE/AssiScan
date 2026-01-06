@@ -17,11 +17,10 @@ from werkzeug.utils import secure_filename
 # --- CONFIGURATION FROM RENDER ENVIRONMENT ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Configure Gemini
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 else:
-    print("⚠️ WARNING: GEMINI_API_KEY is missing in Environment Variables!")
+    print("⚠️ WARNING: GEMINI_API_KEY is missing!")
 
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -79,11 +78,46 @@ def init_db():
         finally:
             conn.close()
 
-# Run DB Init
 init_db()
 
-# --- GEMINI MODEL SETUP (FIXED) ---
-# Safety Settings to allow PII (Personal Info)
+# --- INTELLIGENT MODEL SELECTOR ---
+# This function asks Google: "What models do I have access to?" and picks the best one.
+def get_working_model():
+    try:
+        print("🔍 Searching for available Gemini models...")
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        print(f"📋 Available Models: {available_models}")
+
+        # Priority List
+        preferred_order = [
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-1.0-pro",
+            "models/gemini-pro"
+        ]
+
+        selected_model = "models/gemini-pro" # Default Fallback
+
+        # Check for preferred models in the available list
+        for preferred in preferred_order:
+            if preferred in available_models:
+                selected_model = preferred
+                break
+        
+        print(f"✅ SELECTED MODEL: {selected_model}")
+        return selected_model
+
+    except Exception as e:
+        print(f"⚠️ Error listing models: {e}. Defaulting to 'gemini-pro'")
+        return "gemini-pro"
+
+# Initialize Model with Safety Settings
+active_model_name = get_working_model()
+
 safety_settings = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -91,13 +125,8 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-# UPDATED MODEL NAME: trying 'gemini-1.5-flash-latest' to fix 404
-try:
-    model = genai.GenerativeModel('gemini-1.5-flash-latest', safety_settings=safety_settings)
-except Exception as e:
-    print(f"⚠️ Model Init Error (Trying fallback): {e}")
-    # Fallback to standard name if latest fails
-    model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
+model = genai.GenerativeModel(active_model_name, safety_settings=safety_settings)
+
 
 # --- EMAIL FUNCTION ---
 def send_email_notification(recipient_email, student_name, file_paths):
@@ -140,6 +169,20 @@ def index():
 def history_page():
     return render_template('history.html')
 
+# --- NEW DEBUG ROUTE ---
+# Visit https://your-app.onrender.com/debug-models to see what's happening
+@app.route('/debug-models')
+def debug_models():
+    try:
+        avail = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        return jsonify({
+            "available_models": avail,
+            "currently_using": active_model_name,
+            "api_key_configured": bool(GEMINI_API_KEY)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFile' not in request.files:
@@ -153,10 +196,9 @@ def extract_data():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    print(f"📸 Processing image: {filename}")
+    print(f"📸 Processing image: {filename} using {active_model_name}")
 
     try:
-        # Upload file to Gemini
         myfile = genai.upload_file(filepath)
         
         prompt = """
@@ -167,10 +209,8 @@ def extract_data():
         Do not include markdown formatting (like ```json). Return raw JSON only.
         """
         
-        # Generate content
         res = model.generate_content([myfile, prompt])
         
-        # Clean response
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         print(f"🤖 AI Response: {raw_text}") 
 
@@ -179,15 +219,13 @@ def extract_data():
 
     except Exception as e:
         print(f"❌ Extraction Failed: {e}")
-        # Return the specific error message to the frontend for debugging
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+        return jsonify({"error": f"Model Error ({active_model_name}): {str(e)}"}), 500
 
 @app.route('/save-record', methods=['POST'])
 def save_record():
     d = request.json
     img_filename = os.path.basename(d.get('image_path', ''))
     
-    # Paths
     db_image_path = os.path.join('uploads', img_filename) if img_filename else None
     full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
 
@@ -196,7 +234,6 @@ def save_record():
     cur = conn.cursor()
     
     try:
-        # Check duplicate (Optional logic, removing for now to ensure save works)
         cur.execute('''
             INSERT INTO records (name, sex, birthdate, birthplace, mother_name, mother_citizenship, mother_occupation, father_name, father_citizenship, father_occupation, image_path)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
@@ -205,7 +242,6 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Email
         email_addr = d.get('email', '')
         email_status = "Not Sent"
         if email_addr:
@@ -215,7 +251,6 @@ def save_record():
         return jsonify({"status": "success", "db_id": new_id, "email_status": email_status})
     except Exception as e:
         conn.rollback()
-        print(f"❌ Save Record Error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
     finally:
         conn.close()
@@ -225,7 +260,7 @@ def upload_additional():
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
     file = request.files['file']
     record_id = request.form.get('id')
-    doc_type = request.form.get('type') # form137, form138, goodmoral
+    doc_type = request.form.get('type') 
 
     if not record_id or not doc_type: return jsonify({"error": "Missing ID or Type"}), 400
 
@@ -234,12 +269,7 @@ def upload_additional():
     file.save(filepath)
     db_path = os.path.join('uploads', filename)
 
-    col_map = {
-        'form137': 'form137_path',
-        'form138': 'form138_path',
-        'goodmoral': 'goodmoral_path'
-    }
-
+    col_map = { 'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path' }
     if doc_type not in col_map: return jsonify({"error": "Invalid type"}), 400
 
     conn = get_db_connection()
@@ -262,13 +292,11 @@ def get_records():
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM records ORDER BY id DESC")
         rows = cur.fetchall()
-        # Format dates for JSON
         for r in rows:
             if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: r['birthdate'] = str(r['birthdate'])
         return jsonify({"records": rows})
     except Exception as e:
-        print(f"❌ Fetch Error: {e}")
         return jsonify({"records": []})
     finally:
         conn.close()
