@@ -2,6 +2,7 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold # Added for Safety Settings
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -34,7 +35,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def get_db_connection():
     try:
-        # Gagamit ng DATABASE_URL galing sa Render Environment Variables
         return psycopg2.connect(DATABASE_URL)
     except Exception as e:
         print(f"❌ DB Error: {e}")
@@ -46,7 +46,6 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Ginagawa ang table kung wala pa ito para maiwasan ang Server Error
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -75,11 +74,18 @@ def init_db():
         finally:
             conn.close()
 
-# Tawagin ang init_db bago mag-load ang app routes
 init_db()
 
-# --- MODEL SETUP ---
-model = genai.GenerativeModel('gemini-1.5-flash')
+# --- MODEL SETUP WITH SAFETY SETTINGS ---
+# Importante ito para payagan ang PII (Personal Info) sa documents
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
+
+model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
 
 # --- EMAIL NOTIFICATION ---
 def send_email_notification(recipient_email, student_name, file_paths):
@@ -116,7 +122,6 @@ def send_email_notification(recipient_email, student_name, file_paths):
 
 @app.route('/')
 def index():
-    # Hinahanap ang index.html sa loob ng /templates folder
     return render_template('index.html')
 
 @app.route('/history.html')
@@ -127,26 +132,48 @@ def history_page():
 def extract_data():
     if 'imageFile' not in request.files: return jsonify({"error": "No file"}), 400
     file = request.files['imageFile']
+    
+    # Secure filename and path
     filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
+    print(f"📸 Scanning file: {filename}") # Log entry
+
     try:
         myfile = genai.upload_file(filepath)
-        prompt = """Analyze this Birth Certificate. Return strictly JSON:
-        {"Name": "", "Sex": "", "Birthdate": "YYYY-MM-DD", "PlaceOfBirth": "", "Mother_MaidenName": "", "Mother_Citizenship": "", "Mother_Occupation": "", "Father_Name": "", "Father_Citizenship": "", "Father_Occupation": ""}"""
+        
+        prompt = """
+        You are a data entry assistant. Analyze this Birth Certificate image.
+        Extract the information strictly in valid JSON format.
+        If a field is not visible or unclear, use an empty string "".
+        Keys: "Name", "Sex", "Birthdate" (YYYY-MM-DD format), "PlaceOfBirth", "Mother_MaidenName", "Mother_Citizenship", "Mother_Occupation", "Father_Name", "Father_Citizenship", "Father_Occupation".
+        Do not include markdown formatting like ```json. Just raw JSON.
+        """
+        
         res = model.generate_content([myfile, prompt])
-        data = json.loads(res.text.replace('```json', '').replace('```', '').strip())
+        
+        # Clean the response text to ensure it's valid JSON
+        raw_text = res.text.replace('```json', '').replace('```', '').strip()
+        print(f"🤖 AI Response: {raw_text}") # Log raw AI response for debugging
+
+        data = json.loads(raw_text)
+        
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+    
     except Exception as e:
+        print(f"❌ Extraction Error: {str(e)}") # Print error to Render Logs
         return jsonify({"error": str(e)}), 500
 
 @app.route('/save-record', methods=['POST'])
 def save_record():
     d = request.json
     img_filename = os.path.basename(d.get('image_path', ''))
-    full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
+    # Use relative path for database storage to avoid local path issues
     db_image_path = os.path.join('uploads', img_filename) if img_filename else None
+    
+    # Path for email attachment (full path needed)
+    full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
 
     conn = get_db_connection()
     if not conn: return jsonify({"error": "DB Connection Failed"}), 500
@@ -161,13 +188,17 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
+        # Handle Email
         email_addr = d.get('email', '')
+        email_status = "Not Sent"
         if email_addr:
-            send_email_notification(email_addr, d['name'], [full_image_path] if full_image_path else [])
+            success = send_email_notification(email_addr, d['name'], [full_image_path] if full_image_path else [])
+            email_status = "Sent" if success else "Failed"
 
-        return jsonify({"status": "success", "db_id": new_id})
+        return jsonify({"status": "success", "db_id": new_id, "email_status": email_status})
     except Exception as e:
         conn.rollback()
+        print(f"❌ Save Error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
     finally:
         conn.close()
@@ -176,19 +207,43 @@ def save_record():
 def get_records():
     conn = get_db_connection()
     if not conn: return jsonify({"records": []})
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM records ORDER BY id DESC")
-    rows = cur.fetchall()
-    for r in rows: 
-        if r['created_at']: r['created_at'] = str(r['created_at'])
-    conn.close()
-    return jsonify({"records": rows})
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM records ORDER BY id DESC")
+        rows = cur.fetchall()
+        
+        # Convert objects to string for JSON serialization
+        for r in rows: 
+            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
+            
+        return jsonify({"records": rows})
+    except Exception as e:
+        print(f"❌ Fetch Error: {e}")
+        return jsonify({"records": []})
+    finally:
+        conn.close()
+
+@app.route('/delete/<int:id>', methods=['DELETE'])
+def delete_record(id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB Connection Failed"}), 500
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM records WHERE id = %s", (id,))
+        conn.commit()
+        return jsonify({"message": "Deleted successfully"})
+    except Exception as e:
+        print(f"❌ Delete Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-    # Gumagamit ng Dynamic Port para sa Render deployment
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
