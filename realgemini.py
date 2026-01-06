@@ -2,7 +2,7 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold # Added for Safety Settings
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -16,31 +16,36 @@ from werkzeug.utils import secure_filename
 
 # --- CONFIGURATION FROM RENDER ENVIRONMENT ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+
+# Configure Gemini
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("⚠️ WARNING: GEMINI_API_KEY is missing in Environment Variables!")
 
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-
-# DATABASE CONFIGURATION FOR RENDER
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 app = Flask(__name__)
 CORS(app)
 
+# Setup Upload Folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# --- DATABASE CONNECTION ---
 def get_db_connection():
     try:
         return psycopg2.connect(DATABASE_URL)
     except Exception as e:
-        print(f"❌ DB Error: {e}")
+        print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- AUTO-SETUP DATABASE TABLE ---
+# --- INIT DATABASE TABLE ---
 def init_db():
     conn = get_db_connection()
     if conn:
@@ -68,16 +73,17 @@ def init_db():
             ''')
             conn.commit()
             cur.close()
-            print("✅ Database tables initialized successfully!")
+            print("✅ Database initialized successfully!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
             conn.close()
 
+# Run DB Init
 init_db()
 
-# --- MODEL SETUP WITH SAFETY SETTINGS ---
-# Importante ito para payagan ang PII (Personal Info) sa documents
+# --- GEMINI MODEL SETUP (FIXED) ---
+# Safety Settings to allow PII (Personal Info)
 safety_settings = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -85,11 +91,17 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
+# UPDATED MODEL NAME: trying 'gemini-1.5-flash-latest' to fix 404
+try:
+    model = genai.GenerativeModel('gemini-1.5-flash-latest', safety_settings=safety_settings)
+except Exception as e:
+    print(f"⚠️ Model Init Error (Trying fallback): {e}")
+    # Fallback to standard name if latest fails
+    model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
 
-# --- EMAIL NOTIFICATION ---
+# --- EMAIL FUNCTION ---
 def send_email_notification(recipient_email, student_name, file_paths):
-    if not recipient_email: return
+    if not recipient_email or not EMAIL_SENDER: return False
     try:
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
@@ -130,49 +142,53 @@ def history_page():
 
 @app.route('/extract', methods=['POST'])
 def extract_data():
-    if 'imageFile' not in request.files: return jsonify({"error": "No file"}), 400
-    file = request.files['imageFile']
+    if 'imageFile' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
     
-    # Secure filename and path
+    file = request.files['imageFile']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
     filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    print(f"📸 Scanning file: {filename}") # Log entry
+    print(f"📸 Processing image: {filename}")
 
     try:
+        # Upload file to Gemini
         myfile = genai.upload_file(filepath)
         
         prompt = """
-        You are a data entry assistant. Analyze this Birth Certificate image.
-        Extract the information strictly in valid JSON format.
-        If a field is not visible or unclear, use an empty string "".
-        Keys: "Name", "Sex", "Birthdate" (YYYY-MM-DD format), "PlaceOfBirth", "Mother_MaidenName", "Mother_Citizenship", "Mother_Occupation", "Father_Name", "Father_Citizenship", "Father_Occupation".
-        Do not include markdown formatting like ```json. Just raw JSON.
+        Analyze this Birth Certificate image.
+        Extract the following fields and return ONLY a valid JSON object.
+        Keys needed: "Name", "Sex", "Birthdate" (YYYY-MM-DD), "PlaceOfBirth", "Mother_MaidenName", "Mother_Citizenship", "Mother_Occupation", "Father_Name", "Father_Citizenship", "Father_Occupation".
+        If a field is missing or unreadable, leave it as an empty string "".
+        Do not include markdown formatting (like ```json). Return raw JSON only.
         """
         
+        # Generate content
         res = model.generate_content([myfile, prompt])
         
-        # Clean the response text to ensure it's valid JSON
+        # Clean response
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        print(f"🤖 AI Response: {raw_text}") # Log raw AI response for debugging
+        print(f"🤖 AI Response: {raw_text}") 
 
         data = json.loads(raw_text)
-        
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
-    
+
     except Exception as e:
-        print(f"❌ Extraction Error: {str(e)}") # Print error to Render Logs
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Extraction Failed: {e}")
+        # Return the specific error message to the frontend for debugging
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
 @app.route('/save-record', methods=['POST'])
 def save_record():
     d = request.json
     img_filename = os.path.basename(d.get('image_path', ''))
-    # Use relative path for database storage to avoid local path issues
-    db_image_path = os.path.join('uploads', img_filename) if img_filename else None
     
-    # Path for email attachment (full path needed)
+    # Paths
+    db_image_path = os.path.join('uploads', img_filename) if img_filename else None
     full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
 
     conn = get_db_connection()
@@ -180,6 +196,7 @@ def save_record():
     cur = conn.cursor()
     
     try:
+        # Check duplicate (Optional logic, removing for now to ensure save works)
         cur.execute('''
             INSERT INTO records (name, sex, birthdate, birthplace, mother_name, mother_citizenship, mother_occupation, father_name, father_citizenship, father_occupation, image_path)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
@@ -188,7 +205,7 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Handle Email
+        # Email
         email_addr = d.get('email', '')
         email_status = "Not Sent"
         if email_addr:
@@ -198,45 +215,61 @@ def save_record():
         return jsonify({"status": "success", "db_id": new_id, "email_status": email_status})
     except Exception as e:
         conn.rollback()
-        print(f"❌ Save Error: {e}")
+        print(f"❌ Save Record Error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
     finally:
         conn.close()
+
+@app.route('/upload-additional', methods=['POST'])
+def upload_additional():
+    if 'file' not in request.files: return jsonify({"error": "No file"}), 400
+    file = request.files['file']
+    record_id = request.form.get('id')
+    doc_type = request.form.get('type') # form137, form138, goodmoral
+
+    if not record_id or not doc_type: return jsonify({"error": "Missing ID or Type"}), 400
+
+    filename = secure_filename(f"{doc_type}_{record_id}_{file.filename}")
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    db_path = os.path.join('uploads', filename)
+
+    col_map = {
+        'form137': 'form137_path',
+        'form138': 'form138_path',
+        'goodmoral': 'goodmoral_path'
+    }
+
+    if doc_type not in col_map: return jsonify({"error": "Invalid type"}), 400
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        sql = f"UPDATE records SET {col_map[doc_type]} = %s WHERE id = %s"
+        cur.execute(sql, (db_path, record_id))
+        conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn: conn.close()
 
 @app.route('/get-records', methods=['GET'])
 def get_records():
     conn = get_db_connection()
     if not conn: return jsonify({"records": []})
-    
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM records ORDER BY id DESC")
         rows = cur.fetchall()
-        
-        # Convert objects to string for JSON serialization
-        for r in rows: 
+        # Format dates for JSON
+        for r in rows:
             if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: r['birthdate'] = str(r['birthdate'])
-            
         return jsonify({"records": rows})
     except Exception as e:
         print(f"❌ Fetch Error: {e}")
         return jsonify({"records": []})
-    finally:
-        conn.close()
-
-@app.route('/delete/<int:id>', methods=['DELETE'])
-def delete_record(id):
-    conn = get_db_connection()
-    if not conn: return jsonify({"error": "DB Connection Failed"}), 500
-    try:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM records WHERE id = %s", (id,))
-        conn.commit()
-        return jsonify({"message": "Deleted successfully"})
-    except Exception as e:
-        print(f"❌ Delete Error: {e}")
-        return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
