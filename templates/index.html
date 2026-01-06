@@ -174,7 +174,7 @@
             laser.style.display = 'block';
 
             try {
-                const res = await fetch('http://127.0.0.1:5000/extract', { method: 'POST', body: formData });
+                const res = await fetch('/extract', { method: 'POST', body: formData });
                 const data = await res.json();
                 if(data.structured_data) {
                     const d = data.structured_data;
@@ -221,7 +221,7 @@
             };
 
             try {
-                const response = await fetch('http://127.0.0.1:5000/save-record', {
+                const response = await fetch('/save-record', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(recordData)
@@ -256,9 +256,10 @@
                 formData.append('file', fileInput.files[0]);
                 formData.append('id', id);
                 formData.append('type', type);
-                await fetch('http://127.0.0.1:5000/upload-additional', { method: 'POST', body: formData });
+                await fetch('/upload-additional', { method: 'POST', body: formData });
             }
         }
     </script>
 </body>
 </html>
+
