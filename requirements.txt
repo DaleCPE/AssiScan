@@ -1,0 +1,6 @@
+flask
+flask-cors
+psycopg2-binary
+google-generativeai
+gunicorn
+werkzeug
