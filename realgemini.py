@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -26,7 +26,12 @@ EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# --- ADMIN SECURITY CONFIG ---
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123" # Pwede mong palitan
+
 app = Flask(__name__)
+app.secret_key = "super_secret_security_key_change_me" # REQUIRED FOR LOGIN SESSION
 CORS(app)
 
 # Setup Upload Folder
@@ -81,31 +86,22 @@ def init_db():
 init_db()
 
 # --- SUREFIRE MODEL SELECTOR ---
-# Logic: List all models, pick the FIRST one that supports 'generateContent'.
-# No guessing names anymore.
 def get_working_model():
     print("🔍 QUERYING GOOGLE FOR AVAILABLE MODELS...")
     try:
-        # Loop through all models available to your API Key
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 print(f"✅ FOUND VALID MODEL: {m.name}")
-                # RETURN IMMEDIATELY - Do not look for others. Use this one.
                 return m.name
-        
-        # If loop finishes with no return, we have a problem
         print("❌ NO MODELS FOUND with 'generateContent' capability.")
-        return "models/gemini-1.5-flash" # Last resort fallback
-        
+        return "models/gemini-1.5-flash"
     except Exception as e:
         print(f"❌ CRITICAL ERROR listing models: {e}")
         return "models/gemini-1.5-flash"
 
-# Get the model name dynamically
 active_model_name = get_working_model()
 print(f"🚀 SYSTEM WILL USE: {active_model_name}")
 
-# Configure Safety Settings
 safety_settings = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -113,9 +109,7 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-# Initialize Model
 model = genai.GenerativeModel(active_model_name, safety_settings=safety_settings)
-
 
 # --- EMAIL FUNCTION ---
 def send_email_notification(recipient_email, student_name, file_paths):
@@ -125,10 +119,8 @@ def send_email_notification(recipient_email, student_name, file_paths):
         msg['From'] = EMAIL_SENDER
         msg['To'] = recipient_email
         msg['Subject'] = "AssiScan Verification Complete - Document Copy"
-
         body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
         msg.attach(MIMEText(body, 'plain'))
-
         for fpath in file_paths:
             if fpath and os.path.exists(fpath):
                 with open(fpath, "rb") as attachment:
@@ -137,7 +129,6 @@ def send_email_notification(recipient_email, student_name, file_paths):
                     encoders.encode_base64(part)
                     part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(fpath)}")
                     msg.attach(part)
-
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
@@ -154,9 +145,55 @@ def send_email_notification(recipient_email, student_name, file_paths):
 def index():
     return render_template('index.html')
 
+# --- LOGIN ROUTE (NEW) ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            return redirect('/history.html')
+        else:
+            return render_template('login.html', error="Invalid Credentials")
+    return render_template('login.html')
+
+# --- LOGOUT ROUTE (NEW) ---
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect('/login')
+
+# --- PROTECTED HISTORY PAGE ---
 @app.route('/history.html')
 def history_page():
+    if not session.get('logged_in'):
+        return redirect('/login') # Kick out if not logged in
     return render_template('history.html')
+
+# --- PROTECTED API ---
+@app.route('/get-records', methods=['GET'])
+def get_records():
+    # Security check: Block API access if not logged in
+    if not session.get('logged_in'):
+        return jsonify({"records": [], "error": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    if not conn: return jsonify({"records": []})
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM records ORDER BY id DESC")
+        rows = cur.fetchall()
+        for r in rows:
+            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
+        return jsonify({"records": rows})
+    except Exception as e:
+        return jsonify({"records": []})
+    finally:
+        conn.close()
+
+# --- PUBLIC SCANNING ROUTES (Walang Login para makapag-scan ang students) ---
 
 @app.route('/extract', methods=['POST'])
 def extract_data():
@@ -258,23 +295,6 @@ def upload_additional():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn: conn.close()
-
-@app.route('/get-records', methods=['GET'])
-def get_records():
-    conn = get_db_connection()
-    if not conn: return jsonify({"records": []})
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM records ORDER BY id DESC")
-        rows = cur.fetchall()
-        for r in rows:
-            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
-        return jsonify({"records": rows})
-    except Exception as e:
-        return jsonify({"records": []})
-    finally:
-        conn.close()
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
