@@ -80,44 +80,32 @@ def init_db():
 
 init_db()
 
-# --- INTELLIGENT MODEL SELECTOR ---
-# This function asks Google: "What models do I have access to?" and picks the best one.
+# --- SUREFIRE MODEL SELECTOR ---
+# Logic: List all models, pick the FIRST one that supports 'generateContent'.
+# No guessing names anymore.
 def get_working_model():
+    print("🔍 QUERYING GOOGLE FOR AVAILABLE MODELS...")
     try:
-        print("🔍 Searching for available Gemini models...")
-        available_models = []
+        # Loop through all models available to your API Key
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
+                print(f"✅ FOUND VALID MODEL: {m.name}")
+                # RETURN IMMEDIATELY - Do not look for others. Use this one.
+                return m.name
         
-        print(f"📋 Available Models: {available_models}")
-
-        # Priority List
-        preferred_order = [
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-flash-latest",
-            "models/gemini-1.0-pro",
-            "models/gemini-pro"
-        ]
-
-        selected_model = "models/gemini-pro" # Default Fallback
-
-        # Check for preferred models in the available list
-        for preferred in preferred_order:
-            if preferred in available_models:
-                selected_model = preferred
-                break
+        # If loop finishes with no return, we have a problem
+        print("❌ NO MODELS FOUND with 'generateContent' capability.")
+        return "models/gemini-1.5-flash" # Last resort fallback
         
-        print(f"✅ SELECTED MODEL: {selected_model}")
-        return selected_model
-
     except Exception as e:
-        print(f"⚠️ Error listing models: {e}. Defaulting to 'gemini-pro'")
-        return "gemini-pro"
+        print(f"❌ CRITICAL ERROR listing models: {e}")
+        return "models/gemini-1.5-flash"
 
-# Initialize Model with Safety Settings
+# Get the model name dynamically
 active_model_name = get_working_model()
+print(f"🚀 SYSTEM WILL USE: {active_model_name}")
 
+# Configure Safety Settings
 safety_settings = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -125,6 +113,7 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
+# Initialize Model
 model = genai.GenerativeModel(active_model_name, safety_settings=safety_settings)
 
 
@@ -168,20 +157,6 @@ def index():
 @app.route('/history.html')
 def history_page():
     return render_template('history.html')
-
-# --- NEW DEBUG ROUTE ---
-# Visit https://your-app.onrender.com/debug-models to see what's happening
-@app.route('/debug-models')
-def debug_models():
-    try:
-        avail = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        return jsonify({
-            "available_models": avail,
-            "currently_using": active_model_name,
-            "api_key_configured": bool(GEMINI_API_KEY)
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)})
 
 @app.route('/extract', methods=['POST'])
 def extract_data():
