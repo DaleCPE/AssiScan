@@ -26,7 +26,6 @@
             min-height: 100vh;
         }
 
-        /* HEADER SECTION */
         .header {
             display: flex;
             justify-content: space-between;
@@ -61,14 +60,11 @@
         .btn-logout:hover {
             background: #ff6b6b;
             color: #000;
-            box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
         }
 
-        /* TABLE CONTAINER */
         .table-wrapper {
             width: 100%;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
             border-radius: 8px;
             border: 1px solid rgba(212, 175, 55, 0.2);
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
@@ -76,11 +72,7 @@
             backdrop-filter: blur(5px);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 950px; /* Tinaasan ko onti para kasya buttons */
-        }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
 
         thead { background: rgba(212, 175, 55, 0.1); }
 
@@ -90,9 +82,7 @@
             color: var(--gold);
             font-family: 'Cinzel', serif;
             font-size: 12px;
-            letter-spacing: 1px;
             border-bottom: 2px solid var(--dark-red);
-            white-space: nowrap;
         }
 
         td {
@@ -106,13 +96,11 @@
         tr:last-child td { border-bottom: none; }
         tr:hover { background-color: rgba(212, 175, 55, 0.05); }
 
-        /* BUTTON LINKS STYLE */
         .doc-link {
             color: #888;
             text-decoration: none;
             font-size: 11px;
             margin-right: 5px;
-            margin-bottom: 5px; /* Para may spacing pag nag-wrap */
             padding: 5px 8px;
             border: 1px solid #444;
             border-radius: 4px;
@@ -120,35 +108,25 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            white-space: nowrap;
         }
-
-        /* Specific Colors per Button Type para madali makita */
-        .doc-link:hover { transform: translateY(-2px); color: #fff; }
+        .doc-link:hover { transform: translateY(-2px); color: #fff; border-color: var(--gold); }
         
-        .link-psa:hover { border-color: #d4af37; background: rgba(212, 175, 55, 0.2); }
-        .link-f137:hover { border-color: #4CAF50; background: rgba(76, 175, 80, 0.2); }
-        .link-f138:hover { border-color: #2196F3; background: rgba(33, 150, 243, 0.2); }
-        .link-gm:hover { border-color: #9C27B0; background: rgba(156, 39, 176, 0.2); }
-
-        #loading {
-            text-align: center;
-            color: var(--gold);
-            margin-top: 50px;
-            font-family: 'Cinzel', serif;
-            animation: pulse 1.5s infinite;
+        .btn-delete {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-delete:hover {
+            background: #ff4444;
+            color: white;
+            transform: scale(1.05);
         }
 
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-        
-        .table-wrapper::-webkit-scrollbar { height: 8px; }
-        .table-wrapper::-webkit-scrollbar-track { background: #0f0404; }
-        .table-wrapper::-webkit-scrollbar-thumb { background: #331010; border-radius: 4px; }
-        .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+        #loading { text-align: center; color: var(--gold); margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -169,10 +147,11 @@
                     <th>Birthdate</th>
                     <th>Mother's Name</th>
                     <th>Created</th>
-                    <th>Documents</th> </tr>
+                    <th>Documents</th>
+                    <th style="text-align: center;">Action</th>
+                </tr>
             </thead>
-            <tbody id="tableBody">
-                </tbody>
+            <tbody id="tableBody"></tbody>
         </table>
     </div>
 
@@ -180,11 +159,7 @@
         async function loadData() {
             try {
                 const res = await fetch('/get-records');
-                
-                if (res.status === 401) {
-                    window.location.href = '/login';
-                    return;
-                }
+                if (res.status === 401) { window.location.href = '/login'; return; }
 
                 const data = await res.json();
                 document.getElementById('loading').style.display = 'none';
@@ -192,42 +167,52 @@
                 const tbody = document.getElementById('tableBody');
 
                 if(data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px; font-style:italic;">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No records found.</td></tr>';
                     return;
                 }
 
-                // DITO KO INUPDATE YUNG BUTTONS:
                 tbody.innerHTML = data.records.map(r => `
-                    <tr>
+                    <tr id="row-${r.id}">
                         <td style="font-weight:600; color:#fff;">${r.name}</td>
                         <td>${r.sex}</td>
                         <td>${r.birthdate}</td>
                         <td>${r.mother_name}</td>
                         <td style="color:#666; font-size:12px;">${r.created_at}</td>
                         <td>
-                            ${r.image_path ? 
-                                `<a href="/uploads/${r.image_path.split('/').pop()}" target="_blank" class="doc-link link-psa" title="View PSA">
-                                <i class="fas fa-file-image"></i> PSA</a>` : ''}
-                            
-                            ${r.form137_path ? 
-                                `<a href="/uploads/${r.form137_path.split('/').pop()}" target="_blank" class="doc-link link-f137" title="View Form 137">
-                                <i class="fas fa-file-alt"></i> F137</a>` : ''}
-
-                            ${r.form138_path ? 
-                                `<a href="/uploads/${r.form138_path.split('/').pop()}" target="_blank" class="doc-link link-f138" title="View Form 138">
-                                <i class="fas fa-clipboard-list"></i> F138</a>` : ''}
-
-                            ${r.goodmoral_path ? 
-                                `<a href="/uploads/${r.goodmoral_path.split('/').pop()}" target="_blank" class="doc-link link-gm" title="View Good Moral">
-                                <i class="fas fa-certificate"></i> GM</a>` : ''}
+                            ${r.image_path ? `<a href="/${r.image_path}" target="_blank" class="doc-link"><i class="fas fa-file-image"></i> PSA</a>` : ''}
+                            ${r.form137_path ? `<a href="/${r.form137_path}" target="_blank" class="doc-link"><i class="fas fa-file-alt"></i> F137</a>` : ''}
+                            ${r.form138_path ? `<a href="/${r.form138_path}" target="_blank" class="doc-link"><i class="fas fa-file-invoice"></i> F138</a>` : ''}
+                            ${r.goodmoral_path ? `<a href="/${r.goodmoral_path}" target="_blank" class="doc-link"><i class="fas fa-certificate"></i> GM</a>` : ''}
+                        </td>
+                        <td style="text-align: center;">
+                            <button onclick="deleteRecord(${r.id})" class="btn-delete" title="Delete Record">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
+
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteRecord(id) {
+            if(!confirm("Are you sure you want to PERMANENTLY delete this record and its files?")) return;
+
+            try {
+                const res = await fetch(`/delete-record/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Remove row instantly
+                    document.getElementById(`row-${id}`).remove();
+                } else {
+                    alert("Error deleting: " + (data.error || "Unknown error"));
+                }
             } catch (e) {
-                console.error(e);
-                document.getElementById('loading').innerText = "CONNECTION ERROR.";
+                alert("Failed to delete record.");
             }
         }
+
         loadData();
     </script>
 </body>
