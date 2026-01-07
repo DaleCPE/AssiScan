@@ -50,12 +50,13 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE ---
+# --- INIT DATABASE TABLE (UPDATED SCHEMA) ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
+            # UPDATED: Added birth_order, religion, age columns
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -84,7 +85,7 @@ def init_db():
                     final_general_average VARCHAR(50),
 
                     -- Files
-                    image_path TEXT,
+                    image_path TEXT,      -- PSA Image
                     form137_path TEXT,
                     form138_path TEXT,
                     goodmoral_path TEXT,
@@ -94,7 +95,7 @@ def init_db():
             ''')
             conn.commit()
             cur.close()
-            print("✅ Database initialized successfully!")
+            print("✅ Database initialized successfully with ALL columns!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
@@ -108,6 +109,7 @@ def get_working_model():
     try:
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
+                print(f"✅ FOUND VALID MODEL: {m.name}")
                 return m.name
         return "models/gemini-1.5-flash"
     except Exception as e:
@@ -207,16 +209,18 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (ROBUST VERSION) ---
+# --- 1. STRICT PSA SCANNING (UPDATED WITH DEBUGGING & ERROR HANDLING) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
-    print("🚀 REQUEST RECEIVED: /extract") 
+    print("🚀 REQUEST RECEIVED: /extract") # Debug log
     
     if 'imageFile' not in request.files:
+        print("❌ ERROR: No file part")
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['imageFile']
     if file.filename == '':
+        print("❌ ERROR: No selected file")
         return jsonify({"error": "No selected file"}), 400
 
     try:
@@ -224,10 +228,12 @@ def extract_data():
         filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        print(f"📸 Image Saved at: {filepath}")
 
         # Upload to Gemini
         print("📤 Uploading to Gemini...")
         myfile = genai.upload_file(filepath)
+        print(f"✅ Upload Complete: {myfile.name}")
         
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
@@ -263,27 +269,32 @@ def extract_data():
         }
         """
         
-        print("🤖 Asking Gemini...")
+        print("🤖 Asking Gemini to analyze...")
         res = model.generate_content([myfile, prompt])
         
         if not res.text:
             raise ValueError("Gemini returned an empty response.")
 
-        # Clean JSON
+        print("📩 Raw AI Response:", res.text) # LOG RAW RESPONSE
+
+        # Clean JSON (Remove markdown backticks if present)
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         
         try:
             data = json.loads(raw_text)
         except json.JSONDecodeError as json_err:
             print(f"❌ JSON PARSE ERROR: {json_err}")
+            print(f"💀 Bad Text: {raw_text}")
             return jsonify({"error": "AI response was not valid JSON. Please try again."}), 500
 
         if not data.get("is_valid_document", False):
             if os.path.exists(filepath):
                 os.remove(filepath)
             reason = data.get("rejection_reason", "Not a valid PSA Birth Certificate.")
+            print(f"🚫 Document Rejected: {reason}")
             return jsonify({"error": f"Invalid Document: {reason}"}), 400
 
+        print("✅ Extraction Success!")
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
 
     except Exception as e:
@@ -304,6 +315,8 @@ def extract_form137():
     filename = secure_filename(f"F137_SCAN_{int(datetime.now().timestamp())}_{file.filename}")
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
+
+    print(f"📸 Processing Form 137: {filename}")
 
     try:
         myfile = genai.upload_file(filepath)
@@ -334,23 +347,24 @@ def extract_form137():
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
 
     except Exception as e:
+        print(f"❌ Form 137 Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- 3. SAVE RECORD (WITH ANTI-DUPLICATE & NEW COLUMNS) ---
+# --- 3. UPDATED SAVE RECORD (WITH ANTI-DUPLICATE) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
     try:
         d = request.json
-        print(f"📥 Saving Data: {d.get('name')}")
+        print(f"📥 Received Data for Saving: {d}") # Debugging
         
-        # --- FIELDS ---
+        # --- PSA FIELDS ---
         name = d.get('name') or d.get('Name')
         sex = d.get('sex') or d.get('Sex')
         birthdate = d.get('birthdate') or d.get('Birthdate')
         birthplace = d.get('birthplace') or d.get('PlaceOfBirth')
         
-        # New Fields
+        # NEW: Birth Order, Religion, Age
         birth_order = d.get('birth_order') or d.get('BirthOrder')
         religion = d.get('religion') or d.get('Religion')
         age = d.get('age')
@@ -363,18 +377,22 @@ def save_record():
         f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
         f_occ = d.get('father_occupation') or d.get('Father_Occupation')
 
+        # --- FORM 137 FIELDS ---
         lrn = d.get('lrn', '')
         school_name = d.get('school_name', '')
         school_address = d.get('school_address', '')
         final_grade = d.get('final_general_average', '')
 
+        # --- FIX EMPTY DATES ---
         if not birthdate or birthdate == "null" or birthdate == "":
             birthdate = None 
 
-        # Images
+        # --- HANDLE IMAGES ---
+        # PSA Image
         psa_img = d.get('psa_image_path') or d.get('image_path')
         db_psa_path = os.path.join('uploads', os.path.basename(psa_img)) if psa_img else None
         
+        # Form 137 Image
         f137_img = d.get('f137_image_path')
         db_f137_path = os.path.join('uploads', os.path.basename(f137_img)) if f137_img else None
 
@@ -383,7 +401,7 @@ def save_record():
         cur = conn.cursor()
         
         # ==========================================================
-        # 🛡️ DUPLICATE CHECKER (ANTI-DUPLICATE)
+        # 🛡️ ANTI-DUPLICATE CHECK
         # ==========================================================
         if name and birthdate:
             cur.execute("""
@@ -398,8 +416,8 @@ def save_record():
                 return jsonify({
                     "status": "error", 
                     "error": "DUPLICATE_ENTRY", 
-                    "message": f"Record already exists for {name}."
-                }), 409
+                    "message": f"Record already exists for {name} with birthdate {birthdate}."
+                }), 409 # Return 409 Conflict Error
         # ==========================================================
         
         cur.execute('''
@@ -423,14 +441,13 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Email
+        # Email Notification (Optional)
         email_addr = d.get('email', '')
         full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(psa_img)) if psa_img else None
         if email_addr:
             send_email_notification(email_addr, name, [full_psa_path] if full_psa_path else [])
 
         return jsonify({"status": "success", "db_id": new_id})
-
     except Exception as e:
         print(f"❌ SAVE ERROR: {e}")
         if conn: conn.rollback()
@@ -479,7 +496,7 @@ def delete_record(record_id):
     finally:
         conn.close()
 
-# --- UPLOAD ADDITIONAL FILES ---
+# --- UPLOAD ADDITIONAL FILES (Form 138 / Good Moral) ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
@@ -519,17 +536,20 @@ def upload_additional():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- DB RESET TOOL ---
+# --- DB RESET TOOL (UPDATED) ---
 @app.route('/fix-db')
 def fix_db():
     conn = get_db_connection()
     if not conn: return "DB Config Error"
     try:
         cur = conn.cursor()
+        # WARNING: DROPS TABLE
         cur.execute("DROP TABLE IF EXISTS records;")
         conn.commit()
+        
+        # Recreate with NEW columns
         init_db()
-        return "✅ Database has been RESET!"
+        return "✅ Database has been RESET! Now supports Age, Religion, Birth Order, and Form 137 fields."
     except Exception as e:
         return f"Error: {e}"
     finally:
