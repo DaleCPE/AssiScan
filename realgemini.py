@@ -49,13 +49,13 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED SCHEMA) ---
+# --- INIT DATABASE TABLE (UPDATED SCHEMA WITH LRN & SCHOOL INFO) ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
-            # Added form138, goodmoral columns
+            # Added form138, goodmoral columns AND lrn, school_name, school_address
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -69,6 +69,11 @@ def init_db():
                     father_name VARCHAR(255),
                     father_citizenship VARCHAR(100),
                     father_occupation VARCHAR(100),
+                    
+                    lrn VARCHAR(50),
+                    school_name TEXT,
+                    school_address TEXT,
+
                     image_path TEXT,
                     form137_path TEXT,
                     form138_path TEXT,
@@ -78,7 +83,7 @@ def init_db():
             ''')
             conn.commit()
             cur.close()
-            print("✅ Database initialized successfully!")
+            print("✅ Database initialized successfully with School Info columns!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
@@ -192,7 +197,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- STRICT AI SCANNING ---
+# --- 1. STRICT PSA SCANNING ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFile' not in request.files:
@@ -206,7 +211,7 @@ def extract_data():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    print(f"📸 Processing: {filename}")
+    print(f"📸 Processing PSA: {filename}")
 
     try:
         myfile = genai.upload_file(filepath)
@@ -257,15 +262,61 @@ def extract_data():
         print(f"❌ Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- ROBUST SAVE RECORD (FIX FOR 500 ERROR) ---
+# --- 2. NEW: FORM 137 SCANNING ---
+@app.route('/extract-form137', methods=['POST'])
+def extract_form137():
+    if 'imageFile' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['imageFile']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    filename = secure_filename(f"F137_SCAN_{int(datetime.now().timestamp())}_{file.filename}")
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    print(f"📸 Processing Form 137: {filename}")
+
+    try:
+        myfile = genai.upload_file(filepath)
+        
+        prompt = """
+        SYSTEM ROLE: Philippine School Document Analyzer.
+        TASK: Analyze this image. It should be a Form 137, SF10, or Permanent Record.
+        
+        EXTRACT THE FOLLOWING:
+        1. LRN (Learner Reference Number) - usually a 12-digit number.
+        2. School Name - The name of the school appearing in the header or most recent entry.
+        3. School Address - The location/address of the school.
+
+        OUTPUT FORMAT (JSON ONLY):
+        {
+            "lrn": "string",
+            "school_name": "string",
+            "school_address": "string"
+        }
+        """
+        
+        res = model.generate_content([myfile, prompt])
+        raw_text = res.text.replace('```json', '').replace('```', '').strip()
+        data = json.loads(raw_text)
+        
+        return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+
+    except Exception as e:
+        print(f"❌ Form 137 Extraction Failed: {e}")
+        return jsonify({"error": f"AI Error: {str(e)}"}), 500
+
+# --- 3. UPDATED SAVE RECORD (COMBINED DATA) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
     try:
         d = request.json
-        print(f"📥 Received Data: {d}") # Debugging
+        print(f"📥 Received Data for Saving: {d}") # Debugging
         
-        # 1. FIX KEY MAPPING (Check both lowercase and Capitalized keys)
+        # --- PSA FIELDS ---
         name = d.get('name') or d.get('Name')
         sex = d.get('sex') or d.get('Sex')
         birthdate = d.get('birthdate') or d.get('Birthdate')
@@ -279,13 +330,23 @@ def save_record():
         f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
         f_occ = d.get('father_occupation') or d.get('Father_Occupation')
 
-        # 2. FIX EMPTY DATES (Prevents DB Crash)
+        # --- FORM 137 FIELDS ---
+        lrn = d.get('lrn', '')
+        school_name = d.get('school_name', '')
+        school_address = d.get('school_address', '')
+
+        # --- FIX EMPTY DATES ---
         if not birthdate or birthdate == "null" or birthdate == "":
             birthdate = None 
 
-        img_filename = os.path.basename(d.get('image_path', ''))
-        db_image_path = os.path.join('uploads', img_filename) if img_filename else None
-        full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
+        # --- HANDLE IMAGES ---
+        # PSA Image
+        psa_img = d.get('psa_image_path') or d.get('image_path')
+        db_psa_path = os.path.join('uploads', os.path.basename(psa_img)) if psa_img else None
+        
+        # Form 137 Image
+        f137_img = d.get('f137_image_path')
+        db_f137_path = os.path.join('uploads', os.path.basename(f137_img)) if f137_img else None
 
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
@@ -296,22 +357,29 @@ def save_record():
                 name, sex, birthdate, birthplace, 
                 mother_name, mother_citizenship, mother_occupation, 
                 father_name, father_citizenship, father_occupation, 
-                image_path
+                lrn, school_name, school_address,
+                image_path, form137_path
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
             RETURNING id
-        ''', (name, sex, birthdate, birthplace, m_name, m_cit, m_occ, f_name, f_cit, f_occ, db_image_path))
+        ''', (
+            name, sex, birthdate, birthplace, 
+            m_name, m_cit, m_occ, 
+            f_name, f_cit, f_occ, 
+            lrn, school_name, school_address,
+            db_psa_path, db_f137_path
+        ))
         
         new_id = cur.fetchone()[0]
         conn.commit()
 
+        # Email Notification (Optional)
         email_addr = d.get('email', '')
-        email_status = "Not Sent"
+        full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(psa_img)) if psa_img else None
         if email_addr:
-            success = send_email_notification(email_addr, name, [full_image_path] if full_image_path else [])
-            email_status = "Sent" if success else "Failed"
+            send_email_notification(email_addr, name, [full_psa_path] if full_psa_path else [])
 
-        return jsonify({"status": "success", "db_id": new_id, "email_status": email_status})
+        return jsonify({"status": "success", "db_id": new_id})
     except Exception as e:
         print(f"❌ SAVE ERROR: {e}")
         if conn: conn.rollback()
@@ -319,7 +387,7 @@ def save_record():
     finally:
         if conn: conn.close()
 
-# --- DELETE RECORD ROUTE (ADDED FUNCTION) ---
+# --- DELETE RECORD ROUTE ---
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
     if not session.get('logged_in'):
@@ -401,7 +469,7 @@ def upload_additional():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- DB RESET TOOL (RUN ONCE TO FIX 500 ERROR CAUSE) ---
+# --- DB RESET TOOL (IMPORTANT: RUN THIS TO ADD NEW COLUMNS) ---
 @app.route('/fix-db')
 def fix_db():
     conn = get_db_connection()
@@ -411,9 +479,9 @@ def fix_db():
         # Drop old table
         cur.execute("DROP TABLE IF EXISTS records;")
         conn.commit()
-        # Recreate with new columns
+        # Recreate with new columns including LRN and SCHOOL
         init_db()
-        return "✅ Database has been RESET and Fixed! You can now use the app."
+        return "✅ Database has been RESET and Fixed! Now supports LRN, School Name, and Address."
     except Exception as e:
         return f"Error: {e}"
     finally:
