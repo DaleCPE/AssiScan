@@ -49,12 +49,13 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE ---
+# --- INIT DATABASE TABLE (UPDATED SCHEMA) ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
+            # Added form138, goodmoral columns
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -256,13 +257,15 @@ def extract_data():
         print(f"❌ Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- ROBUST SAVE RECORD (FIXED 500 ERROR) ---
+# --- ROBUST SAVE RECORD (FIX FOR 500 ERROR) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
+    conn = None
     try:
         d = request.json
+        print(f"📥 Received Data: {d}") # Debugging
         
-        # Key Mapping (Handles casing differences)
+        # 1. FIX KEY MAPPING (Check both lowercase and Capitalized keys)
         name = d.get('name') or d.get('Name')
         sex = d.get('sex') or d.get('Sex')
         birthdate = d.get('birthdate') or d.get('Birthdate')
@@ -276,7 +279,7 @@ def save_record():
         f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
         f_occ = d.get('father_occupation') or d.get('Father_Occupation')
 
-        # Handle Empty Dates
+        # 2. FIX EMPTY DATES (Prevents DB Crash)
         if not birthdate or birthdate == "null" or birthdate == "":
             birthdate = None 
 
@@ -316,7 +319,7 @@ def save_record():
     finally:
         if conn: conn.close()
 
-# --- DELETE RECORD AND FILES ---
+# --- DELETE RECORD ROUTE (ADDED FUNCTION) ---
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
     if not session.get('logged_in'):
@@ -333,7 +336,7 @@ def delete_record(record_id):
         row = cur.fetchone()
 
         if row:
-            # Loop through paths and delete physical files
+            # Delete physical files to save space
             for file_path in row:
                 if file_path:
                     clean_filename = os.path.basename(file_path)
@@ -398,15 +401,17 @@ def upload_additional():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- DB RESET TOOL ---
+# --- DB RESET TOOL (RUN ONCE TO FIX 500 ERROR CAUSE) ---
 @app.route('/fix-db')
 def fix_db():
     conn = get_db_connection()
     if not conn: return "DB Config Error"
     try:
         cur = conn.cursor()
+        # Drop old table
         cur.execute("DROP TABLE IF EXISTS records;")
         conn.commit()
+        # Recreate with new columns
         init_db()
         return "✅ Database has been RESET and Fixed! You can now use the app."
     except Exception as e:
