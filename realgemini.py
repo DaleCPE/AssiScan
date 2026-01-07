@@ -13,6 +13,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+import traceback # Added for better error logging
 
 # --- CONFIGURATION FROM RENDER ENVIRONMENT ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -208,24 +209,31 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (UPDATED WITH BIRTH ORDER/RELIGION) ---
+# --- 1. STRICT PSA SCANNING (UPDATED WITH DEBUGGING & ERROR HANDLING) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
+    print("🚀 REQUEST RECEIVED: /extract") # Debug log
+    
     if 'imageFile' not in request.files:
+        print("❌ ERROR: No file part")
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['imageFile']
     if file.filename == '':
+        print("❌ ERROR: No selected file")
         return jsonify({"error": "No selected file"}), 400
 
-    filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
-    print(f"📸 Processing PSA: {filename}")
-
     try:
+        # Save file
+        filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        print(f"📸 Image Saved at: {filepath}")
+
+        # Upload to Gemini
+        print("📤 Uploading to Gemini...")
         myfile = genai.upload_file(filepath)
+        print(f"✅ Upload Complete: {myfile.name}")
         
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
@@ -261,21 +269,38 @@ def extract_data():
         }
         """
         
+        print("🤖 Asking Gemini to analyze...")
         res = model.generate_content([myfile, prompt])
+        
+        if not res.text:
+            raise ValueError("Gemini returned an empty response.")
+
+        print("📩 Raw AI Response:", res.text) # LOG RAW RESPONSE
+
+        # Clean JSON (Remove markdown backticks if present)
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        data = json.loads(raw_text)
+        
+        try:
+            data = json.loads(raw_text)
+        except json.JSONDecodeError as json_err:
+            print(f"❌ JSON PARSE ERROR: {json_err}")
+            print(f"💀 Bad Text: {raw_text}")
+            return jsonify({"error": "AI response was not valid JSON. Please try again."}), 500
 
         if not data.get("is_valid_document", False):
             if os.path.exists(filepath):
                 os.remove(filepath)
             reason = data.get("rejection_reason", "Not a valid PSA Birth Certificate.")
+            print(f"🚫 Document Rejected: {reason}")
             return jsonify({"error": f"Invalid Document: {reason}"}), 400
 
+        print("✅ Extraction Success!")
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
 
     except Exception as e:
-        print(f"❌ Extraction Failed: {e}")
-        return jsonify({"error": f"AI Error: {str(e)}"}), 500
+        print(f"❌ CRITICAL SERVER ERROR: {str(e)}")
+        traceback.print_exc() 
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
 # --- 2. FORM 137 SCANNING ---
 @app.route('/extract-form137', methods=['POST'])
