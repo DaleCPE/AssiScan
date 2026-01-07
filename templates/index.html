@@ -146,9 +146,27 @@
         input:focus, select:focus { border-color: var(--primary-gold); background: rgba(212, 175, 55, 0.05); }
         label { font-size: 9px; color: #888; margin-left: 2px; }
 
+        /* Custom File Upload Styling for Panel */
         .file-upload-group { border: 1px dashed #331010; padding: 10px; border-radius: 4px; transition: 0.2s; margin-top: 5px; background: rgba(0,0,0,0.2); }
         .file-upload-group:hover { border-color: var(--border-dim); background: rgba(255,255,255,0.02); }
         .file-label { font-size: 10px; color: #aaa; display: block; margin-bottom: 4px; }
+        
+        /* Make file input look better */
+        input[type="file"] {
+            font-size: 10px;
+            color: #888;
+            padding: 5px;
+        }
+        input[type="file"]::file-selector-button {
+            background-color: #220a0a;
+            color: var(--primary-gold);
+            border: 1px solid #441515;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 10px;
+        }
         
         .btn-save { 
             background: linear-gradient(90deg, #1e3c22, #2e7d32); color: #fff; border: none; padding: 15px; 
@@ -190,7 +208,7 @@
         <div class="scanner-wrapper">
             <div class="scan-label">
                 <span><i class="fas fa-baby"></i> PSA BIRTH CERTIFICATE</span>
-                <span id="psaStatus" class="status-text">Waiting...</span>
+                <span id="psaStatus" class="status-text">Waiting for input...</span>
             </div>
             <div class="scan-frame" onclick="document.getElementById('psaInput').click()">
                 <div class="scan-laser" id="psaLaser"></div>
@@ -198,7 +216,8 @@
                 
                 <div class="upload-placeholder" id="psaPlaceholder">
                     <i class="fas fa-camera"></i>
-                    <div style="font-size: 10px; letter-spacing: 2px;">SCAN PSA</div>
+                    <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN PSA</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="psaPreview" class="img-preview">
                 <input type="file" id="psaInput" hidden accept="image/*" onchange="processPSA(this)">
@@ -208,7 +227,7 @@
         <div class="scanner-wrapper">
             <div class="scan-label">
                 <span><i class="fas fa-file-contract"></i> FORM 137 / SF10</span>
-                <span id="f137Status" class="status-text">Waiting...</span>
+                <span id="f137Status" class="status-text">Waiting for input...</span>
             </div>
             <div class="scan-frame" onclick="document.getElementById('f137Input').click()">
                 <div class="scan-laser" id="f137Laser"></div>
@@ -216,7 +235,8 @@
                 
                 <div class="upload-placeholder" id="f137Placeholder">
                     <i class="fas fa-camera"></i>
-                    <div style="font-size: 10px; letter-spacing: 2px;">SCAN FORM 137</div>
+                    <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN FORM 137</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="f137Preview" class="img-preview">
                 <input type="file" id="f137Input" hidden accept="image/*" onchange="processForm137(this)">
@@ -278,11 +298,11 @@
         <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
         <div class="file-upload-group">
             <span class="file-label">Form 138 (Report Card)</span>
-            <input type="file" id="fileForm138">
+            <input type="file" id="fileForm138" accept="image/*">
         </div>
         <div class="file-upload-group">
             <span class="file-label">Good Moral Certificate</span>
-            <input type="file" id="fileGoodMoral">
+            <input type="file" id="fileGoodMoral" accept="image/*">
         </div>
 
         <button class="btn-save" onclick="saveRecord()">
