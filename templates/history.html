@@ -127,7 +127,7 @@
             backdrop-filter: blur(5px);
         }
 
-        table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
 
         thead { background: rgba(212, 175, 55, 0.1); }
 
@@ -136,9 +136,10 @@
             text-align: left;
             color: var(--gold);
             font-family: 'Cinzel', serif;
-            font-size: 12px;
+            font-size: 11px;
             border-bottom: 2px solid var(--dark-red);
             white-space: nowrap;
+            text-transform: uppercase;
         }
 
         td {
@@ -146,12 +147,17 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             font-size: 13px;
             color: #ccc;
-            vertical-align: middle;
+            vertical-align: top; /* Align top for multi-line cells */
         }
 
         tr:last-child td { border-bottom: none; }
         tr:hover { background-color: rgba(212, 175, 55, 0.05); }
 
+        /* Data Styling Helper Classes */
+        .sub-text { display: block; font-size: 11px; color: #888; margin-top: 2px; }
+        .highlight-text { color: #fff; font-weight: 600; }
+        .gold-text { color: var(--gold); }
+        
         /* Document Links */
         .doc-link {
             color: #aaa;
@@ -169,6 +175,7 @@
         }
         .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
         .doc-link.f137 { border-color: var(--gold); color: #f3d576; }
+        .doc-link.gm { border-color: #55a630; color: #80b918; }
         
         .doc-link:hover { transform: translateY(-2px); filter: brightness(1.2); }
         
@@ -189,8 +196,15 @@
         }
 
         /* School Info Column */
-        .school-info { font-weight: 600; color: #e0e0e0; font-size: 12px; }
-        .lrn-info { font-size: 10px; color: #888; font-family: monospace; letter-spacing: 1px; }
+        .lrn-info { font-size: 11px; color: var(--gold); font-family: monospace; letter-spacing: 0.5px; }
+        .grade-badge { 
+            background: rgba(212, 175, 55, 0.15); 
+            color: var(--gold); 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 11px; 
+            font-weight: bold;
+        }
 
         #loading { text-align: center; color: var(--gold); margin-top: 50px; font-family: 'Cinzel', serif; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
@@ -201,28 +215,28 @@
 <body>
 
     <div class="header">
-        <h2><i class="fas fa-database"></i> DATABASE RECORDS</h2>
+        <h2><i class="fas fa-database"></i> STUDENT RECORDS</h2>
         <div class="btn-group">
-            <a href="index.html" class="btn-action btn-back"><i class="fas fa-qrcode"></i> Scan New</a>
+            <a href="/" class="btn-action btn-back"><i class="fas fa-qrcode"></i> Scan New</a>
             <a href="/logout" class="btn-action btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search student name or LRN...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, or School...">
         <i class="fas fa-search search-icon"></i>
     </div>
 
-    <div id="loading">ACCESSING SECURE ARCHIVES...</div>
+    <div id="loading">RETRIEVING SECURE ARCHIVES...</div>
 
     <div class="table-wrapper">
         <table id="recordsTable" style="display:none;">
             <thead>
                 <tr>
-                    <th>Student Name</th>
-                    <th>Sex</th>
-                    <th>Birthdate</th>
-                    <th>School / LRN</th> <th>Mother's Name</th>
+                    <th>Student Profile</th>
+                    <th>Birth Details</th>
+                    <th>Academic Record</th>
+                    <th>Parents</th>
                     <th>Date Added</th>
                     <th>Files</th>
                     <th style="text-align: center;">Action</th>
@@ -230,7 +244,7 @@
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
-        <div id="no-match-msg">No student found matching your search.</div>
+        <div id="no-match-msg">No records found matching your search.</div>
     </div>
 
     <script>
@@ -245,39 +259,61 @@
                 const tbody = document.getElementById('tableBody');
 
                 if(data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 30px;">No records found in database.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No records found in database.</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.records.map(r => {
-                    // Handle image paths (Supporting old and new variable names just in case)
+                    // --- PREPARE DATA DISPLAY ---
                     const psaPath = r.psa_image_path || r.image_path;
                     const f137Path = r.f137_image_path || r.form137_path;
+
+                    // Calculate Age Display
+                    const ageDisplay = r.age ? `${r.age} yrs` : '';
                     
-                    // Format School Data
-                    const schoolDisplay = r.school_name ? `<div class="school-info">${r.school_name}</div>` : '<span style="color:#444">-</span>';
-                    const lrnDisplay = r.lrn ? `<div class="lrn-info">LRN: ${r.lrn}</div>` : '';
+                    // Sex Badge Color
+                    const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
 
                     return `
                     <tr id="row-${r.id}">
-                        <td class="student-name" style="font-weight:600; color:#fff;">${r.name}</td>
-                        <td>${r.sex || '-'}</td>
-                        <td>${r.birthdate || '-'}</td>
-                        
-                        <td class="searchable-lrn">
-                            ${schoolDisplay}
-                            ${lrnDisplay}
+                        <td>
+                            <div class="highlight-text student-name" style="font-size:14px;">${r.name || 'Unknown'}</div>
+                            <div class="sub-text">
+                                <span style="color:${sexColor}">${r.sex || '-'}</span> 
+                                ${ageDisplay ? `• ${ageDisplay}` : ''}
+                            </div>
+                            <div class="sub-text" style="margin-top:4px;">
+                                ${r.religion ? `<i class="fas fa-praying-hands" style="font-size:10px;"></i> ${r.religion}` : ''}
+                            </div>
                         </td>
 
-                        <td>${r.mother_name || '-'}</td>
-                        <td style="color:#666; font-size:11px;">${r.created_at || ''}</td>
-                        
+                        <td>
+                            <div style="color:#ddd;">${r.birthdate || '-'}</div>
+                            <div class="sub-text">${r.birthplace || ''}</div>
+                            ${r.birth_order ? `<div class="sub-text" style="color:var(--gold);">Order: ${r.birth_order}</div>` : ''}
+                        </td>
+
+                        <td class="searchable-lrn">
+                            <div class="highlight-text">${r.school_name || '-'}</div>
+                            <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
+                            <div class="sub-text">${r.school_address || ''}</div>
+                            ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">AVG: ${r.final_general_average}</span></div>` : ''}
+                        </td>
+
+                        <td>
+                            <div class="sub-text"><span style="color:#aaa;">M:</span> ${r.mother_name || '-'}</div>
+                            <div class="sub-text"><span style="color:#aaa;">F:</span> ${r.father_name || '-'}</div>
+                        </td>
+
+                        <td style="font-size:11px; color:#666;">
+                            ${r.created_at || '-'}
+                        </td>
+
                         <td>
                             ${psaPath ? `<a href="/${psaPath}" target="_blank" class="doc-link psa"><i class="fas fa-id-card"></i> PSA</a>` : ''}
                             ${f137Path ? `<a href="/${f137Path}" target="_blank" class="doc-link f137"><i class="fas fa-file-contract"></i> F137</a>` : ''}
-                            
                             ${r.form138_path ? `<a href="/${r.form138_path}" target="_blank" class="doc-link"><i class="fas fa-file-invoice"></i> F138</a>` : ''}
-                            ${r.goodmoral_path ? `<a href="/${r.goodmoral_path}" target="_blank" class="doc-link"><i class="fas fa-certificate"></i> GM</a>` : ''}
+                            ${r.goodmoral_path ? `<a href="/${r.goodmoral_path}" target="_blank" class="doc-link gm"><i class="fas fa-certificate"></i> GM</a>` : ''}
                         </td>
 
                         <td style="text-align: center;">
@@ -313,7 +349,7 @@
             }
         }
 
-        // --- ENHANCED SEARCH (Name + LRN) ---
+        // --- ENHANCED SEARCH (Name + LRN + School) ---
         document.getElementById('searchInput').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();
             let rows = document.querySelectorAll('#tableBody tr');
