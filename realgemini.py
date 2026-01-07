@@ -49,20 +49,27 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED SCHEMA WITH LRN & SCHOOL INFO) ---
+# --- INIT DATABASE TABLE (UPDATED SCHEMA) ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
-            # Added form138, goodmoral columns AND lrn, school_name, school_address
+            # UPDATED: Added birth_order, religion, age columns
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
+                    
+                    -- PSA Data
                     name VARCHAR(255),
                     sex VARCHAR(50),
                     birthdate DATE,
                     birthplace TEXT,
+                    birth_order VARCHAR(50),
+                    religion VARCHAR(100),
+                    age INTEGER,
+
+                    -- Parents
                     mother_name VARCHAR(255),
                     mother_citizenship VARCHAR(100),
                     mother_occupation VARCHAR(100),
@@ -70,20 +77,24 @@ def init_db():
                     father_citizenship VARCHAR(100),
                     father_occupation VARCHAR(100),
                     
+                    -- Form 137 / School Data
                     lrn VARCHAR(50),
                     school_name TEXT,
                     school_address TEXT,
+                    final_general_average VARCHAR(50),
 
-                    image_path TEXT,
+                    -- Files
+                    image_path TEXT,      -- PSA Image
                     form137_path TEXT,
                     form138_path TEXT,
                     goodmoral_path TEXT,
+                    
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             ''')
             conn.commit()
             cur.close()
-            print("✅ Database initialized successfully with School Info columns!")
+            print("✅ Database initialized successfully with ALL columns!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
@@ -197,7 +208,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING ---
+# --- 1. STRICT PSA SCANNING (UPDATED WITH BIRTH ORDER/RELIGION) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFile' not in request.files:
@@ -226,6 +237,8 @@ def extract_data():
         
         IF VALID, EXTRACT THESE FIELDS:
         - Name, Sex, Birthdate (YYYY-MM-DD), PlaceOfBirth
+        - BirthOrder (e.g. First, Second)
+        - Religion (if present)
         - Mother_MaidenName, Mother_Citizenship, Mother_Occupation
         - Father_Name, Father_Citizenship, Father_Occupation
 
@@ -237,6 +250,8 @@ def extract_data():
             "Sex": "string",
             "Birthdate": "string",
             "PlaceOfBirth": "string",
+            "BirthOrder": "string",
+            "Religion": "string",
             "Mother_MaidenName": "string",
             "Mother_Citizenship": "string",
             "Mother_Occupation": "string",
@@ -262,7 +277,7 @@ def extract_data():
         print(f"❌ Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- 2. NEW: FORM 137 SCANNING ---
+# --- 2. FORM 137 SCANNING ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFile' not in request.files:
@@ -289,12 +304,14 @@ def extract_form137():
         1. LRN (Learner Reference Number) - usually a 12-digit number.
         2. School Name - The name of the school appearing in the header or most recent entry.
         3. School Address - The location/address of the school.
+        4. Final General Average - The final grade/GPA if visible (e.g. 90.5).
 
         OUTPUT FORMAT (JSON ONLY):
         {
             "lrn": "string",
             "school_name": "string",
-            "school_address": "string"
+            "school_address": "string",
+            "final_general_average": "string"
         }
         """
         
@@ -308,7 +325,7 @@ def extract_form137():
         print(f"❌ Form 137 Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- 3. UPDATED SAVE RECORD (COMBINED DATA) ---
+# --- 3. UPDATED SAVE RECORD (ALL FIELDS) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
@@ -322,6 +339,11 @@ def save_record():
         birthdate = d.get('birthdate') or d.get('Birthdate')
         birthplace = d.get('birthplace') or d.get('PlaceOfBirth')
         
+        # NEW: Birth Order, Religion, Age
+        birth_order = d.get('birth_order') or d.get('BirthOrder')
+        religion = d.get('religion') or d.get('Religion')
+        age = d.get('age')
+
         m_name = d.get('mother_name') or d.get('Mother_MaidenName')
         m_cit = d.get('mother_citizenship') or d.get('Mother_Citizenship')
         m_occ = d.get('mother_occupation') or d.get('Mother_Occupation')
@@ -334,6 +356,7 @@ def save_record():
         lrn = d.get('lrn', '')
         school_name = d.get('school_name', '')
         school_address = d.get('school_address', '')
+        final_grade = d.get('final_general_average', '')
 
         # --- FIX EMPTY DATES ---
         if not birthdate or birthdate == "null" or birthdate == "":
@@ -354,19 +377,19 @@ def save_record():
         
         cur.execute('''
             INSERT INTO records (
-                name, sex, birthdate, birthplace, 
+                name, sex, birthdate, birthplace, birth_order, religion, age,
                 mother_name, mother_citizenship, mother_occupation, 
                 father_name, father_citizenship, father_occupation, 
-                lrn, school_name, school_address,
+                lrn, school_name, school_address, final_general_average,
                 image_path, form137_path
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
             RETURNING id
         ''', (
-            name, sex, birthdate, birthplace, 
+            name, sex, birthdate, birthplace, birth_order, religion, age,
             m_name, m_cit, m_occ, 
             f_name, f_cit, f_occ, 
-            lrn, school_name, school_address,
+            lrn, school_name, school_address, final_grade,
             db_psa_path, db_f137_path
         ))
         
@@ -404,7 +427,7 @@ def delete_record(record_id):
         row = cur.fetchone()
 
         if row:
-            # Delete physical files to save space
+            # Delete physical files
             for file_path in row:
                 if file_path:
                     clean_filename = os.path.basename(file_path)
@@ -412,7 +435,6 @@ def delete_record(record_id):
                     if os.path.exists(full_path):
                         try:
                             os.remove(full_path)
-                            print(f"🗑️ Deleted file: {full_path}")
                         except Exception as e:
                             print(f"⚠️ Failed to delete file {full_path}: {e}")
 
@@ -429,7 +451,7 @@ def delete_record(record_id):
     finally:
         conn.close()
 
-# --- UPLOAD ADDITIONAL FILES ---
+# --- UPLOAD ADDITIONAL FILES (Form 138 / Good Moral) ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
@@ -469,19 +491,20 @@ def upload_additional():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- DB RESET TOOL (IMPORTANT: RUN THIS TO ADD NEW COLUMNS) ---
+# --- DB RESET TOOL (UPDATED) ---
 @app.route('/fix-db')
 def fix_db():
     conn = get_db_connection()
     if not conn: return "DB Config Error"
     try:
         cur = conn.cursor()
-        # Drop old table
+        # WARNING: DROPS TABLE
         cur.execute("DROP TABLE IF EXISTS records;")
         conn.commit()
-        # Recreate with new columns including LRN and SCHOOL
+        
+        # Recreate with NEW columns
         init_db()
-        return "✅ Database has been RESET and Fixed! Now supports LRN, School Name, and Address."
+        return "✅ Database has been RESET! Now supports Age, Religion, Birth Order, and Form 137 fields."
     except Exception as e:
         return f"Error: {e}"
     finally:
