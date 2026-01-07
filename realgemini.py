@@ -31,7 +31,7 @@ ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
 app = Flask(__name__)
-app.secret_key = "super_secret_security_key_change_me" 
+app.secret_key = "super_secret_security_key_change_me"
 CORS(app)
 
 # Setup Upload Folder
@@ -55,7 +55,6 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # UPDATED SCHEMA: Includes form138 and goodmoral
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -211,7 +210,6 @@ def extract_data():
     try:
         myfile = genai.upload_file(filepath)
         
-        # STRICT PROMPT
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
         TASK: Analyze this image. It MUST be a "Certificate of Live Birth" (PSA/NSO/LCR).
@@ -264,7 +262,7 @@ def save_record():
     try:
         d = request.json
         
-        # 1. ROBUST KEY MAPPING (Handles casing differences)
+        # Key Mapping (Handles casing differences)
         name = d.get('name') or d.get('Name')
         sex = d.get('sex') or d.get('Sex')
         birthdate = d.get('birthdate') or d.get('Birthdate')
@@ -278,7 +276,7 @@ def save_record():
         f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
         f_occ = d.get('father_occupation') or d.get('Father_Occupation')
 
-        # 2. HANDLE EMPTY DATES
+        # Handle Empty Dates
         if not birthdate or birthdate == "null" or birthdate == "":
             birthdate = None 
 
@@ -317,6 +315,48 @@ def save_record():
         return jsonify({"status": "error", "error": str(e)}), 500
     finally:
         if conn: conn.close()
+
+# --- DELETE RECORD AND FILES ---
+@app.route('/delete-record/<int:record_id>', methods=['DELETE'])
+def delete_record(record_id):
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB Connection Error"}), 500
+
+    try:
+        cur = conn.cursor()
+        
+        # 1. Get file paths first
+        cur.execute("SELECT image_path, form137_path, form138_path, goodmoral_path FROM records WHERE id = %s", (record_id,))
+        row = cur.fetchone()
+
+        if row:
+            # Loop through paths and delete physical files
+            for file_path in row:
+                if file_path:
+                    clean_filename = os.path.basename(file_path)
+                    full_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
+                    if os.path.exists(full_path):
+                        try:
+                            os.remove(full_path)
+                            print(f"🗑️ Deleted file: {full_path}")
+                        except Exception as e:
+                            print(f"⚠️ Failed to delete file {full_path}: {e}")
+
+            # 2. Delete DB record
+            cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
+            conn.commit()
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Record not found"}), 404
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 # --- UPLOAD ADDITIONAL FILES ---
 @app.route('/upload-additional', methods=['POST'])
@@ -358,7 +398,7 @@ def upload_additional():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- DB RESET TOOL (RUN THIS ONCE) ---
+# --- DB RESET TOOL ---
 @app.route('/fix-db')
 def fix_db():
     conn = get_db_connection()
