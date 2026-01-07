@@ -28,10 +28,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"  # Pwede mong palitan
+ADMIN_PASSWORD = "admin123"
 
 app = Flask(__name__)
-app.secret_key = "super_secret_security_key_change_me"  # REQUIRED FOR LOGIN SESSION
+app.secret_key = "super_secret_security_key_change_me" 
 CORS(app)
 
 # Setup Upload Folder
@@ -49,13 +49,13 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED WITH NEW COLUMNS) ---
+# --- INIT DATABASE TABLE ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
-            # Added form138_path and goodmoral_path
+            # UPDATED SCHEMA: Includes form138 and goodmoral
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -86,7 +86,7 @@ def init_db():
 
 init_db()
 
-# --- SUREFIRE MODEL SELECTOR ---
+# --- MODEL SELECTOR ---
 def get_working_model():
     print("🔍 QUERYING GOOGLE FOR AVAILABLE MODELS...")
     try:
@@ -94,14 +94,12 @@ def get_working_model():
             if 'generateContent' in m.supported_generation_methods:
                 print(f"✅ FOUND VALID MODEL: {m.name}")
                 return m.name
-        print("❌ NO MODELS FOUND with 'generateContent' capability.")
         return "models/gemini-1.5-flash"
     except Exception as e:
         print(f"❌ CRITICAL ERROR listing models: {e}")
         return "models/gemini-1.5-flash"
 
 active_model_name = get_working_model()
-print(f"🚀 SYSTEM WILL USE: {active_model_name}")
 
 safety_settings = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -169,13 +167,12 @@ def logout():
 @app.route('/history.html')
 def history_page():
     if not session.get('logged_in'):
-        return redirect('/login')  # Kick out if not logged in
+        return redirect('/login') 
     return render_template('history.html')
 
 # --- PROTECTED API: GET RECORDS ---
 @app.route('/get-records', methods=['GET'])
 def get_records():
-    # Security check: Block API access if not logged in
     if not session.get('logged_in'):
         return jsonify({"records": [], "error": "Unauthorized"}), 401
 
@@ -183,7 +180,6 @@ def get_records():
     if not conn: return jsonify({"records": []})
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        # Select all columns including the new form138 and goodmoral
         cur.execute("SELECT * FROM records ORDER BY id DESC")
         rows = cur.fetchall()
         for r in rows:
@@ -196,8 +192,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- STRICT AI SCANNING ROUTE ---
-
+# --- STRICT AI SCANNING ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFile' not in request.files:
@@ -211,34 +206,26 @@ def extract_data():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    print(f"📸 Processing image: {filename} using {active_model_name}")
+    print(f"📸 Processing: {filename}")
 
     try:
         myfile = genai.upload_file(filepath)
         
-        # --- STRICT VERIFICATION PROMPT ---
+        # STRICT PROMPT
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
         TASK: Analyze this image. It MUST be a "Certificate of Live Birth" (PSA/NSO/LCR).
         
         STRICT VALIDATION RULES:
         1. Look for the text "Certificate of Live Birth" OR "Republic of the Philippines" AND "Office of the Civil Registrar General".
-        2. If the image is a selfie, a landscape, an ID, a receipt, blurry, or random text, mark "is_valid_document": false.
-        3. If "is_valid_document" is false, provide a "rejection_reason".
+        2. If the image is a selfie, a landscape, an ID, a receipt, or NOT a birth certificate, mark "is_valid_document": false.
         
         IF VALID, EXTRACT THESE FIELDS:
-        - Name (First Middle Last)
-        - Sex (Male/Female)
-        - Birthdate (YYYY-MM-DD)
-        - PlaceOfBirth
-        - Mother_MaidenName
-        - Mother_Citizenship
-        - Mother_Occupation
-        - Father_Name
-        - Father_Citizenship
-        - Father_Occupation
+        - Name, Sex, Birthdate (YYYY-MM-DD), PlaceOfBirth
+        - Mother_MaidenName, Mother_Citizenship, Mother_Occupation
+        - Father_Name, Father_Citizenship, Father_Occupation
 
-        OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
+        OUTPUT FORMAT (JSON ONLY):
         {
             "is_valid_document": boolean,
             "rejection_reason": "string or null",
@@ -256,47 +243,63 @@ def extract_data():
         """
         
         res = model.generate_content([myfile, prompt])
-        
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        print(f"🤖 AI Response: {raw_text}") 
-
         data = json.loads(raw_text)
 
-        # --- VALIDATION CHECK ---
         if not data.get("is_valid_document", False):
-            # Delete invalid file to save space
             if os.path.exists(filepath):
                 os.remove(filepath)
-            
-            reason = data.get("rejection_reason", "Not a recognized Birth Certificate.")
-            print(f"⛔ REJECTED: {reason}")
-            return jsonify({"error": f"Invalid Document: {reason} Please upload a clear PSA/NSO Certificate."}), 400
+            reason = data.get("rejection_reason", "Not a valid PSA Birth Certificate.")
+            return jsonify({"error": f"Invalid Document: {reason}"}), 400
 
-        # Success - Return the data
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
 
     except Exception as e:
         print(f"❌ Extraction Failed: {e}")
-        return jsonify({"error": f"Model Error ({active_model_name}): {str(e)}"}), 500
+        return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- SAVE RECORD ROUTE ---
+# --- ROBUST SAVE RECORD (FIXED 500 ERROR) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
-    d = request.json
-    img_filename = os.path.basename(d.get('image_path', ''))
-    
-    db_image_path = os.path.join('uploads', img_filename) if img_filename else None
-    full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
-
-    conn = get_db_connection()
-    if not conn: return jsonify({"error": "DB Connection Failed"}), 500
-    cur = conn.cursor()
-    
     try:
+        d = request.json
+        
+        # 1. ROBUST KEY MAPPING (Handles casing differences)
+        name = d.get('name') or d.get('Name')
+        sex = d.get('sex') or d.get('Sex')
+        birthdate = d.get('birthdate') or d.get('Birthdate')
+        birthplace = d.get('birthplace') or d.get('PlaceOfBirth')
+        
+        m_name = d.get('mother_name') or d.get('Mother_MaidenName')
+        m_cit = d.get('mother_citizenship') or d.get('Mother_Citizenship')
+        m_occ = d.get('mother_occupation') or d.get('Mother_Occupation')
+        
+        f_name = d.get('father_name') or d.get('Father_Name')
+        f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
+        f_occ = d.get('father_occupation') or d.get('Father_Occupation')
+
+        # 2. HANDLE EMPTY DATES
+        if not birthdate or birthdate == "null" or birthdate == "":
+            birthdate = None 
+
+        img_filename = os.path.basename(d.get('image_path', ''))
+        db_image_path = os.path.join('uploads', img_filename) if img_filename else None
+        full_image_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename) if img_filename else None
+
+        conn = get_db_connection()
+        if not conn: return jsonify({"error": "DB Connection Failed"}), 500
+        cur = conn.cursor()
+        
         cur.execute('''
-            INSERT INTO records (name, sex, birthdate, birthplace, mother_name, mother_citizenship, mother_occupation, father_name, father_citizenship, father_occupation, image_path)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        ''', (d['name'], d['sex'], d['birthdate'], d['birthplace'], d['mother_name'], d['mother_citizenship'], d['mother_occupation'], d['father_name'], d['father_citizenship'], d['father_occupation'], db_image_path))
+            INSERT INTO records (
+                name, sex, birthdate, birthplace, 
+                mother_name, mother_citizenship, mother_occupation, 
+                father_name, father_citizenship, father_occupation, 
+                image_path
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+            RETURNING id
+        ''', (name, sex, birthdate, birthplace, m_name, m_cit, m_occ, f_name, f_cit, f_occ, db_image_path))
         
         new_id = cur.fetchone()[0]
         conn.commit()
@@ -304,17 +307,18 @@ def save_record():
         email_addr = d.get('email', '')
         email_status = "Not Sent"
         if email_addr:
-            success = send_email_notification(email_addr, d['name'], [full_image_path] if full_image_path else [])
+            success = send_email_notification(email_addr, name, [full_image_path] if full_image_path else [])
             email_status = "Sent" if success else "Failed"
 
         return jsonify({"status": "success", "db_id": new_id, "email_status": email_status})
     except Exception as e:
-        conn.rollback()
+        print(f"❌ SAVE ERROR: {e}")
+        if conn: conn.rollback()
         return jsonify({"status": "error", "error": str(e)}), 500
     finally:
-        conn.close()
+        if conn: conn.close()
 
-# --- UPLOAD ADDITIONAL FILES (UPDATED MAP) ---
+# --- UPLOAD ADDITIONAL FILES ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
@@ -329,7 +333,6 @@ def upload_additional():
     file.save(filepath)
     db_path = os.path.join('uploads', filename)
 
-    # Added form138 and goodmoral to the map
     col_map = { 
         'form137': 'form137_path', 
         'form138': 'form138_path', 
@@ -350,9 +353,26 @@ def upload_additional():
     finally:
         if conn: conn.close()
 
+# --- FILE SERVER ---
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# --- DB RESET TOOL (RUN THIS ONCE) ---
+@app.route('/fix-db')
+def fix_db():
+    conn = get_db_connection()
+    if not conn: return "DB Config Error"
+    try:
+        cur = conn.cursor()
+        cur.execute("DROP TABLE IF EXISTS records;")
+        conn.commit()
+        init_db()
+        return "✅ Database has been RESET and Fixed! You can now use the app."
+    except Exception as e:
+        return f"Error: {e}"
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
