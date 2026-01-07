@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AssiScan | Premium Console</title>
+    <title>AssiScan | Premium Dual Console</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -23,14 +23,15 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at 20% 50%, #1a0505 0%, #000000 100%);
+            background: radial-gradient(circle at 50% 50%, #1a0505 0%, #000000 100%);
             color: var(--text-main);
             margin: 0;
             height: 100vh;
-            overflow: hidden; /* Desktop: No Scroll */
+            overflow: hidden;
             display: flex;
         }
 
+        /* --- ANIMATIONS --- */
         @keyframes scanLaser { 
             0% { top: 0%; opacity: 0; box-shadow: 0 0 5px var(--primary-gold); } 
             20% { opacity: 1; }
@@ -38,309 +39,366 @@
             100% { top: 100%; opacity: 0; } 
         }
 
-        /* --- SIDEBAR (Desktop) --- */
+        /* --- SIDEBAR (Left Navigation) --- */
         .sidebar {
-            width: 280px;
-            background: rgba(10, 2, 2, 0.9);
+            width: 250px;
+            background: rgba(10, 2, 2, 0.95);
             border-right: 1px solid var(--border-dim);
-            padding: 40px 30px;
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(10px);
             z-index: 20;
         }
-        .brand-title { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 32px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .brand-subtitle { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 5px; padding-bottom: 20px; border-bottom: 1px solid var(--border-dim); }
+        .brand-title { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 28px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .brand-subtitle { font-size: 9px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 5px; padding-bottom: 20px; border-bottom: 1px solid var(--border-dim); }
         
-        .btn-access { margin-top: auto; background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-dim); color: var(--primary-gold); padding: 15px; border-radius: 6px; text-decoration: none; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
-        .btn-access:hover { background: var(--primary-gold); color: #000; }
+        .btn-nav { margin-top: auto; background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-dim); color: var(--primary-gold); padding: 12px; border-radius: 4px; text-decoration: none; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+        .btn-nav:hover { background: var(--primary-gold); color: #000; }
 
-        /* --- SCAN AREA --- */
-        .main-scan { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; background: radial-gradient(circle, rgba(43,12,12,0.4) 0%, rgba(0,0,0,0) 70%); }
+        /* --- MAIN DUAL SCAN AREA --- */
+        .main-scan { 
+            flex: 1; 
+            padding: 20px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            position: relative; 
+        }
+
+        .dual-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            width: 100%;
+            max-width: 1100px;
+            height: 80%;
+        }
+
+        /* --- SCANNER CARD --- */
+        .scan-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .card-title {
+            font-family: 'Cinzel', serif;
+            color: var(--primary-gold);
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scan-frame { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+            min-height: 350px;
+            border: 1px solid var(--border-dim); 
+            background: rgba(0, 0, 0, 0.3); 
+            border-radius: 6px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            overflow: hidden; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); 
+        }
+        .scan-frame:hover { border-color: var(--primary-gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.1); }
         
-        .scan-frame { position: relative; width: 420px; height: 580px; border: 1px solid var(--border-dim); background: rgba(0, 0, 0, 0.4); border-radius: 4px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        .scan-frame:hover { border-color: var(--primary-gold); box-shadow: 0 0 30px rgba(212, 175, 55, 0.15); }
+        /* Image Preview inside frame */
+        .img-preview { width: 100%; height: 100%; object-fit: contain; display: none; position: absolute; z-index: 1; background: #000; }
         
-        #preview { width: 100%; height: 100%; object-fit: contain; display: none; position: absolute; top: 0; left: 0; z-index: 1; background: #000; }
-        
-        .corner { position: absolute; width: 25px; height: 25px; border-color: var(--primary-gold); border-style: solid; transition: 0.3s; z-index: 5; pointer-events: none; }
+        /* Corners */
+        .corner { position: absolute; width: 20px; height: 20px; border-color: var(--primary-gold); border-style: solid; transition: 0.3s; z-index: 5; pointer-events: none; }
         .tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
         .tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
         .bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
         .br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
-        .scan-frame:hover .corner { width: 35px; height: 35px; }
-        
+        .scan-frame:hover .corner { width: 30px; height: 30px; }
+
+        /* Placeholder Content */
         .upload-placeholder { text-align: center; color: var(--text-muted); z-index: 2; pointer-events: none; }
-        .upload-placeholder i { font-size: 40px; color: var(--border-dim); margin-bottom: 15px; }
+        .upload-placeholder i { font-size: 30px; color: var(--border-dim); margin-bottom: 10px; }
         
-        .scan-laser { position: absolute; width: 100%; height: 2px; background: var(--bright-gold); box-shadow: 0 0 15px var(--primary-gold); z-index: 10; display: none; animation: scanLaser 2s infinite linear; }
-        
-        .btn-initiate { margin-top: 30px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); padding: 14px 40px; font-family: 'Cinzel', serif; letter-spacing: 2px; cursor: pointer; transition: 0.3s; font-size: 14px; }
-        .btn-initiate:hover { background: var(--primary-gold); color: #000; box-shadow: 0 0 20px rgba(212, 175, 55, 0.4); }
+        /* Laser Effect */
+        .scan-laser { position: absolute; width: 100%; height: 2px; background: var(--bright-gold); box-shadow: 0 0 15px var(--primary-gold); z-index: 10; display: none; animation: scanLaser 1.5s infinite linear; }
 
-        /* --- FORM PANEL --- */
-        .form-panel { width: 400px; background: #110303; border-left: 1px solid var(--border-dim); padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; height: 100vh; z-index: 15; }
-        .form-panel::-webkit-scrollbar { width: 5px; }
-        .form-panel::-webkit-scrollbar-thumb { background: #331010; border-radius: 3px; }
-        
-        .form-header { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 18px; border-bottom: 1px solid var(--border-dim); padding-bottom: 10px; margin-bottom: 10px; }
-        .section-label { font-size: 10px; color: var(--primary-gold); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; font-weight: 600; }
-        
-        .row { display: flex; gap: 10px; }
-        input, select { width: 100%; background: var(--input-bg); border: 1px solid #331010; color: #e0e0e0; padding: 12px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 12px; outline: none; transition: 0.3s; }
-        input:focus, select:focus { border-color: var(--primary-gold); background: rgba(212, 175, 55, 0.05); }
-        
-        .file-upload-group { border: 1px dashed #331010; padding: 12px; border-radius: 4px; transition: 0.2s; position: relative; }
-        .file-upload-group:hover { border-color: var(--border-dim); background: rgba(255,255,255,0.02); }
-        .file-label { font-size: 10px; color: #888; display: block; margin-bottom: 4px; }
-        
-        .btn-save { background: linear-gradient(90deg, #1e3c22, #2e7d32); color: #fff; border: none; padding: 15px; font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 15px; transition: 0.3s; text-transform: uppercase; font-size: 12px; }
-        .btn-save:hover { background: #388e3c; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        #imageInput { display: none; }
+        /* --- RESULTS PANEL (Below Scanners) --- */
+        .result-box {
+            width: 100%;
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            padding: 15px;
+            font-size: 12px;
+            color: #ccc;
+            min-height: 100px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .result-label { color: var(--primary-gold); font-weight: bold; margin-right: 5px; }
 
-        /* ================= MOBILE RESPONSIVE ================= */
+        /* --- ACTION BAR (Bottom) --- */
+        .action-bar {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn-save-all { 
+            background: linear-gradient(90deg, #d4af37, #f3d576);
+            color: #0f0404;
+            padding: 15px 60px; 
+            font-family: 'Cinzel', serif; 
+            font-weight: bold;
+            letter-spacing: 2px; 
+            border: none;
+            border-radius: 4px;
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 16px; 
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            opacity: 0.5; /* Disabled look initially */
+            pointer-events: none;
+        }
+        .btn-save-all.active { opacity: 1; pointer-events: all; }
+        .btn-save-all:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(212, 175, 55, 0.6); }
+
+        /* --- MOBILE RESPONSIVE --- */
         @media (max-width: 900px) {
-            body {
-                flex-direction: column; /* Stack top-to-bottom */
-                height: auto;
-                min-height: 100vh;
-                overflow-y: auto; /* Enable Scroll */
-            }
-
-            /* Header instead of Sidebar */
-            .sidebar {
-                width: 100%;
-                height: auto;
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-                padding: 15px 20px;
-                border-right: none;
-                border-bottom: 1px solid var(--border-dim);
-                position: sticky;
-                top: 0;
-            }
-            .brand-subtitle { display: none; } /* Hide subtitle on mobile */
-            .brand-title { font-size: 20px; margin: 0; }
-            .btn-access { margin: 0; padding: 8px 12px; font-size: 12px; }
-
-            /* Camera Area */
-            .main-scan {
-                height: auto;
-                padding: 30px 15px;
-                flex: none; /* Do not stretch */
-            }
-            .scan-frame {
-                width: 100%;
-                max-width: 100%;
-                height: 65vh; /* Taller on phone */
-                border-style: dashed;
-            }
-            .btn-initiate {
-                width: 100%;
-                padding: 18px;
-                font-size: 16px;
-                font-weight: bold;
-                background: rgba(0,0,0,0.5);
-            }
-
-            /* Form Area */
-            .form-panel {
-                width: 100%;
-                height: auto;
-                border-left: none;
-                border-top: 1px solid var(--border-dim);
-                padding: 25px 20px 80px 20px; /* Extra padding bottom */
-            }
-            
-            /* Inputs */
-            input, select {
-                font-size: 16px; /* Prevent IOS Zoom */
-                padding: 15px;
-            }
+            body { flex-direction: column; overflow-y: auto; height: auto; }
+            .sidebar { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; padding: 15px; position: sticky; top: 0; }
+            .brand-subtitle { display: none; }
+            .dual-container { grid-template-columns: 1fr; height: auto; padding-bottom: 50px; }
+            .scan-frame { height: 300px; }
+            .main-scan { height: auto; }
         }
     </style>
 </head>
 <body>
 
     <nav class="sidebar">
-        <div><div class="brand-title">ASSISCAN</div><div class="brand-subtitle">University of Batangas Lipa</div></div>
-        <a href="history.html" class="btn-access"><i class="fas fa-database"></i> Database</a>
+        <div>
+            <div class="brand-title">ASSISCAN</div>
+            <div class="brand-subtitle">University of Batangas Lipa</div>
+        </div>
+        <a href="history.html" class="btn-nav"><i class="fas fa-database"></i> VIEW RECORDS</a>
     </nav>
 
     <main class="main-scan">
-        <div class="scan-frame" onclick="document.getElementById('imageInput').click()">
-            <div class="scan-laser" id="scanFx"></div>
-            <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
-            <div class="upload-placeholder" id="uploadPlaceholder">
-                <i class="fas fa-camera"></i>
-                <div style="font-size: 12px; letter-spacing: 2px; color: #aaa;">TAP TO SCAN</div>
-                <div style="font-size: 10px; color: #555; margin-top: 5px;">Take Photo of PSA</div>
+        
+        <div class="dual-container">
+            
+            <div class="scan-card">
+                <div class="card-title"><i class="fas fa-baby"></i> STEP 1: PSA BIRTH CERT.</div>
+                
+                <div class="scan-frame" onclick="document.getElementById('psaInput').click()">
+                    <div class="scan-laser" id="psaLaser"></div>
+                    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+                    
+                    <div class="upload-placeholder" id="psaPlaceholder">
+                        <i class="fas fa-id-card"></i>
+                        <div style="font-size: 11px; letter-spacing: 1px;">TAP TO SCAN PSA</div>
+                    </div>
+                    
+                    <img id="psaPreview" class="img-preview">
+                    <input type="file" id="psaInput" hidden accept="image/*" onchange="processPSA(this)">
+                </div>
+
+                <div class="result-box" id="psaResultDisplay">
+                    <i style="color: #555;">Waiting for PSA scan...</i>
+                </div>
             </div>
-            <img id="preview" alt="Document Preview">
-            <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="previewImage(this)">
+
+            <div class="scan-card">
+                <div class="card-title"><i class="fas fa-school"></i> STEP 2: FORM 137 / SF10</div>
+                
+                <div class="scan-frame" onclick="document.getElementById('f137Input').click()">
+                    <div class="scan-laser" id="f137Laser"></div>
+                    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+                    
+                    <div class="upload-placeholder" id="f137Placeholder">
+                        <i class="fas fa-file-contract"></i>
+                        <div style="font-size: 11px; letter-spacing: 1px;">TAP TO SCAN FORM 137</div>
+                    </div>
+                    
+                    <img id="f137Preview" class="img-preview">
+                    <input type="file" id="f137Input" hidden accept="image/*" onchange="processForm137(this)">
+                </div>
+
+                <div class="result-box" id="f137ResultDisplay">
+                    <i style="color: #555;">Waiting for School Record...</i>
+                </div>
+            </div>
+
         </div>
-        <button class="btn-initiate" onclick="extractData()">PROCESS IMAGE</button>
+
+        <div class="action-bar">
+            <button id="saveBtn" class="btn-save-all" onclick="saveCombinedRecord()">
+                SAVE COMPLETE RECORD
+            </button>
+        </div>
+
     </main>
 
-    <aside class="form-panel">
-        <div class="form-header">DATA VERIFICATION</div>
-
-        <span class="section-label"><i class="fas fa-child"></i> Student Info</span>
-        <input type="text" id="childName" placeholder="Full Name">
-        <input type="email" id="studentEmail" placeholder="Student Email Address (@gmail.com)" style="margin-top: 10px;">
-        
-        <div class="row" style="margin-top: 10px;">
-            <input type="date" id="childBirthdate">
-            <select id="childSex"><option>Male</option><option>Female</option></select>
-        </div>
-        <input type="text" id="childBirthplace" placeholder="Place of Birth" style="margin-top: 10px;">
-
-        <span class="section-label"><i class="fas fa-female"></i> Mother's Info</span>
-        <input type="text" id="motherName" placeholder="Maiden Name">
-        <div class="row">
-            <input type="text" id="motherCitizenship" placeholder="Citizenship">
-            <input type="text" id="motherOccupation" placeholder="Occupation">
-        </div>
-
-        <span class="section-label"><i class="fas fa-male"></i> Father's Info</span>
-        <input type="text" id="fatherName" placeholder="Full Name">
-        <div class="row">
-            <input type="text" id="fatherCitizenship" placeholder="Citizenship">
-            <input type="text" id="fatherOccupation" placeholder="Occupation">
-        </div>
-
-        <span class="section-label"><i class="fas fa-paperclip"></i> Attachments</span>
-        <div class="file-upload-group"><span class="file-label">Form 137</span><input type="file" id="fileForm137"></div>
-        <div class="file-upload-group"><span class="file-label">Form 138 (Card)</span><input type="file" id="fileForm138"></div>
-        <div class="file-upload-group"><span class="file-label">Good Moral</span><input type="file" id="fileGoodMoral"></div>
-
-        <button class="btn-save" onclick="saveRecord()">VERIFY & SAVE RECORD</button>
-    </aside>
-
     <script>
-        let currentImagePath = "";
+        let psaData = null;
+        let f137Data = null;
+        let psaImagePath = null;
+        let f137ImagePath = null;
 
-        function previewImage(input) {
+        // --- 1. PROCESS PSA ---
+        async function processPSA(input) {
             const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('preview');
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                    document.getElementById('uploadPlaceholder').style.display = 'none';
-                }
-                reader.readAsDataURL(file);
-            }
-        }
+            if (!file) return;
 
-        async function extractData() {
-            const fileInput = document.getElementById('imageInput');
-            if(fileInput.files.length === 0) return alert("Please capture an image first.");
+            // UI Updates
+            showPreview(file, 'psaPreview', 'psaPlaceholder');
+            toggleLaser('psaLaser', true);
+            document.getElementById('psaResultDisplay').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing PSA Document...';
+
             const formData = new FormData();
-            formData.append('imageFile', fileInput.files[0]);
-            const btn = document.querySelector('.btn-initiate');
-            const laser = document.getElementById('scanFx');
-            
-            const originalBtnText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SCANNING...';
-            btn.disabled = true;
-            laser.style.display = 'block';
+            formData.append('imageFile', file);
 
             try {
                 const res = await fetch('/extract', { method: 'POST', body: formData });
                 const data = await res.json();
-                
-                if (res.status !== 200) {
-                    alert(data.error || "Extraction failed.");
-                } else if(data.structured_data) {
-                    const d = data.structured_data;
-                    document.getElementById('childName').value = d.Name || "";
-                    document.getElementById('childSex').value = d.Sex || "Male";
-                    document.getElementById('childBirthdate').value = d.Birthdate || "";
-                    document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
-                    document.getElementById('motherName').value = d.Mother_MaidenName || "";
-                    document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
-                    document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
-                    document.getElementById('fatherName').value = d.Father_Name || "";
-                    document.getElementById('fatherCitizenship').value = d.Father_Citizenship || "";
-                    document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
-                    currentImagePath = data.image_path;
+                toggleLaser('psaLaser', false);
+
+                if (data.error) {
+                    document.getElementById('psaResultDisplay').innerHTML = `<span style="color:red">Error: ${data.error}</span>`;
+                } else {
+                    psaData = data.structured_data;
+                    psaImagePath = data.image_path;
                     
-                    // Auto scroll to form on mobile
-                    if(window.innerWidth < 900) {
-                        document.querySelector('.form-panel').scrollIntoView({behavior: "smooth"});
-                    }
+                    // Display Clean Data
+                    document.getElementById('psaResultDisplay').innerHTML = `
+                        <div><span class="result-label">Name:</span> ${psaData.Name}</div>
+                        <div><span class="result-label">Sex:</span> ${psaData.Sex}</div>
+                        <div><span class="result-label">B-day:</span> ${psaData.Birthdate}</div>
+                        <div><span class="result-label">Mother:</span> ${psaData.Mother_MaidenName}</div>
+                    `;
+                    checkReady();
                 }
-            } catch(e) { 
-                alert("Server connection failed."); 
-                console.error(e);
+            } catch (e) {
+                toggleLaser('psaLaser', false);
+                alert("Scan failed. Check connection.");
             }
-            
-            btn.innerHTML = originalBtnText;
-            btn.disabled = false;
-            laser.style.display = 'none';
         }
 
-        async function saveRecord() {
-            const btn = document.querySelector('.btn-save');
-            if (!document.getElementById('childName').value) return alert("Name is required.");
-            
-            const origText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> SAVING...';
-            btn.disabled = true;
+        // --- 2. PROCESS FORM 137 ---
+        async function processForm137(input) {
+            const file = input.files[0];
+            if (!file) return;
 
-            const recordData = {
-                name: document.getElementById('childName').value.trim(),
-                email: document.getElementById('studentEmail').value.trim(),
-                sex: document.getElementById('childSex').value,
-                birthdate: document.getElementById('childBirthdate').value,
-                birthplace: document.getElementById('childBirthplace').value,
-                mother_name: document.getElementById('motherName').value,
-                mother_citizenship: document.getElementById('motherCitizenship').value,
-                mother_occupation: document.getElementById('motherOccupation').value,
-                father_name: document.getElementById('fatherName').value,
-                father_citizenship: document.getElementById('fatherCitizenship').value,
-                father_occupation: document.getElementById('fatherOccupation').value,
-                image_path: currentImagePath 
+            // UI Updates
+            showPreview(file, 'f137Preview', 'f137Placeholder');
+            toggleLaser('f137Laser', true);
+            document.getElementById('f137ResultDisplay').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting School Data...';
+
+            const formData = new FormData();
+            formData.append('imageFile', file);
+
+            try {
+                const res = await fetch('/extract-form137', { method: 'POST', body: formData });
+                const data = await res.json();
+                toggleLaser('f137Laser', false);
+
+                if (data.error) {
+                    document.getElementById('f137ResultDisplay').innerHTML = `<span style="color:red">Error: ${data.error}</span>`;
+                } else {
+                    f137Data = data.structured_data;
+                    f137ImagePath = data.image_path;
+
+                    // Display Clean Data
+                    document.getElementById('f137ResultDisplay').innerHTML = `
+                        <div><span class="result-label">LRN:</span> ${f137Data.lrn}</div>
+                        <div><span class="result-label">School:</span> ${f137Data.school_name}</div>
+                        <div><span class="result-label">Addr:</span> ${f137Data.school_address}</div>
+                    `;
+                    checkReady();
+                }
+            } catch (e) {
+                toggleLaser('f137Laser', false);
+                alert("Scan failed.");
+            }
+        }
+
+        // --- UTILS ---
+        function showPreview(file, imgId, placeholderId) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById(imgId);
+                img.src = e.target.result;
+                img.style.display = 'block';
+                document.getElementById(placeholderId).style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function toggleLaser(id, show) {
+            document.getElementById(id).style.display = show ? 'block' : 'none';
+        }
+
+        function checkReady() {
+            const btn = document.getElementById('saveBtn');
+            // Enable save button only if PSA is present (F137 is optional but recommended)
+            if (psaData) {
+                btn.classList.add('active');
+                btn.innerText = f137Data ? "SAVE COMPLETE RECORD" : "SAVE (PSA ONLY)";
+            }
+        }
+
+        // --- 3. SAVE COMBINED ---
+        async function saveCombinedRecord() {
+            const btn = document.getElementById('saveBtn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SAVING DATABASE...';
+            
+            const payload = {
+                // PSA
+                name: psaData.Name,
+                sex: psaData.Sex,
+                birthdate: psaData.Birthdate,
+                birthplace: psaData.PlaceOfBirth,
+                mother_name: psaData.Mother_MaidenName,
+                mother_citizenship: psaData.Mother_Citizenship,
+                mother_occupation: psaData.Mother_Occupation,
+                father_name: psaData.Father_Name,
+                father_citizenship: psaData.Father_Citizenship,
+                father_occupation: psaData.Father_Occupation,
+                psa_image_path: psaImagePath,
+                
+                // Form 137 (Pass empty strings if not scanned)
+                lrn: f137Data ? f137Data.lrn : "",
+                school_name: f137Data ? f137Data.school_name : "",
+                school_address: f137Data ? f137Data.school_address : "",
+                f137_image_path: f137ImagePath
             };
 
             try {
-                const response = await fetch('/save-record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(recordData)
+                const res = await fetch('/save-record', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
                 });
-                const result = await response.json();
-
-                if (result.status === "success") {
-                    const newID = result.db_id;
-                    await uploadIfPresent('fileForm137', 'form137', newID);
-                    await uploadIfPresent('fileForm138', 'form138', newID);
-                    await uploadIfPresent('fileGoodMoral', 'goodmoral', newID);
-                    
-                    let msg = "✅ Record Saved!";
-                    if(result.email_status === "Sent") msg += "\n📧 Email sent to student.";
-                    
-                    alert(msg);
-                    window.location.reload();
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    alert("✅ Success! Record stored in database.");
+                    window.location.href = "/history.html";
                 } else {
-                    alert("Error: " + (result.error || "Unknown Error"));
+                    alert("Database Error: " + result.error);
+                    btn.innerText = "TRY AGAIN";
                 }
-            } catch (error) { alert("Connection Failed"); }
-            btn.innerHTML = origText;
-            btn.disabled = false;
-        }
-
-        async function uploadIfPresent(inputId, type, id) {
-            const fileInput = document.getElementById(inputId);
-            if (fileInput.files.length > 0) {
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
-                formData.append('id', id);
-                formData.append('type', type);
-                await fetch('/upload-additional', { method: 'POST', body: formData });
+            } catch (e) {
+                alert("Network Error");
             }
         }
     </script>
