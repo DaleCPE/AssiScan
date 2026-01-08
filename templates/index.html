@@ -311,8 +311,18 @@
 
         <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
         <div class="row">
-            <div class="col-half"><input type="text" id="addressRegion" placeholder="Region"></div>
-            <div class="col-half"><input type="text" id="addressProvince" placeholder="Province"></div>
+            <div class="col-half">
+                <label>Region</label>
+                <select id="addressRegion" onchange="updateProvinces()">
+                    <option value="">Select Region</option>
+                </select>
+            </div>
+            <div class="col-half">
+                <label>Province</label>
+                <select id="addressProvince">
+                    <option value="">Select Region First</option>
+                </select>
+            </div>
         </div>
         <input type="text" id="addressSpecific" placeholder="House No. / Street / Brgy / City">
         
@@ -400,6 +410,60 @@
         let psaImagePath = "";
         let f137ImagePath = "";
 
+        // --- DYNAMIC ADDRESS LOGIC ---
+        const philippineLocations = {
+            "NCR": ["Metro Manila"],
+            "CAR": ["Abra", "Apayao", "Benguet", "Ifugao", "Kalinga", "Mountain Province"],
+            "Region I (Ilocos Region)": ["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"],
+            "Region II (Cagayan Valley)": ["Batanes", "Cagayan", "Isabela", "Nueva Vizcaya", "Quirino"],
+            "Region III (Central Luzon)": ["Aurora", "Bataan", "Bulacan", "Nueva Ecija", "Pampanga", "Tarlac", "Zambales"],
+            "Region IV-A (CALABARZON)": ["Batangas", "Cavite", "Laguna", "Quezon", "Rizal"],
+            "Region IV-B (MIMAROPA)": ["Marinduque", "Occidental Mindoro", "Oriental Mindoro", "Palawan", "Romblon"],
+            "Region V (Bicol Region)": ["Albay", "Camarines Norte", "Camarines Sur", "Catanduanes", "Masbate", "Sorsogon"],
+            "Region VI (Western Visayas)": ["Aklan", "Antique", "Capiz", "Guimaras", "Iloilo", "Negros Occidental"],
+            "Region VII (Central Visayas)": ["Bohol", "Cebu", "Negros Oriental", "Siquijor"],
+            "Region VIII (Eastern Visayas)": ["Biliran", "Eastern Samar", "Leyte", "Northern Samar", "Samar", "Southern Leyte"],
+            "Region IX (Zamboanga Peninsula)": ["Zamboanga del Norte", "Zamboanga del Sur", "Zamboanga Sibugay"],
+            "Region X (Northern Mindanao)": ["Bukidnon", "Camiguin", "Lanao del Norte", "Misamis Occidental", "Misamis Oriental"],
+            "Region XI (Davao Region)": ["Davao de Oro", "Davao del Norte", "Davao del Sur", "Davao Occidental", "Davao Oriental"],
+            "Region XII (SOCCSKSARGEN)": ["Cotabato", "Sarangani", "South Cotabato", "Sultan Kudarat"],
+            "Region XIII (Caraga)": ["Agusan del Norte", "Agusan del Sur", "Dinagat Islands", "Surigao del Norte", "Surigao del Sur"],
+            "BARMM": ["Basilan", "Lanao del Sur", "Maguindanao", "Sulu", "Tawi-Tawi"]
+        };
+
+        function populateRegions() {
+            const regionSelect = document.getElementById("addressRegion");
+            for (const region in philippineLocations) {
+                const option = document.createElement("option");
+                option.value = region;
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            }
+        }
+
+        function updateProvinces() {
+            const regionSelect = document.getElementById("addressRegion");
+            const provinceSelect = document.getElementById("addressProvince");
+            const selectedRegion = regionSelect.value;
+
+            // Clear existing options
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+
+            if (selectedRegion && philippineLocations[selectedRegion]) {
+                const provinces = philippineLocations[selectedRegion];
+                provinces.forEach(province => {
+                    const option = document.createElement("option");
+                    option.value = province;
+                    option.textContent = province;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Initialize regions on load
+        window.addEventListener('load', populateRegions);
+
+        // --- EXISTING UTILS ---
         function calculateAge() {
             const birthDate = new Date(document.getElementById('childBirthdate').value);
             const today = new Date();
@@ -532,7 +596,7 @@
                 residence_type: document.getElementById('residenceType').value,
                 employer_name: document.getElementById('employerName').value,
                 
-                // Address
+                // Address (Values from Dropdowns)
                 region: document.getElementById('addressRegion').value,
                 province: document.getElementById('addressProvince').value,
                 specific_address: document.getElementById('addressSpecific').value,
