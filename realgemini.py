@@ -1,7 +1,6 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-# --- UPDATED IMPORT FOR NEW SDK ---
 from google import genai
 from google.genai import types
 import json
@@ -15,6 +14,8 @@ from flask import Flask, request, jsonify, send_from_directory, render_template,
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback 
+# --- NEW IMPORT FOR IMAGE HANDLING ---
+from PIL import Image
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
@@ -185,7 +186,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (FIXED PARAMETER) ---
+# --- 1. STRICT PSA SCANNING (DIRECT IMAGE) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     print("🚀 REQUEST RECEIVED: /extract")
@@ -202,12 +203,17 @@ def extract_data():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # --- NEW SDK UPLOAD (FIXED: used 'file=' instead of 'path=') ---
+        # --- FIX: DIRECT PILLOW IMAGE LOADING ---
+        # This avoids the "unexpected keyword argument" error entirely
         if not client:
              return jsonify({"error": "Server Error: AI Client not initialized"}), 500
 
-        myfile = client.files.upload(file=filepath)
-        
+        try:
+            # Buksan ang image gamit ang Pillow
+            pil_image = Image.open(filepath)
+        except Exception as e:
+             return jsonify({"error": f"Invalid Image File: {str(e)}"}), 400
+
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
         TASK: Analyze this image. It MUST be a "Certificate of Live Birth" (PSA/NSO/LCR).
@@ -235,10 +241,10 @@ def extract_data():
         }
         """
         
-        # --- NEW SDK GENERATE ---
+        # Send PIL Image directly to Gemini
         res = client.models.generate_content(
             model='gemini-1.5-flash',
-            contents=[myfile, prompt]
+            contents=[pil_image, prompt]
         )
         
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
@@ -254,7 +260,6 @@ def extract_data():
             return jsonify({"error": "Failed to read document data. Please try clearer image."}), 500
 
         if not data.get("is_valid_document", False):
-            # Optional: Delete file if invalid
             if os.path.exists(filepath):
                 try: os.remove(filepath)
                 except: pass
@@ -268,7 +273,7 @@ def extract_data():
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- 2. FORM 137 SCANNING (FIXED PARAMETER) ---
+# --- 2. FORM 137 SCANNING (DIRECT IMAGE) ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFile' not in request.files:
@@ -285,11 +290,13 @@ def extract_form137():
     print(f"📸 Processing Form 137: {filename}")
 
     try:
-        # --- NEW SDK UPLOAD (FIXED: used 'file=' instead of 'path=') ---
         if not client:
              return jsonify({"error": "Server Error: AI Client not initialized"}), 500
 
-        myfile = client.files.upload(file=filepath)
+        try:
+            pil_image = Image.open(filepath)
+        except Exception as e:
+             return jsonify({"error": f"Invalid Image File: {str(e)}"}), 400
         
         prompt = """
         SYSTEM ROLE: Philippine School Document Analyzer.
@@ -305,10 +312,10 @@ def extract_form137():
         Return ONLY the JSON. Do not add markdown backticks.
         """
         
-        # --- NEW SDK GENERATE ---
+        # Send PIL Image directly to Gemini
         res = client.models.generate_content(
             model='gemini-1.5-flash',
-            contents=[myfile, prompt]
+            contents=[pil_image, prompt]
         )
         
         if not res.text:
