@@ -54,7 +54,7 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED FOR UB FORM) ---
+# --- INIT DATABASE TABLE (UPDATED FOR UB FORM + NEW FIELDS) ---
 def init_db():
     conn = get_db_connection()
     if conn:
@@ -116,7 +116,16 @@ def init_db():
                 ("school_year", "VARCHAR(50)"),
                 ("student_type", "VARCHAR(50)"),
                 ("program", "VARCHAR(100)"),
-                ("last_level_attended", "VARCHAR(100)")
+                ("last_level_attended", "VARCHAR(100)"),
+                
+                # --- LATEST ADDITIONS (Missing Fields) ---
+                ("is_ip", "VARCHAR(10)"),
+                ("is_pwd", "VARCHAR(10)"),
+                ("has_medication", "VARCHAR(10)"),
+                ("is_working", "VARCHAR(10)"),
+                ("residence_type", "VARCHAR(50)"),
+                ("employer_name", "VARCHAR(255)"),
+                ("marital_status", "VARCHAR(50)")
             ]
             
             for col_name, col_type in new_columns:
@@ -398,7 +407,11 @@ def save_record():
                 mother_contact, father_contact,
                 guardian_name, guardian_relation, guardian_contact,
                 region, province, specific_address,
-                school_year, student_type, program, last_level_attended
+                school_year, student_type, program, last_level_attended,
+                
+                -- LATEST ADDITIONS (Missing Part)
+                is_ip, is_pwd, has_medication, is_working,
+                residence_type, employer_name, marital_status
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -410,7 +423,8 @@ def save_record():
                 %s, %s,
                 %s, %s, %s,
                 %s, %s, %s,
-                %s, %s, %s, %s
+                %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s
             ) 
             RETURNING id
         ''', (
@@ -420,12 +434,15 @@ def save_record():
             d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
             os.path.basename(d.get('psa_image_path', '')), os.path.basename(d.get('f137_image_path', '')),
             
-            # New Data Mappings
             d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
             d.get('mother_contact'), d.get('father_contact'),
             d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
             d.get('region'), d.get('province'), d.get('specific_address'),
-            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended')
+            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
+            
+            # New Values Mappings
+            d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
+            d.get('residence_type'), d.get('employer_name'), d.get('marital_status')
         ))
         
         new_id = cur.fetchone()[0]
