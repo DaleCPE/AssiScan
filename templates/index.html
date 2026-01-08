@@ -463,8 +463,9 @@
     </aside>
 
     <script>
-        let psaImagePath = "";
-        let f137ImagePath = "";
+        // CHANGED: Initialized as arrays to support multiple pages
+        let psaImagePath = [];
+        let f137ImagePath = [];
 
         const philippineLocations = {
             "NCR": ["Metro Manila"],
@@ -525,6 +526,7 @@
                     document.getElementById(imgId).style.display = 'block';
                     document.getElementById(placeholderId).style.display = 'none';
                 }
+                // Only show the first page in preview to keep design simple
                 reader.readAsDataURL(files[0]);
             }
         }
@@ -550,7 +552,7 @@
             `;
         }
 
-        // --- PROCESS PSA ---
+        // --- PROCESS PSA (Multiple Pages) ---
         async function processPSA(input) {
             const files = input.files;
             if (files.length === 0) return;
@@ -565,7 +567,7 @@
             }
 
             try {
-                const res = await fetch('/extract', { method: 'POST', body: formData });
+                const res = await fetch('http://localhost:5000/extract', { method: 'POST', body: formData });
                 const data = await res.json();
                 document.getElementById('psaLaser').style.display = 'none';
 
@@ -587,17 +589,20 @@
                     document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
                     
                     if(d.Birthdate) calculateAge();
+                    
+                    // Save array of paths
                     psaImagePath = data.image_paths; 
                 } else {
                     document.getElementById('psaStatus').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
+                console.error(e);
                 document.getElementById('psaLaser').style.display = 'none';
                 document.getElementById('psaStatus').innerText = "❌ Error";
             }
         }
 
-        // --- PROCESS FORM 137 ---
+        // --- PROCESS FORM 137 (Multiple Pages) ---
         async function processForm137(input) {
             const files = input.files;
             if (files.length === 0) return;
@@ -612,7 +617,7 @@
             }
 
             try {
-                const res = await fetch('/extract-form137', { method: 'POST', body: formData });
+                const res = await fetch('http://localhost:5000/extract-form137', { method: 'POST', body: formData });
                 const data = await res.json();
                 document.getElementById('f137Laser').style.display = 'none';
 
@@ -623,16 +628,20 @@
                     document.getElementById('schoolName').value = d.school_name || "";
                     document.getElementById('schoolAddress').value = d.school_address || "";
                     document.getElementById('genAverage').value = d.final_general_average || "";
+                    
+                    // Save array of paths
                     f137ImagePath = data.image_paths;
                 } else {
                     document.getElementById('f137Status').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
+                console.error(e);
                 document.getElementById('f137Laser').style.display = 'none';
                 document.getElementById('f137Status').innerText = "❌ Error";
             }
         }
 
+        // --- SAVE RECORD ---
         async function saveRecord() {
             const btn = document.querySelector('.btn-save');
             const name = document.getElementById('childName').value;
@@ -653,80 +662,99 @@
                 }
             });
 
+            // 2. CONSTRUCT DATA OBJECT
             const recordData = {
+                // Enrollment Details
                 school_year: document.getElementById('schoolYear').value,
                 student_type: document.getElementById('studentType').value,
                 program: document.getElementById('programCourse').value,
                 last_level_attended: document.getElementById('lastLevel').value,
+                
+                // Student Personal
                 name: name,
                 sex: document.getElementById('childSex').value,
                 birthdate: document.getElementById('childBirthdate').value,
+                age: document.getElementById('childAge').value,
                 birthplace: document.getElementById('childBirthplace').value,
                 birth_order: document.getElementById('birthOrder').value,
-                religion: document.getElementById('childReligion').value,
-                age: document.getElementById('childAge').value,
                 civil_status: document.getElementById('childCivilStatus').value,
                 nationality: document.getElementById('childNationality').value,
                 mobile_no: document.getElementById('childMobile').value,
-                is_ip: document.getElementById('isIP').value,
-                is_pwd: document.getElementById('isPWD').value,
-                has_medication: document.getElementById('hasMedication').value,
-                is_working: document.getElementById('isWorking').value,
-                is_gifted: document.getElementById('isGifted').value, 
-                needs_assistance: document.getElementById('needsAssistance').value, 
+                religion: document.getElementById('childReligion').value,
+                
+                // Address
                 region: document.getElementById('addressRegion').value,
                 province: document.getElementById('addressProvince').value,
                 specific_address: document.getElementById('addressSpecific').value,
                 residence_type: document.getElementById('residenceType').value,
+                
+                // Special Groups
+                is_ip: document.getElementById('isIP').value,
+                is_pwd: document.getElementById('isPWD').value,
+                is_working: document.getElementById('isWorking').value,
+                has_medication: document.getElementById('hasMedication').value,
+                is_gifted: document.getElementById('isGifted').value,
+                needs_assistance: document.getElementById('needsAssistance').value,
+                
+                // Family
                 employer_name: document.getElementById('employerName').value,
-                marital_status: document.getElementById('maritalStatus').value, 
+                parents_marital_status: document.getElementById('maritalStatus').value,
+                
                 mother_name: document.getElementById('motherName').value,
                 mother_citizenship: document.getElementById('motherCitizenship').value,
                 mother_occupation: document.getElementById('motherOccupation').value,
                 mother_contact: document.getElementById('motherContact').value,
+                
                 father_name: document.getElementById('fatherName').value,
                 father_citizenship: document.getElementById('fatherCitizenship').value,
                 father_occupation: document.getElementById('fatherOccupation').value,
                 father_contact: document.getElementById('fatherContact').value,
+                
                 guardian_name: document.getElementById('guardianName').value,
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
                 
-                // ADDED SIBLINGS HERE
-                siblings: siblingsList,
-
+                contact_email: document.getElementById('contactEmail').value,
+                
+                // School Records
                 lrn: document.getElementById('lrn').value,
                 school_name: document.getElementById('schoolName').value,
                 school_address: document.getElementById('schoolAddress').value,
+                school_type: document.getElementById('schoolType').value,
+                year_attended: document.getElementById('yearAttended').value,
                 final_general_average: document.getElementById('genAverage').value,
-                school_type: document.getElementById('schoolType').value, 
-                year_attended: document.getElementById('yearAttended').value, 
-                special_talents: document.getElementById('specialTalents').value, 
-                is_scholar: document.getElementById('isScholar').value, 
-                email: document.getElementById('contactEmail').value,
                 
-                psa_image_path: psaImagePath,
-                f137_image_path: f137ImagePath
+                // Extra
+                special_talents: document.getElementById('specialTalents').value,
+                is_scholar: document.getElementById('isScholar').value,
+
+                // IMAGES & SIBLINGS (Converted to String for Database)
+                // If it's an array, stringify it. If empty, stringify empty array.
+                psa_image_path: psaImagePath.length > 0 ? JSON.stringify(psaImagePath) : "[]",
+                f137_image_path: f137ImagePath.length > 0 ? JSON.stringify(f137ImagePath) : "[]",
+                siblings: siblingsList
             };
 
+            // 3. SEND TO SERVER
             try {
-                const res = await fetch('/save-record', {
+                const response = await fetch('http://localhost:5000/save-record', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(recordData)
                 });
+                const result = await response.json();
                 
-                const result = await res.json();
-                if(result.success) {
-                    alert('Record Saved Successfully!');
-                    location.reload(); 
+                if (result.status === 'success') {
+                    alert("✅ Record Saved Successfully!");
+                    location.reload();
                 } else {
-                    alert('Error saving record: ' + result.message);
+                    alert("❌ Error Saving: " + result.message);
                     btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                     btn.disabled = false;
                 }
-            } catch(e) {
-                alert('Connection Error!');
+            } catch (e) {
+                console.error(e);
+                alert("❌ Connection Error");
                 btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                 btn.disabled = false;
             }
