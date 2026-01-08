@@ -185,7 +185,6 @@ def get_records():
         conn.close()
 
 # --- 🔍 NEW DIAGNOSTIC ROUTE (CHECK AVAILABLE MODELS) ---
-# IMPORTANT: Visit https://your-app.onrender.com/debug-ai to see if API Key works
 @app.route('/debug-ai', methods=['GET'])
 def debug_ai():
     try:
@@ -205,20 +204,20 @@ def debug_ai():
             "hint": "API Key invalid or Library version mismatch."
         })
 
-# --- INTELLIGENT MODEL SELECTOR ---
+# --- INTELLIGENT MODEL SELECTOR (UPDATED FOR 2.5) ---
 def generate_content_standard(pil_image, prompt):
     """
     Subukan ang lahat ng available na models.
     Automatic fail-over kapag may 404 error.
     """
     
-    # PRIORITY LIST (Updated for reliability)
+    # PRIORITY LIST (UPDATED REQUEST)
     MODEL_PRIORITY_LIST = [
-        "gemini-1.5-flash",      # Most standard/stable
-        "gemini-1.5-pro",        # High intelligence
-        "gemini-2.0-flash-exp",  # Experimental (might not exist yet on all keys)
-        "gemini-1.0-pro",        # Legacy
-        "gemini-pro"             # Oldest alias
+        "gemini-2.5-flash",       # <--- 1st Choice (Your Request)
+        "gemini-2.0-flash-exp",   # <--- 2nd Choice (Next Gen)
+        "gemini-1.5-flash",       # <--- 3rd Choice (Stable Standard)
+        "gemini-1.5-pro",         # <--- Fallback High Intelligence
+        "gemini-1.0-pro"          # <--- Last Resort
     ]
 
     last_error = None
