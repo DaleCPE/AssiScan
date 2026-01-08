@@ -599,66 +599,6 @@ def delete_record(record_id):
         return jsonify({"success": True})
     finally: conn.close()
 
-# --- UPDATE RECORD (EDIT) ---
-@app.route('/update-record', methods=['POST'])
-def update_record():
-    if not session.get('logged_in'):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"success": False, "error": "Database connection failed"}), 500
-
-    try:
-        data = request.json
-        record_id = data.get('id')
-        
-        if not record_id:
-            return jsonify({"success": False, "error": "No Record ID provided"}), 400
-
-        # Handle Date: Empty string converted to None for Postgres
-        bdate = data.get('birthdate')
-        if not bdate or bdate == "":
-            bdate = None
-
-        cur = conn.cursor()
-        
-        # Execute Update Query
-        cur.execute("""
-            UPDATE records 
-            SET name = %s, 
-                sex = %s, 
-                birthdate = %s, 
-                province = %s, 
-                lrn = %s, 
-                school_name = %s, 
-                final_general_average = %s, 
-                program = %s
-            WHERE id = %s
-        """, (
-            data.get('name'),
-            data.get('sex'),
-            bdate,
-            data.get('province'),
-            data.get('lrn'),
-            data.get('school_name'),
-            data.get('final_general_average'),
-            data.get('program'),
-            record_id
-        ))
-
-        conn.commit()
-        cur.close()
-
-        return jsonify({'success': True, 'message': 'Record updated successfully!'})
-
-    except Exception as e:
-        print(f"❌ Update Error: {e}")
-        if conn: conn.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-    finally:
-        if conn: conn.close()
-
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
