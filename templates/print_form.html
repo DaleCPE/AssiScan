@@ -21,11 +21,18 @@
             body { background-color: white; }
             .no-print { display: none !important; }
             .container { box-shadow: none; width: 100%; max-width: 100%; border: none; margin: 0; padding: 0; }
+            /* Gawing mukhang fill-in-the-blanks ang inputs */
             input, select, textarea { 
-                border: none !important; border-bottom: 1px solid #ccc !important; 
-                background: transparent !important; color: black !important; font-weight: bold;
+                border: none !important; 
+                border-bottom: 1px solid #ccc !important; 
+                background: transparent !important; 
+                color: black !important; 
+                font-weight: bold;
+                padding-left: 0;
             }
             .ub-header { color: black !important; }
+            /* Hide empty placeholders */
+            ::placeholder { color: transparent; }
         }
     </style>
 </head>
@@ -42,7 +49,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <div class="lg:col-span-3">
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Year</label>
-                        <input type="text" value="{{ r.school_year }}" class="w-full border-gray-300 border p-2 text-red-900">
+                        <input type="text" value="{{ r.school_year }}" class="w-full border-gray-300 border p-2 text-red-900 font-bold">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Student Classification</label>
@@ -85,15 +92,15 @@
 
                 <div class="bg-gray-50 p-4 rounded border border-gray-200 mb-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Indigenous Peoples Group?</label><input type="text" value="{{ r.is_ip }}" class="w-full border-gray-300 border p-2"></div>
-                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Person with Disability (PWD)?</label><input type="text" value="{{ r.is_pwd }}" class="w-full border-gray-300 border p-2"></div>
+                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">IP Member?</label><input type="text" value="{{ r.is_ip }}" class="w-full border-gray-300 border p-2"></div>
+                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">PWD?</label><input type="text" value="{{ r.is_pwd }}" class="w-full border-gray-300 border p-2"></div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Regular Medication?</label><input type="text" value="{{ r.has_medication }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Medication?</label><input type="text" value="{{ r.has_medication }}" class="w-full border-gray-300 border p-2"></div>
                     <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Age</label><input type="text" value="{{ r.age }}" class="w-full border-gray-300 border p-2"></div>
-                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Currently Working?</label><input type="text" value="{{ r.is_working }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Working?</label><input type="text" value="{{ r.is_working }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="mb-4">
@@ -117,6 +124,11 @@
                       <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Occupation</label><input type="text" value="-" class="w-full border-gray-300 border p-2"></div>
                 </div>
                 {% endif %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Gifted Child?</label><input type="text" value="{{ r.is_gifted }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Needs Assistance?</label><input type="text" value="{{ r.needs_assistance }}" class="w-full border-gray-300 border p-2"></div>
+                </div>
 
                 <h3 class="form-section-title">Family Background</h3>
 
@@ -154,7 +166,7 @@
                 </div>
 
                 <div class="mb-6">
-                    <label class="inline-flex items-center mb-2"><span class="ml-2 text-sm font-bold text-gray-700">Siblings</span></label>
+                    <label class="inline-flex items-center mb-2"><span class="ml-2 text-sm font-bold text-gray-700">Siblings (Fill manually after printing)</span></label>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left text-gray-500 border border-gray-200">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-100">
@@ -167,6 +179,7 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr class="bg-white border-b"><td class="p-2 border h-8"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td></tr>
                                 <tr class="bg-white border-b"><td class="p-2 border h-8"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td></tr>
                                 <tr class="bg-white border-b"><td class="p-2 border h-8"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td></tr>
                             </tbody>
@@ -182,25 +195,14 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Type</label><input type="text" value="Public/Private" class="w-full border-gray-300 border p-2"></div>
-                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Year Attended</label><input type="text" value="-" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Type</label><input type="text" value="{{ r.school_type }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Year Attended</label><input type="text" value="{{ r.year_attended }}" class="w-full border-gray-300 border p-2"></div>
                     <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Final Grade Avg</label><input type="text" value="{{ r.final_general_average }}" class="w-full border-gray-300 border p-2 font-bold bg-yellow-100"></div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Organizations / Clubs</label>
-                    <div class="flex flex-wrap gap-4 text-sm text-gray-700 bg-gray-50 p-3 rounded border">
-                        <span>Student Council [ ]</span>
-                        <span>Sports Club [ ]</span>
-                        <span>School Paper [ ]</span>
-                        <span>Glee Club [ ]</span>
-                        <span>Theater [ ]</span>
-                    </div>
-                </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Special Talents / Skills</label><input type="text" class="w-full border-gray-300 border p-2"></div>
-                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Beneficiary of Scholarship?</label><input type="text" class="w-full border-gray-300 border p-2"></div>
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Special Talents / Skills</label><input type="text" value="{{ r.special_talents }}" class="w-full border-gray-300 border p-2"></div>
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Beneficiary of Scholarship?</label><input type="text" value="{{ r.is_scholar }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200 no-print">
