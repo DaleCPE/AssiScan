@@ -54,17 +54,19 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE ---
+# --- INIT DATABASE TABLE (UPDATED FOR UB FORM) ---
 def init_db():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
+            
+            # 1. Create Basic Table if not exists
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
                     
-                    -- PSA Data
+                    -- Basic PSA
                     name VARCHAR(255),
                     sex VARCHAR(50),
                     birthdate DATE,
@@ -72,8 +74,8 @@ def init_db():
                     birth_order VARCHAR(50),
                     religion VARCHAR(100),
                     age INTEGER,
-
-                    -- Parents
+                    
+                    -- Basic Parents
                     mother_name VARCHAR(255),
                     mother_citizenship VARCHAR(100),
                     mother_occupation VARCHAR(100),
@@ -81,24 +83,53 @@ def init_db():
                     father_citizenship VARCHAR(100),
                     father_occupation VARCHAR(100),
                     
-                    -- Form 137 / School Data
+                    -- Basic F137
                     lrn VARCHAR(50),
                     school_name TEXT,
                     school_address TEXT,
                     final_general_average VARCHAR(50),
-
+                    
                     -- Files
                     image_path TEXT,
                     form137_path TEXT,
                     form138_path TEXT,
                     goodmoral_path TEXT,
-                    
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             ''')
+            
+            # 2. AUTO-MIGRATE: Add New Columns for UB Form
+            # Ito ang mag-a-add ng columns kung wala pa sila sa database mo
+            new_columns = [
+                ("email", "VARCHAR(100)"),
+                ("civil_status", "VARCHAR(50)"),
+                ("nationality", "VARCHAR(100)"),
+                ("mother_contact", "VARCHAR(50)"),
+                ("father_contact", "VARCHAR(50)"),
+                ("guardian_name", "VARCHAR(255)"),
+                ("guardian_relation", "VARCHAR(100)"),
+                ("guardian_contact", "VARCHAR(50)"),
+                ("region", "VARCHAR(100)"),
+                ("province", "VARCHAR(100)"),
+                ("specific_address", "TEXT"),
+                ("mobile_no", "VARCHAR(50)"),
+                ("school_year", "VARCHAR(50)"),
+                ("student_type", "VARCHAR(50)"),
+                ("program", "VARCHAR(100)"),
+                ("last_level_attended", "VARCHAR(100)")
+            ]
+            
+            for col_name, col_type in new_columns:
+                try:
+                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                except Exception:
+                    conn.rollback() # Ignore if error
+                else:
+                    conn.commit()
+
             conn.commit()
             cur.close()
-            print("✅ Database initialized successfully (PostgreSQL)!")
+            print("✅ Database Schema Updated for UB Form!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
@@ -167,7 +198,6 @@ def history_page():
 def get_records():
     if not session.get('logged_in'):
         return jsonify({"records": [], "error": "Unauthorized"}), 401
-
     conn = get_db_connection()
     if not conn: return jsonify({"records": []})
     try:
@@ -179,12 +209,36 @@ def get_records():
             if r['birthdate']: r['birthdate'] = str(r['birthdate'])
         return jsonify({"records": rows})
     except Exception as e:
-        print(f"DB Error: {e}")
         return jsonify({"records": []})
     finally:
         conn.close()
 
-# --- 🔍 NEW DIAGNOSTIC ROUTE (CHECK AVAILABLE MODELS) ---
+# --- NEW: VIEW FORM ROUTE (FOR PRINTING) ---
+@app.route('/view-form/<int:record_id>')
+def view_form(record_id):
+    if not session.get('logged_in'):
+        return redirect('/login')
+        
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if record:
+            # Handle date formatting for HTML
+            if record.get('birthdate'):
+                record['birthdate'] = str(record['birthdate'])
+            # Render the print template
+            return render_template('print_form.html', r=record)
+        else:
+            return "Record not found", 404
+    except Exception as e:
+        return f"Error loading form: {str(e)}", 500
+    finally:
+        conn.close()
+
+# --- DIAGNOSTIC ROUTE ---
 @app.route('/debug-ai', methods=['GET'])
 def debug_ai():
     try:
@@ -192,34 +246,19 @@ def debug_ai():
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 model_list.append(m.name)
-        return jsonify({
-            "status": "success",
-            "message": "API Key is working. These are the available models:",
-            "models": model_list
-        })
+        return jsonify({"status": "success", "models": model_list})
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "hint": "API Key invalid or Library version mismatch."
-        })
+        return jsonify({"status": "error", "message": str(e)})
 
-# --- INTELLIGENT MODEL SELECTOR (UPDATED FOR 2.5) ---
+# --- INTELLIGENT MODEL SELECTOR ---
 def generate_content_standard(pil_image, prompt):
-    """
-    Subukan ang lahat ng available na models.
-    Automatic fail-over kapag may 404 error.
-    """
-    
-    # PRIORITY LIST (UPDATED REQUEST)
     MODEL_PRIORITY_LIST = [
-        "gemini-2.5-flash",       # <--- 1st Choice (Your Request)
-        "gemini-2.0-flash-exp",   # <--- 2nd Choice (Next Gen)
-        "gemini-1.5-flash",       # <--- 3rd Choice (Stable Standard)
-        "gemini-1.5-pro",         # <--- Fallback High Intelligence
-        "gemini-1.0-pro"          # <--- Last Resort
+        "gemini-2.5-flash",      # 1st Choice (Your Request)
+        "gemini-2.0-flash-exp",  # 2nd Choice
+        "gemini-1.5-flash",      # 3rd Choice (Stable)
+        "gemini-1.5-pro",        
+        "gemini-1.0-pro"         
     ]
-
     last_error = None
     print("🤖 AI START: Attempting to find a working model...")
 
@@ -227,55 +266,34 @@ def generate_content_standard(pil_image, prompt):
         try:
             print(f"   👉 Trying model: {model_name} ...")
             model = genai.GenerativeModel(model_name)
-            
-            # Generate content
             response = model.generate_content([pil_image, prompt])
-            
-            if not response.text:
-                raise ValueError("Model returned empty text.")
-
+            if not response.text: raise ValueError("Empty text.")
             print(f"   ✅ SUCCESS using: {model_name}")
             return response
-            
         except Exception as e:
-            # Catch 404s and other errors, try next model
             print(f"   ⚠️ Failed on {model_name}: {str(e)}")
             last_error = e
             continue
-
     print("❌ ALL MODELS FAILED.")
     raise last_error if last_error else Exception("No AI models available.")
 
-# --- 1. STRICT PSA SCANNING ---
+# --- EXTRACT PSA ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
-    print("🚀 REQUEST RECEIVED: /extract")
-    
-    if 'imageFile' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    
+    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
     file = request.files['imageFile']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+    if file.filename == '': return jsonify({"error": "No selected file"}), 400
 
     try:
         filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
-        try:
-            pil_image = Image.open(filepath)
-        except Exception as e:
-             return jsonify({"error": f"Invalid Image File: {str(e)}"}), 400
+        try: pil_image = Image.open(filepath)
+        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
 
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
-        TASK: Analyze this image. It MUST be a "Certificate of Live Birth" (PSA/NSO/LCR).
-        
-        STRICT VALIDATION RULES:
-        1. Look for the text "Certificate of Live Birth" OR "Republic of the Philippines" AND "Office of the Civil Registrar General".
-        2. If the image is a selfie, a landscape, an ID, a receipt, or NOT a birth certificate, mark "is_valid_document": false.
-        
+        TASK: Analyze this image. It MUST be a "Certificate of Live Birth".
         OUTPUT FORMAT (JSON ONLY):
         {
             "is_valid_document": boolean,
@@ -294,95 +312,61 @@ def extract_data():
             "Father_Occupation": "string"
         }
         """
-        
-        # USE INTELLIGENT MODEL SELECTOR
         res = generate_content_standard(pil_image, prompt)
-        
-        # Clean response
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        start_idx = raw_text.find('{')
-        end_idx = raw_text.rfind('}') + 1
-        if start_idx != -1 and end_idx != -1:
-            raw_text = raw_text[start_idx:end_idx]
-
-        try:
-            data = json.loads(raw_text)
-        except json.JSONDecodeError:
-            print(f"💀 JSON Parse Failed. Raw text was: {raw_text}")
-            return jsonify({"error": "Failed to read document data. Please try clearer image."}), 500
+        s = raw_text.find('{')
+        e = raw_text.rfind('}') + 1
+        data = json.loads(raw_text[s:e])
 
         if not data.get("is_valid_document", False):
-            if os.path.exists(filepath):
-                try: os.remove(filepath)
-                except: pass
-            reason = data.get("rejection_reason", "Not a valid PSA Birth Certificate.")
-            return jsonify({"error": f"Invalid Document: {reason}"}), 400
+            return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
 
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
-
     except Exception as e:
-        print(f"❌ CRITICAL SERVER ERROR: {str(e)}")
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- 2. FORM 137 SCANNING ---
+# --- EXTRACT FORM 137 ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
-    if 'imageFile' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    
+    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
     file = request.files['imageFile']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
+    if file.filename == '': return jsonify({"error": "No selected file"}), 400
+    
     filename = secure_filename(f"F137_SCAN_{int(datetime.now().timestamp())}_{file.filename}")
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
-
     print(f"📸 Processing Form 137: {filename}")
 
     try:
-        try:
-            pil_image = Image.open(filepath)
-        except Exception as e:
-             return jsonify({"error": f"Invalid Image File: {str(e)}"}), 400
+        try: pil_image = Image.open(filepath)
+        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
         
         prompt = """
-        SYSTEM ROLE: Philippine School Document Analyzer.
-        TASK: Analyze this image. It should be a Form 137, SF10, or Permanent Record.
-        
-        EXTRACT THE FOLLOWING STRICTLY IN JSON format:
+        SYSTEM ROLE: Expert Data Encoder.
+        TASK: Extract details from Form 137 / SF10.
+        JSON FORMAT ONLY:
         {
-            "lrn": "Learner Reference Number",
+            "lrn": "123456789012",
             "school_name": "Name of School",
-            "school_address": "Address of School",
-            "final_general_average": "The final GWA or General Average found"
+            "school_address": "City, Province",
+            "final_general_average": "85"
         }
-        Return ONLY the JSON. Do not add markdown backticks.
         """
-        
-        # USE INTELLIGENT MODEL SELECTOR
         res = generate_content_standard(pil_image, prompt)
-        
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        start_idx = raw_text.find('{')
-        end_idx = raw_text.rfind('}') + 1
-        if start_idx != -1 and end_idx != -1:
-            raw_text = raw_text[start_idx:end_idx]
+        s = raw_text.find('{')
+        e = raw_text.rfind('}') + 1
+        if s != -1 and e != -1: raw_text = raw_text[s:e]
 
-        try:
-            data = json.loads(raw_text)
-        except json.JSONDecodeError as e:
-            print(f"❌ JSON Error in F137. Raw text: {raw_text}")
-            return jsonify({"error": "Could not read data from Form 137. Please try again."}), 500
+        try: data = json.loads(raw_text)
+        except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
         
         return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
-
     except Exception as e:
-        print(f"❌ Form 137 Extraction Failed: {e}")
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- 3. SAVE RECORD (PostgreSQL) ---
+# --- UPDATED SAVE RECORD (INCLUDES ALL UB FORM FIELDS) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
@@ -390,82 +374,68 @@ def save_record():
         d = request.json
         print(f"📥 Received Data for Saving: {d}")
         
-        # PSA FIELDS
-        name = d.get('name') or d.get('Name')
-        sex = d.get('sex') or d.get('Sex')
-        birthdate = d.get('birthdate') or d.get('Birthdate')
-        birthplace = d.get('birthplace') or d.get('PlaceOfBirth')
-        birth_order = d.get('birth_order') or d.get('BirthOrder')
-        religion = d.get('religion') or d.get('Religion')
-        age = d.get('age')
-
-        m_name = d.get('mother_name') or d.get('Mother_MaidenName')
-        m_cit = d.get('mother_citizenship') or d.get('Mother_Citizenship')
-        m_occ = d.get('mother_occupation') or d.get('Mother_Occupation')
-        
-        f_name = d.get('father_name') or d.get('Father_Name')
-        f_cit = d.get('father_citizenship') or d.get('Father_Citizenship')
-        f_occ = d.get('father_occupation') or d.get('Father_Occupation')
-
-        # FORM 137 FIELDS
-        lrn = d.get('lrn', '')
-        school_name = d.get('school_name', '')
-        school_address = d.get('school_address', '')
-        final_grade = d.get('final_general_average', '')
-
-        if not birthdate or birthdate == "null" or birthdate == "":
-            birthdate = None 
-
-        psa_img = d.get('psa_image_path') or d.get('image_path')
-        db_psa_path = os.path.basename(psa_img) if psa_img else None
-        
-        f137_img = d.get('f137_image_path')
-        db_f137_path = os.path.basename(f137_img) if f137_img else None
-
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
         cur = conn.cursor()
         
-        if name and birthdate:
-            cur.execute("""
-                SELECT id FROM records 
-                WHERE LOWER(name) = LOWER(%s) AND birthdate = %s
-            """, (name, birthdate))
-            
-            existing = cur.fetchone()
-            if existing:
-                print(f"⚠️ Duplicate Prevented: {name}")
-                return jsonify({
-                    "status": "error", 
-                    "error": "DUPLICATE_ENTRY", 
-                    "message": f"Record already exists for {name}."
-                }), 409
-        
+        # Check duplicate
+        if d.get('name') and d.get('birthdate'):
+            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", (d.get('name'), d.get('birthdate')))
+            if cur.fetchone():
+                return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
+
+        # INSERT ALL FIELDS (Updated for Major Update)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
                 mother_name, mother_citizenship, mother_occupation, 
                 father_name, father_citizenship, father_occupation, 
                 lrn, school_name, school_address, final_general_average,
-                image_path, form137_path
+                image_path, form137_path,
+                
+                -- NEW FIELDS
+                email, mobile_no, civil_status, nationality,
+                mother_contact, father_contact,
+                guardian_name, guardian_relation, guardian_contact,
+                region, province, specific_address,
+                school_year, student_type, program, last_level_attended
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, 
+                %s, %s, %s, 
+                %s, %s, %s, %s, 
+                %s, %s,
+                %s, %s, %s, %s,
+                %s, %s,
+                %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s
+            ) 
             RETURNING id
         ''', (
-            name, sex, birthdate, birthplace, birth_order, religion, age,
-            m_name, m_cit, m_occ, 
-            f_name, f_cit, f_occ, 
-            lrn, school_name, school_address, final_grade,
-            db_psa_path, db_f137_path
+            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), d.get('birth_order'), d.get('religion'), d.get('age'),
+            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
+            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
+            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
+            os.path.basename(d.get('psa_image_path', '')), os.path.basename(d.get('f137_image_path', '')),
+            
+            # New Data Mappings
+            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
+            d.get('mother_contact'), d.get('father_contact'),
+            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
+            d.get('region'), d.get('province'), d.get('specific_address'),
+            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended')
         ))
         
         new_id = cur.fetchone()[0]
         conn.commit()
 
+        # Send Email
         email_addr = d.get('email', '')
-        full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], db_psa_path) if db_psa_path else None
+        full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(d.get('psa_image_path', ''))) if d.get('psa_image_path') else None
         if email_addr:
-            send_email_notification(email_addr, name, [full_psa_path] if full_psa_path else [])
+            send_email_notification(email_addr, d.get('name'), [full_psa_path] if full_psa_path else [])
 
         return jsonify({"status": "success", "db_id": new_id})
     except Exception as e:
@@ -475,75 +445,33 @@ def save_record():
     finally:
         if conn: conn.close()
 
-# --- DELETE RECORD ROUTE ---
+# --- OTHER ROUTES ---
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-
+    if not session.get('logged_in'): return jsonify({"error": "Unauthorized"}), 401
     conn = get_db_connection()
-    if not conn: return jsonify({"error": "DB Connection Error"}), 500
-
     try:
         cur = conn.cursor()
-        cur.execute("SELECT image_path, form137_path, form138_path, goodmoral_path FROM records WHERE id = %s", (record_id,))
-        row = cur.fetchone()
+        cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
 
-        if row:
-            for file_path in row:
-                if file_path:
-                    full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
-                    if os.path.exists(full_path):
-                        try: os.remove(full_path)
-                        except: pass
-
-            cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
-            conn.commit()
-            return jsonify({"success": True})
-        else:
-            return jsonify({"error": "Record not found"}), 404
-
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-# --- UPLOAD ADDITIONAL FILES ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
-    if 'file' not in request.files: return jsonify({"error": "No file"}), 400
-    file = request.files['file']
-    record_id = request.form.get('id')
-    doc_type = request.form.get('type') 
-
-    if not record_id or not doc_type: return jsonify({"error": "Missing ID or Type"}), 400
-
-    filename = secure_filename(f"{doc_type}_{record_id}_{file.filename}")
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-    
-    db_filename = filename
-
-    col_map = { 
-        'form137': 'form137_path', 
-        'form138': 'form138_path', 
-        'goodmoral': 'goodmoral_path' 
-    }
-    
-    if doc_type not in col_map: return jsonify({"error": "Invalid type"}), 400
-
+    file = request.files.get('file')
+    rid, dtype = request.form.get('id'), request.form.get('type')
+    if not file or not rid: return jsonify({"error": "Data Missing"}), 400
+    fname = secure_filename(f"{dtype}_{rid}_{file.filename}")
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        sql = f"UPDATE records SET {col_map[doc_type]} = %s WHERE id = %s"
-        cur.execute(sql, (db_filename, record_id))
+        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (fname, rid))
         conn.commit()
         return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if conn: conn.close()
+    finally: conn.close()
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
