@@ -120,7 +120,8 @@ def init_db():
                 ("school_type", "VARCHAR(50)"),
                 ("year_attended", "VARCHAR(50)"),
                 ("special_talents", "TEXT"),
-                ("is_scholar", "VARCHAR(10)")
+                ("is_scholar", "VARCHAR(10)"),
+                ("siblings", "TEXT")  # <--- NEW: SIBLINGS FIELD (JSON)
             ]
             
             for col_name, col_type in new_columns:
@@ -200,38 +201,47 @@ def save_multiple_files(files, prefix):
                 
     return saved_paths, pil_images
 
-# Helper: Intelligent Model Selector (UPDATED FOR GEMINI 2.5 FLASH)
+# Helper: Intelligent Model Selector
 def generate_content_standard(parts):
-    """
-    parts: A list containing [prompt, image1, image2, ...]
-    """
-    # --- UPDATED PRIORITY LIST ---
-    # Inuna natin ang gemini-2.5-flash.
-    # Kung wala pa ito, lilipat siya sa 2.0-flash-exp o 1.5-flash.
-    MODEL_PRIORITY_LIST = [
-        "gemini-2.5-flash", 
-        "gemini-2.0-flash-exp", 
-        "gemini-1.5-flash", 
-        "gemini-1.5-pro", 
-        "gemini-1.0-pro"
-    ]
-    last_error = None
-    print("🤖 AI START: Attempting to find a working model...")
+    print("🤖 AI START: Fetching list of ALL available models from Google...")
+    
+    available_models = []
+    try:
+        # Fetch models dynamically
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                if 'gemini' in m.name:
+                    available_models.append(m.name)
+        
+        available_models.sort(reverse=True)
+        
+        if not available_models:
+             print("⚠️ No Gemini models found. Falling back to default list.")
+             available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
+             
+    except Exception as e:
+        print(f"⚠️ Error listing models: {e}. Using fallback.")
+        available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
 
-    for model_name in MODEL_PRIORITY_LIST:
+    print(f"📋 Model Candidates found: {available_models}")
+
+    last_error = None
+
+    for model_name in available_models:
         try:
             print(f"   👉 Trying model: {model_name} ...")
             model = genai.GenerativeModel(model_name)
-            # Pass the list of parts directly
             response = model.generate_content(parts)
-            if not response.text: raise ValueError("Empty text.")
-            print(f"   ✅ SUCCESS using: {model_name}")
-            return response
+            
+            if response.text:
+                print(f"   ✅ SUCCESS using: {model_name}")
+                return response
         except Exception as e:
             print(f"   ⚠️ Failed on {model_name}: {str(e)}")
             last_error = e
-            continue
-    print("❌ ALL MODELS FAILED.")
+            continue 
+            
+    print("❌ ALL AVAILABLE MODELS FAILED.")
     raise last_error if last_error else Exception("No AI models available.")
 
 # ================= ROUTES =================
@@ -296,6 +306,17 @@ def view_form(record_id):
         if record:
             if record.get('birthdate'):
                 record['birthdate'] = str(record['birthdate'])
+            
+            # --- PARSE SIBLINGS JSON FOR VIEWING ---
+            if record.get('siblings'):
+                try:
+                    record['siblings'] = json.loads(record['siblings'])
+                except Exception:
+                    record['siblings'] = []
+            else:
+                record['siblings'] = []
+            # ---------------------------------------
+
             return render_template('print_form.html', r=record)
         else:
             return "Record not found", 404
@@ -304,17 +325,15 @@ def view_form(record_id):
     finally:
         conn.close()
 
-# --- EXTRACT PSA (MULTI-PAGE READY) ---
+# --- EXTRACT PSA ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
     
-    # Get List of files
     files = request.files.getlist('imageFiles')
     if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Save all and get PIL images
         saved_paths, pil_images = save_multiple_files(files, "PSA")
         
         if not pil_images:
@@ -343,7 +362,6 @@ def extract_data():
         }
         """
         
-        # Pass PROMPT + ALL IMAGES
         res = generate_content_standard([prompt, *pil_images])
         
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
@@ -354,23 +372,20 @@ def extract_data():
         if not data.get("is_valid_document", False):
             return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
 
-        # Return comma-separated string for paths
         return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
     except Exception as e:
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- EXTRACT FORM 137 (MULTI-PAGE READY) ---
+# --- EXTRACT FORM 137 ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
     
-    # Get List of files
     files = request.files.getlist('imageFiles')
     if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
     
     try:
-        # Save all and get PIL images
         saved_paths, pil_images = save_multiple_files(files, "F137")
         print(f"📸 Processing Form 137: {len(pil_images)} pages")
 
@@ -390,7 +405,6 @@ def extract_form137():
         }
         """
         
-        # Pass PROMPT + ALL IMAGES
         res = generate_content_standard([prompt, *pil_images])
         
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
@@ -401,7 +415,6 @@ def extract_form137():
         try: data = json.loads(raw_text)
         except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
         
-        # Return comma-separated string for paths
         return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
     except Exception as e:
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
@@ -414,6 +427,11 @@ def save_record():
         d = request.json
         print(f"📥 Received Data: {d}")
         
+        # --- PREPARE SIBLINGS DATA ---
+        siblings_list = d.get('siblings', [])
+        siblings_json = json.dumps(siblings_list) # Convert List to JSON String
+        # -----------------------------
+        
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
         cur = conn.cursor()
@@ -423,7 +441,7 @@ def save_record():
             if cur.fetchone():
                 return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
 
-        # INSERT ALL FIELDS
+        # INSERT ALL FIELDS (Added siblings at the end)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -441,8 +459,8 @@ def save_record():
                 is_ip, is_pwd, has_medication, is_working,
                 residence_type, employer_name, marital_status,
                 
-                -- NEWEST COLUMNS
-                is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar
+                is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
+                siblings -- <--- ADDED COLUMN
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -457,7 +475,8 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s,
-                %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s,
+                %s -- <--- ADDED PLACEHOLDER
             ) 
             RETURNING id
         ''', (
@@ -465,7 +484,7 @@ def save_record():
             d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
             d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
             d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            d.get('psa_image_path', ''), d.get('f137_image_path', ''), # Stores comma-separated strings
+            d.get('psa_image_path', ''), d.get('f137_image_path', ''), 
             
             d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
             d.get('mother_contact'), d.get('father_contact'),
@@ -476,8 +495,8 @@ def save_record():
             d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
             d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
             
-            # New Values
-            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar')
+            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
+            siblings_json # <--- PASSED THE JSON STRING
         ))
         
         new_id = cur.fetchone()[0]
@@ -485,7 +504,6 @@ def save_record():
 
         # Send Email
         email_addr = d.get('email', '')
-        # Prepare paths for email (handle both PSA and F137)
         files_to_send = []
         if d.get('psa_image_path'): files_to_send.append(d.get('psa_image_path'))
         if d.get('f137_image_path'): files_to_send.append(d.get('f137_image_path'))
@@ -501,10 +519,9 @@ def save_record():
     finally:
         if conn: conn.close()
 
-# --- UPLOAD ADDITIONAL (MULTI-FILE READY) ---
+# --- UPLOAD ADDITIONAL ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
-    # Use getlist to handle multiple files
     files = request.files.getlist('files')
     rid, dtype = request.form.get('id'), request.form.get('type')
     
@@ -519,15 +536,12 @@ def upload_additional():
             file.save(path)
             saved_paths.append(path)
 
-    # Join with commas if multiple
     full_path_str = ",".join(saved_paths)
     
     col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        # Note: This overwrites existing entry. If you want to append, you'd need to SELECT first.
-        # For now, we assume this is the main upload action.
         cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (full_path_str, rid))
         conn.commit()
         return jsonify({"status": "success"})
