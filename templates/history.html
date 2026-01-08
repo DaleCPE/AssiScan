@@ -15,6 +15,7 @@
             --bg-dark: #050101;
             --text-light: #f0f0f0;
             --glass: rgba(20, 5, 5, 0.7);
+            --info-blue: #17a2b8; /* New Color for Edit */
         }
 
         body {
@@ -196,12 +197,14 @@
         }
         .action-btn:hover { transform: scale(1.1); }
 
-        /* NEW PRINT BUTTON STYLE */
         .btn-print { border-color: var(--gold); color: var(--gold); }
         .btn-print:hover { background: var(--gold); color: #000; }
 
         .btn-view { border-color: #4a6fa5; color: #4a6fa5; }
         .btn-view:hover { background: #4a6fa5; color: white; }
+
+        .btn-edit { border-color: var(--info-blue); color: var(--info-blue); }
+        .btn-edit:hover { background: var(--info-blue); color: white; }
 
         .btn-upload { border-color: #55a630; color: #55a630; }
         .btn-upload:hover { background: #55a630; color: white; }
@@ -275,7 +278,7 @@
         .info-label { color: #777; }
         .info-val { color: #fff; font-weight: 500; text-align: right; }
 
-        /* Form Elements for Upload */
+        /* Form Elements */
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 5px; color: var(--gold); font-size: 12px; font-weight: bold; }
         .form-control {
@@ -288,8 +291,16 @@
             box-sizing: border-box; 
         }
         .form-control:focus { border-color: var(--gold); outline: none; }
+        .form-control:disabled { background: #1a1a1a; color: #555; }
 
-        .modal-footer { padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; }
+        /* Edit Form Grid */
+        .edit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-footer { padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
         
         .btn-modal-action {
             background: var(--gold);
@@ -301,6 +312,9 @@
             border-radius: 4px;
         }
         .btn-modal-action:hover { background: #fff; }
+        
+        .btn-cancel { background: #333; color: #fff; }
+        .btn-cancel:hover { background: #555; }
 
     </style>
 </head>
@@ -357,7 +371,70 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-action" style="background:#333; color:#fff" onclick="closeModal('viewModal')">Close</button>
+                <button class="btn-modal-action btn-cancel" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-edit"></i> Edit Record</h3>
+                <i class="fas fa-times modal-close" onclick="closeModal('editModal')"></i>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="edit_id">
+                    
+                    <div class="edit-grid">
+                        <div>
+                            <h4 style="color:var(--gold); border-bottom:1px solid #333; font-size:12px; margin-top:0;">Personal Info</h4>
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="edit_name" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Sex</label>
+                                <select id="edit_sex" class="form-control">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birthdate</label>
+                                <input type="date" id="edit_birthdate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address / Province</label>
+                                <input type="text" id="edit_province" class="form-control">
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="color:#17a2b8; border-bottom:1px solid #333; font-size:12px; margin-top:0;">Academic Info</h4>
+                            <div class="form-group">
+                                <label class="form-label">Learner Reference No. (LRN)</label>
+                                <input type="text" id="edit_lrn" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">School Name</label>
+                                <input type="text" id="edit_school" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">General Average</label>
+                                <input type="text" id="edit_average" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Track / Program</label>
+                                <input type="text" id="edit_program" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-action btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+                <button class="btn-modal-action" onclick="saveRecord()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -374,7 +451,7 @@
                     
                     <div class="form-group">
                         <label class="form-label">Student Name</label>
-                        <input type="text" id="upload_name" class="form-control" disabled style="color: #777;">
+                        <input type="text" id="upload_name" class="form-control" disabled>
                     </div>
 
                     <div class="form-group">
@@ -467,6 +544,11 @@
                             <button onclick="openViewModal(${r.id})" class="action-btn btn-view" title="View Extracted Info">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            
+                            <button onclick="openEditModal(${r.id})" class="action-btn btn-edit" title="Edit Record">
+                                <i class="fas fa-edit"></i>
+                            </button>
+
                             <button onclick="openUploadModal(${r.id}, '${r.name}')" class="action-btn btn-upload" title="Upload Missing File">
                                 <i class="fas fa-cloud-upload-alt"></i>
                             </button>
@@ -483,6 +565,7 @@
             }
         }
 
+        // ================= VIEW LOGIC =================
         function openViewModal(id) {
             const r = allRecords.find(item => item.id === id);
             if(!r) return;
@@ -501,8 +584,6 @@
                 ${row('Mother', r.mother_name)}
                 ${row('Father', r.father_name)}
                 ${row('Religion', r.religion)}
-                ${row('Birth Order', r.birth_order)}
-                ${row('Nationality', r.nationality)}
                 ${row('Address', r.specific_address + ' ' + (r.province||''))}
             `;
 
@@ -519,6 +600,62 @@
             document.getElementById('viewModal').style.display = 'flex';
         }
 
+        // ================= EDIT LOGIC (NEW) =================
+        function openEditModal(id) {
+            const r = allRecords.find(item => item.id === id);
+            if(!r) return;
+
+            // Populate form
+            document.getElementById('edit_id').value = r.id;
+            document.getElementById('edit_name').value = r.name || '';
+            document.getElementById('edit_sex').value = r.sex || 'Male';
+            document.getElementById('edit_birthdate').value = r.birthdate || '';
+            document.getElementById('edit_province').value = r.province || '';
+            document.getElementById('edit_lrn').value = r.lrn || '';
+            document.getElementById('edit_school').value = r.school_name || '';
+            document.getElementById('edit_average').value = r.final_general_average || '';
+            document.getElementById('edit_program').value = r.program || '';
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function saveRecord() {
+            const id = document.getElementById('edit_id').value;
+            const data = {
+                id: id,
+                name: document.getElementById('edit_name').value,
+                sex: document.getElementById('edit_sex').value,
+                birthdate: document.getElementById('edit_birthdate').value,
+                province: document.getElementById('edit_province').value,
+                lrn: document.getElementById('edit_lrn').value,
+                school_name: document.getElementById('edit_school').value,
+                final_general_average: document.getElementById('edit_average').value,
+                program: document.getElementById('edit_program').value
+            };
+
+            if(!confirm("Are you sure you want to save these changes?")) return;
+
+            try {
+                const res = await fetch('/update-record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    alert("Record updated successfully!");
+                    closeModal('editModal');
+                    loadData(); // Refresh table
+                } else {
+                    alert("Error updating: " + result.error);
+                }
+            } catch (err) {
+                alert("Failed to connect to server.");
+            }
+        }
+
+        // ================= UPLOAD LOGIC =================
         function openUploadModal(id, name) {
             document.getElementById('upload_id').value = id;
             document.getElementById('upload_name').value = name;
@@ -568,6 +705,7 @@
             }
         }
 
+        // ================= UTILS =================
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
