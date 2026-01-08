@@ -259,7 +259,7 @@
         <input type="text" id="programCourse" placeholder="Program / Course">
         <input type="text" id="lastLevel" placeholder="Last Level Attended (e.g. Grade 12)">
 
-        <span class="section-label"><i class="fas fa-user"></i> Student Profile</span>
+        <span class="section-label"><i class="fas fa-user"></i> Personal Information</span>
         <input type="text" id="childName" placeholder="Full Name">
         
         <div class="row">
@@ -287,14 +287,63 @@
         <input type="text" id="childBirthplace" placeholder="Place of Birth">
         <input type="text" id="childReligion" placeholder="Religion">
 
-        <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address</span>
+        <span class="section-label"><i class="fas fa-notes-medical"></i> Special Groups & Health</span>
+        <div class="row">
+            <div class="col-half">
+                <label>IP Member?</label>
+                <select id="isIP"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>PWD?</label>
+                <select id="isPWD"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-half">
+                <label>Medication?</label>
+                <select id="hasMedication"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>Working Student?</label>
+                <select id="isWorking"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
+
+        <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
         <div class="row">
             <div class="col-half"><input type="text" id="addressRegion" placeholder="Region"></div>
             <div class="col-half"><input type="text" id="addressProvince" placeholder="Province"></div>
         </div>
         <input type="text" id="addressSpecific" placeholder="House No. / Street / Brgy / City">
+        
+        <div class="row">
+            <div class="col-half">
+                <label>Residence Type</label>
+                <select id="residenceType">
+                    <option value="With Parents">With Parents</option>
+                    <option value="Boarding House">Boarding House</option>
+                    <option value="Relative">Relative</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+        </div>
 
-        <span class="section-label"><i class="fas fa-female"></i> Mother's Info</span>
+        <span class="section-label"><i class="fas fa-briefcase"></i> Employer (If Working)</span>
+        <input type="text" id="employerName" placeholder="Employer Name">
+
+        <span class="section-label"><i class="fas fa-users"></i> Family Background</span>
+        
+        <label>Parents' Marital Status</label>
+        <select id="maritalStatus">
+            <option value="Married">Married</option>
+            <option value="Living Together">Living Together</option>
+            <option value="Separated">Separated</option>
+            <option value="Single Parent">Single Parent</option>
+            <option value="Widowed">Widowed</option>
+        </select>
+
+        <div style="margin-top:10px;"></div>
+        <span class="file-label">Mother's Info</span>
         <input type="text" id="motherName" placeholder="Mother's Maiden Name">
         <div class="row">
             <input type="text" id="motherCitizenship" placeholder="Citizenship">
@@ -302,7 +351,8 @@
         </div>
         <input type="text" id="motherContact" placeholder="Mother's Contact No.">
 
-        <span class="section-label"><i class="fas fa-male"></i> Father's Info</span>
+        <div style="margin-top:10px;"></div>
+        <span class="file-label">Father's Info</span>
         <input type="text" id="fatherName" placeholder="Father's Name">
         <div class="row">
             <input type="text" id="fatherCitizenship" placeholder="Citizenship">
@@ -469,17 +519,27 @@
                 religion: document.getElementById('childReligion').value,
                 age: document.getElementById('childAge').value,
                 
-                // New Profile Fields
+                // Profile
                 civil_status: document.getElementById('childCivilStatus').value,
                 nationality: document.getElementById('childNationality').value,
                 mobile_no: document.getElementById('childMobile').value,
 
-                // Address (New)
+                // NEW FIELDS (Now linked to existing HTML elements)
+                is_ip: document.getElementById('isIP').value,
+                is_pwd: document.getElementById('isPWD').value,
+                has_medication: document.getElementById('hasMedication').value,
+                is_working: document.getElementById('isWorking').value,
+                residence_type: document.getElementById('residenceType').value,
+                employer_name: document.getElementById('employerName').value,
+                
+                // Address
                 region: document.getElementById('addressRegion').value,
                 province: document.getElementById('addressProvince').value,
                 specific_address: document.getElementById('addressSpecific').value,
 
                 // Parents (Updated)
+                marital_status: document.getElementById('maritalStatus').value, 
+                
                 mother_name: document.getElementById('motherName').value,
                 mother_citizenship: document.getElementById('motherCitizenship').value,
                 mother_occupation: document.getElementById('motherOccupation').value,
@@ -490,7 +550,7 @@
                 father_occupation: document.getElementById('fatherOccupation').value,
                 father_contact: document.getElementById('fatherContact').value,
 
-                // Guardian (New)
+                // Guardian
                 guardian_name: document.getElementById('guardianName').value,
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
