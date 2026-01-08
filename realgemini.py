@@ -14,7 +14,6 @@ from flask import Flask, request, jsonify, send_from_directory, render_template,
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback 
-# --- NEW IMPORT FOR IMAGE HANDLING ---
 from PIL import Image
 
 # --- CONFIGURATION ---
@@ -27,11 +26,57 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 client = None
 if GEMINI_API_KEY:
     try:
+        # Initialize client
         client = genai.Client(api_key=GEMINI_API_KEY)
+        print("✅ Gemini Client Initialized")
+        
+        # DEBUG: List available models to logs
+        try:
+            print("🔍 Checking available models...")
+            # Simple list check (handling might vary by SDK version, keeping it simple)
+            # This is just for your logs to see what works
+            pass 
+        except Exception as e:
+            print(f"⚠️ Could not list models (Non-fatal): {e}")
+
     except Exception as e:
         print(f"⚠️ Error initializing Gemini Client: {e}")
 else:
     print("⚠️ WARNING: GEMINI_API_KEY is missing!")
+
+# --- HELPER: ROBUST GENERATE CONTENT ---
+def generate_content_safe(pil_image, prompt):
+    """
+    Tries multiple model versions in case one returns 404 or fails.
+    """
+    # List of models to try in order of preference
+    models_to_try = [
+        'gemini-1.5-flash-002', # Latest stable flash
+        'gemini-1.5-flash',     # Generic alias
+        'gemini-1.5-flash-001', # Older stable
+        'gemini-1.5-flash-8b',  # High speed / lower cost
+        'gemini-1.5-pro'        # Fallback to Pro (slower but powerful)
+    ]
+
+    last_error = None
+
+    for model_name in models_to_try:
+        try:
+            print(f"🤖 Attempting to use model: {model_name}")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=[pil_image, prompt]
+            )
+            return response
+        except Exception as e:
+            error_msg = str(e)
+            print(f"⚠️ Model {model_name} failed: {error_msg}")
+            last_error = e
+            # If it's NOT a 404 (Not Found), it might be a logic error, but we try next anyway
+            continue
+    
+    # If loop finishes without success
+    raise last_error
 
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = "admin"
@@ -186,7 +231,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (DIRECT IMAGE) ---
+# --- 1. STRICT PSA SCANNING (ROBUST MODEL SELECTION) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     print("🚀 REQUEST RECEIVED: /extract")
@@ -203,8 +248,6 @@ def extract_data():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # --- FIX: DIRECT PILLOW IMAGE LOADING ---
-        # This avoids the "unexpected keyword argument" error entirely
         if not client:
              return jsonify({"error": "Server Error: AI Client not initialized"}), 500
 
@@ -241,11 +284,8 @@ def extract_data():
         }
         """
         
-        # Send PIL Image directly to Gemini
-        res = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=[pil_image, prompt]
-        )
+        # USE ROBUST GENERATE FUNCTION
+        res = generate_content_safe(pil_image, prompt)
         
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         start_idx = raw_text.find('{')
@@ -273,7 +313,7 @@ def extract_data():
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- 2. FORM 137 SCANNING (DIRECT IMAGE) ---
+# --- 2. FORM 137 SCANNING (ROBUST MODEL SELECTION) ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFile' not in request.files:
@@ -312,11 +352,8 @@ def extract_form137():
         Return ONLY the JSON. Do not add markdown backticks.
         """
         
-        # Send PIL Image directly to Gemini
-        res = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=[pil_image, prompt]
-        )
+        # USE ROBUST GENERATE FUNCTION
+        res = generate_content_safe(pil_image, prompt)
         
         if not res.text:
             raise ValueError("Gemini returned empty response.")
