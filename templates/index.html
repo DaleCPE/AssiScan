@@ -308,6 +308,16 @@
                 <select id="isWorking"><option value="No">No</option><option value="Yes">Yes</option></select>
             </div>
         </div>
+        <div class="row">
+            <div class="col-half">
+                <label>Gifted Child?</label>
+                <select id="isGifted"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>Needs Assistance?</label>
+                <select id="needsAssistance"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
 
         <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
         <div class="row">
@@ -383,11 +393,27 @@
         <span class="section-label"><i class="fas fa-school"></i> School Record (F137)</span>
         <input type="text" id="lrn" placeholder="Learner Reference No. (LRN)">
         <input type="text" id="schoolName" placeholder="School Name">
-        <input type="text" id="schoolAddress" placeholder="School Address">
         <div class="row">
+            <div class="col-half"><input type="text" id="schoolAddress" placeholder="School Address"></div>
+            <div class="col-half"><select id="schoolType"><option value="Public">Public</option><option value="Private">Private</option></select></div>
+        </div>
+        <div class="row">
+            <div class="col-half">
+                 <label>Year Attended</label>
+                 <input type="text" id="yearAttended" placeholder="e.g. 2023-2024">
+            </div>
             <div class="col-half">
                  <label>Final Gen. Average</label>
                  <input type="text" id="genAverage" placeholder="e.g. 92.5">
+            </div>
+        </div>
+        
+        <span class="section-label"><i class="fas fa-star"></i> Additional Info</span>
+        <input type="text" id="specialTalents" placeholder="Special Talents / Skills">
+        <div class="row">
+            <div class="col-half">
+                <label>Scholar?</label>
+                <select id="isScholar"><option value="No">No</option><option value="Yes">Yes</option></select>
             </div>
         </div>
 
@@ -410,25 +436,18 @@
         let psaImagePath = "";
         let f137ImagePath = "";
 
-        // --- DYNAMIC ADDRESS LOGIC ---
         const philippineLocations = {
             "NCR": ["Metro Manila"],
-            "CAR": ["Abra", "Apayao", "Benguet", "Ifugao", "Kalinga", "Mountain Province"],
-            "Region I (Ilocos Region)": ["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"],
-            "Region II (Cagayan Valley)": ["Batanes", "Cagayan", "Isabela", "Nueva Vizcaya", "Quirino"],
-            "Region III (Central Luzon)": ["Aurora", "Bataan", "Bulacan", "Nueva Ecija", "Pampanga", "Tarlac", "Zambales"],
             "Region IV-A (CALABARZON)": ["Batangas", "Cavite", "Laguna", "Quezon", "Rizal"],
-            "Region IV-B (MIMAROPA)": ["Marinduque", "Occidental Mindoro", "Oriental Mindoro", "Palawan", "Romblon"],
-            "Region V (Bicol Region)": ["Albay", "Camarines Norte", "Camarines Sur", "Catanduanes", "Masbate", "Sorsogon"],
-            "Region VI (Western Visayas)": ["Aklan", "Antique", "Capiz", "Guimaras", "Iloilo", "Negros Occidental"],
-            "Region VII (Central Visayas)": ["Bohol", "Cebu", "Negros Oriental", "Siquijor"],
-            "Region VIII (Eastern Visayas)": ["Biliran", "Eastern Samar", "Leyte", "Northern Samar", "Samar", "Southern Leyte"],
-            "Region IX (Zamboanga Peninsula)": ["Zamboanga del Norte", "Zamboanga del Sur", "Zamboanga Sibugay"],
-            "Region X (Northern Mindanao)": ["Bukidnon", "Camiguin", "Lanao del Norte", "Misamis Occidental", "Misamis Oriental"],
-            "Region XI (Davao Region)": ["Davao de Oro", "Davao del Norte", "Davao del Sur", "Davao Occidental", "Davao Oriental"],
-            "Region XII (SOCCSKSARGEN)": ["Cotabato", "Sarangani", "South Cotabato", "Sultan Kudarat"],
-            "Region XIII (Caraga)": ["Agusan del Norte", "Agusan del Sur", "Dinagat Islands", "Surigao del Norte", "Surigao del Sur"],
-            "BARMM": ["Basilan", "Lanao del Sur", "Maguindanao", "Sulu", "Tawi-Tawi"]
+            "Region III (Central Luzon)": ["Bulacan", "Pampanga", "Tarlac", "Zambales"],
+            "Region I": ["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"],
+            "Region II": ["Cagayan", "Isabela", "Nueva Vizcaya"],
+            "Region V": ["Albay", "Camarines Sur", "Sorsogon"],
+            "Region VI": ["Iloilo", "Negros Occidental"],
+            "Region VII": ["Cebu", "Bohol"],
+            "Region VIII": ["Leyte", "Samar"],
+            "Region X": ["Bukidnon", "Misamis Oriental"],
+            "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
         function populateRegions() {
@@ -445,13 +464,9 @@
             const regionSelect = document.getElementById("addressRegion");
             const provinceSelect = document.getElementById("addressProvince");
             const selectedRegion = regionSelect.value;
-
-            // Clear existing options
             provinceSelect.innerHTML = '<option value="">Select Province</option>';
-
             if (selectedRegion && philippineLocations[selectedRegion]) {
-                const provinces = philippineLocations[selectedRegion];
-                provinces.forEach(province => {
+                philippineLocations[selectedRegion].forEach(province => {
                     const option = document.createElement("option");
                     option.value = province;
                     option.textContent = province;
@@ -460,10 +475,8 @@
             }
         }
 
-        // Initialize regions on load
         window.addEventListener('load', populateRegions);
 
-        // --- EXISTING UTILS ---
         function calculateAge() {
             const birthDate = new Date(document.getElementById('childBirthdate').value);
             const today = new Date();
@@ -501,22 +514,18 @@
                 if (data.structured_data) {
                     const d = data.structured_data;
                     document.getElementById('psaStatus').innerText = "✅ Data Extracted";
-                    
                     document.getElementById('childName').value = d.Name || "";
                     document.getElementById('childSex').value = d.Sex || "";
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
                     document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
                     document.getElementById('birthOrder').value = d.BirthOrder || "";
                     document.getElementById('childReligion').value = d.Religion || "";
-                    
                     document.getElementById('motherName').value = d.Mother_MaidenName || "";
                     document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
                     document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
-
                     document.getElementById('fatherName').value = d.Father_Name || "";
                     document.getElementById('fatherCitizenship').value = d.Father_Citizenship || "";
                     document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
-
                     if(d.Birthdate) calculateAge();
                     psaImagePath = data.image_path;
                 } else {
@@ -588,45 +597,47 @@
                 nationality: document.getElementById('childNationality').value,
                 mobile_no: document.getElementById('childMobile').value,
 
-                // NEW FIELDS (Now linked to existing HTML elements)
+                // Special Groups (COMPLETE)
                 is_ip: document.getElementById('isIP').value,
                 is_pwd: document.getElementById('isPWD').value,
                 has_medication: document.getElementById('hasMedication').value,
                 is_working: document.getElementById('isWorking').value,
-                residence_type: document.getElementById('residenceType').value,
-                employer_name: document.getElementById('employerName').value,
-                
-                // Address (Values from Dropdowns)
+                is_gifted: document.getElementById('isGifted').value, 
+                needs_assistance: document.getElementById('needsAssistance').value, 
+
+                // Address & Employer
                 region: document.getElementById('addressRegion').value,
                 province: document.getElementById('addressProvince').value,
                 specific_address: document.getElementById('addressSpecific').value,
+                residence_type: document.getElementById('residenceType').value,
+                employer_name: document.getElementById('employerName').value,
 
-                // Parents (Updated)
+                // Family
                 marital_status: document.getElementById('maritalStatus').value, 
-                
                 mother_name: document.getElementById('motherName').value,
                 mother_citizenship: document.getElementById('motherCitizenship').value,
                 mother_occupation: document.getElementById('motherOccupation').value,
                 mother_contact: document.getElementById('motherContact').value,
-
                 father_name: document.getElementById('fatherName').value,
                 father_citizenship: document.getElementById('fatherCitizenship').value,
                 father_occupation: document.getElementById('fatherOccupation').value,
                 father_contact: document.getElementById('fatherContact').value,
-
-                // Guardian
                 guardian_name: document.getElementById('guardianName').value,
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
 
-                email: document.getElementById('contactEmail').value,
-                psa_image_path: psaImagePath,
-
-                // F137
+                // School Records (COMPLETE)
                 lrn: document.getElementById('lrn').value,
                 school_name: document.getElementById('schoolName').value,
                 school_address: document.getElementById('schoolAddress').value,
                 final_general_average: document.getElementById('genAverage').value,
+                school_type: document.getElementById('schoolType').value, 
+                year_attended: document.getElementById('yearAttended').value, 
+                special_talents: document.getElementById('specialTalents').value, 
+                is_scholar: document.getElementById('isScholar').value, 
+
+                email: document.getElementById('contactEmail').value,
+                psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath
             };
 
