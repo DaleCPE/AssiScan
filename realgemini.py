@@ -21,7 +21,7 @@ EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- CONFIGURE GEMINI (STANDARD WAY) ---
+# --- CONFIGURE GEMINI ---
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
@@ -184,23 +184,44 @@ def get_records():
     finally:
         conn.close()
 
-# --- INTELLIGENT MODEL SELECTOR (UPDATED LOGIC HERE) ---
+# --- 🔍 NEW DIAGNOSTIC ROUTE (CHECK AVAILABLE MODELS) ---
+# IMPORTANT: Visit https://your-app.onrender.com/debug-ai to see if API Key works
+@app.route('/debug-ai', methods=['GET'])
+def debug_ai():
+    try:
+        model_list = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                model_list.append(m.name)
+        return jsonify({
+            "status": "success",
+            "message": "API Key is working. These are the available models:",
+            "models": model_list
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "hint": "API Key invalid or Library version mismatch."
+        })
+
+# --- INTELLIGENT MODEL SELECTOR ---
 def generate_content_standard(pil_image, prompt):
     """
-    Subukan ang lahat ng available na models mula sa pinakabago hanggang sa luma.
-    Kapag nag-fail ang isa, lilipat sa susunod.
+    Subukan ang lahat ng available na models.
+    Automatic fail-over kapag may 404 error.
     """
     
-    # LIST OF MODELS TO TRY (In Order of Priority)
+    # PRIORITY LIST (Updated for reliability)
     MODEL_PRIORITY_LIST = [
-        "gemini-2.0-flash-exp",  # Try Newest/Fastest
-        "gemini-1.5-pro",        # Try High Intelligence
-        "gemini-1.5-flash",      # Try Standard Stable
-        "gemini-1.0-pro"         # Legacy fallback
+        "gemini-1.5-flash",      # Most standard/stable
+        "gemini-1.5-pro",        # High intelligence
+        "gemini-2.0-flash-exp",  # Experimental (might not exist yet on all keys)
+        "gemini-1.0-pro",        # Legacy
+        "gemini-pro"             # Oldest alias
     ]
 
     last_error = None
-    
     print("🤖 AI START: Attempting to find a working model...")
 
     for model_name in MODEL_PRIORITY_LIST:
@@ -208,24 +229,21 @@ def generate_content_standard(pil_image, prompt):
             print(f"   👉 Trying model: {model_name} ...")
             model = genai.GenerativeModel(model_name)
             
-            # Subukang mag-generate
+            # Generate content
             response = model.generate_content([pil_image, prompt])
             
-            # Check kung may laman ang response
             if not response.text:
                 raise ValueError("Model returned empty text.")
 
-            # Kung walang error, success!
             print(f"   ✅ SUCCESS using: {model_name}")
             return response
             
         except Exception as e:
-            # Kung nagka-error (e.g. 404 Not Found), i-log lang at ituloy sa susunod
+            # Catch 404s and other errors, try next model
             print(f"   ⚠️ Failed on {model_name}: {str(e)}")
             last_error = e
             continue
 
-    # Kung naubos na ang listahan at wala pa ring gumana:
     print("❌ ALL MODELS FAILED.")
     raise last_error if last_error else Exception("No AI models available.")
 
