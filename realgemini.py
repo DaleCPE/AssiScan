@@ -121,7 +121,7 @@ def init_db():
                 ("year_attended", "VARCHAR(50)"),
                 ("special_talents", "TEXT"),
                 ("is_scholar", "VARCHAR(10)"),
-                ("siblings", "TEXT")  # <--- NEW: SIBLINGS FIELD (JSON)
+                ("siblings", "TEXT") 
             ]
             
             for col_name, col_type in new_columns:
@@ -142,8 +142,12 @@ def init_db():
 
 init_db()
 
-# --- EMAIL FUNCTION ---
-def send_email_notification(recipient_email, student_name, file_paths):
+# --- EMAIL FUNCTION (UPDATED FOR JSON ARRAYS) ---
+def send_email_notification(recipient_email, student_name, file_paths_list):
+    """
+    file_paths_list: A list containing strings. 
+    Each string might be a JSON array '["a.jpg", "b.jpg"]' or a plain path.
+    """
     if not recipient_email or not EMAIL_SENDER: return False
     try:
         msg = MIMEMultipart()
@@ -153,19 +157,36 @@ def send_email_notification(recipient_email, student_name, file_paths):
         body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
         msg.attach(MIMEText(body, 'plain'))
         
-        # Handle comma-separated paths
-        for path_string in file_paths:
-            if path_string:
-                # Split in case multiple files are stored in one string
-                individual_paths = path_string.split(',')
-                for clean_path in individual_paths:
-                    if clean_path and os.path.exists(clean_path):
+        # Process each item in the list
+        for raw_entry in file_paths_list:
+            if not raw_entry: continue
+
+            # Determine if it's a JSON array or a plain string
+            real_paths = []
+            try:
+                # Try to parse as JSON (e.g., '["uploads/a.jpg", "uploads/b.jpg"]')
+                parsed = json.loads(raw_entry)
+                if isinstance(parsed, list):
+                    real_paths = parsed
+                else:
+                    real_paths = [raw_entry] # Fallback
+            except:
+                # Fallback for legacy comma-separated
+                real_paths = raw_entry.split(',')
+
+            # Attach files
+            for path in real_paths:
+                clean_path = path.strip()
+                if clean_path and os.path.exists(clean_path):
+                    try:
                         with open(clean_path, "rb") as attachment:
                             part = MIMEBase('application', 'octet-stream')
                             part.set_payload(attachment.read())
                             encoders.encode_base64(part)
                             part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(clean_path)}")
                             msg.attach(part)
+                    except Exception as e:
+                        print(f"⚠️ Error attaching file {clean_path}: {e}")
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -191,7 +212,7 @@ def save_multiple_files(files, prefix):
             filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
-            saved_paths.append(path)
+            saved_paths.append(path) # Keep absolute or relative path as needed
             # Open image for Gemini
             try:
                 img = Image.open(path)
@@ -207,7 +228,6 @@ def generate_content_standard(parts):
     
     available_models = []
     try:
-        # Fetch models dynamically
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 if 'gemini' in m.name:
@@ -216,7 +236,6 @@ def generate_content_standard(parts):
         available_models.sort(reverse=True)
         
         if not available_models:
-             print("⚠️ No Gemini models found. Falling back to default list.")
              available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
              
     except Exception as e:
@@ -286,6 +305,7 @@ def get_records():
         for r in rows:
             if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: r['birthdate'] = str(r['birthdate'])
+            # Note: image_path and form137_path are sent as JSON strings here, which is perfect for frontend parsing
         return jsonify({"records": rows})
     except Exception as e:
         return jsonify({"records": []})
@@ -307,15 +327,27 @@ def view_form(record_id):
             if record.get('birthdate'):
                 record['birthdate'] = str(record['birthdate'])
             
-            # --- PARSE SIBLINGS JSON FOR VIEWING ---
+            # --- PARSE SIBLINGS JSON ---
             if record.get('siblings'):
-                try:
-                    record['siblings'] = json.loads(record['siblings'])
-                except Exception:
-                    record['siblings'] = []
+                try: record['siblings'] = json.loads(record['siblings'])
+                except: record['siblings'] = []
             else:
                 record['siblings'] = []
-            # ---------------------------------------
+                
+            # --- PARSE IMAGES JSON (Optional, if print view needs to loop them) ---
+            # Parse PSA
+            try: 
+                record['psa_images'] = json.loads(record['image_path']) if record['image_path'] else []
+                if not isinstance(record['psa_images'], list): record['psa_images'] = [record['image_path']]
+            except: 
+                record['psa_images'] = [record['image_path']] if record['image_path'] else []
+
+            # Parse F137
+            try: 
+                record['f137_images'] = json.loads(record['form137_path']) if record['form137_path'] else []
+                if not isinstance(record['f137_images'], list): record['f137_images'] = [record['form137_path']]
+            except: 
+                record['f137_images'] = [record['form137_path']] if record['form137_path'] else []
 
             return render_template('print_form.html', r=record)
         else:
@@ -325,7 +357,7 @@ def view_form(record_id):
     finally:
         conn.close()
 
-# --- EXTRACT PSA ---
+# --- EXTRACT PSA (UPDATED) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
@@ -334,6 +366,7 @@ def extract_data():
     if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
 
     try:
+        # Save all files and get their paths
         saved_paths, pil_images = save_multiple_files(files, "PSA")
         
         if not pil_images:
@@ -372,12 +405,14 @@ def extract_data():
         if not data.get("is_valid_document", False):
             return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
 
-        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
+        # UPDATED: Return saved_paths as a LIST, not a joined string.
+        # This allows the frontend to receive an array, and then JSON.stringify it later.
+        return jsonify({"message": "Success", "structured_data": data, "image_paths": saved_paths})
     except Exception as e:
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- EXTRACT FORM 137 ---
+# --- EXTRACT FORM 137 (UPDATED) ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
@@ -415,11 +450,12 @@ def extract_form137():
         try: data = json.loads(raw_text)
         except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
         
-        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
+        # UPDATED: Return saved_paths as a LIST
+        return jsonify({"message": "Success", "structured_data": data, "image_paths": saved_paths})
     except Exception as e:
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- SAVE RECORD ---
+# --- SAVE RECORD (UPDATED logic notes) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
@@ -429,8 +465,11 @@ def save_record():
         
         # --- PREPARE SIBLINGS DATA ---
         siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list) # Convert List to JSON String
-        # -----------------------------
+        siblings_json = json.dumps(siblings_list)
+        
+        # Note: d.get('psa_image_path') and d.get('f137_image_path') 
+        # are now expected to be JSON STRINGS (e.g., '["path1", "path2"]') 
+        # because the Frontend applied JSON.stringify() to the arrays before sending.
         
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
@@ -441,7 +480,7 @@ def save_record():
             if cur.fetchone():
                 return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
 
-        # INSERT ALL FIELDS (Added siblings at the end)
+        # INSERT ALL FIELDS
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -460,7 +499,7 @@ def save_record():
                 residence_type, employer_name, marital_status,
                 
                 is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings -- <--- ADDED COLUMN
+                siblings
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -476,7 +515,7 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s -- <--- ADDED PLACEHOLDER
+                %s
             ) 
             RETURNING id
         ''', (
@@ -496,7 +535,7 @@ def save_record():
             d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
             
             d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json # <--- PASSED THE JSON STRING
+            siblings_json 
         ))
         
         new_id = cur.fetchone()[0]
@@ -509,6 +548,7 @@ def save_record():
         if d.get('f137_image_path'): files_to_send.append(d.get('f137_image_path'))
 
         if email_addr:
+            # Note: files_to_send contains strings like '["uploads/a.jpg"]'
             send_email_notification(email_addr, d.get('name'), files_to_send)
 
         return jsonify({"status": "success", "db_id": new_id})
@@ -536,7 +576,8 @@ def upload_additional():
             file.save(path)
             saved_paths.append(path)
 
-    full_path_str = ",".join(saved_paths)
+    # For additional uploads, we store as JSON string now to maintain consistency
+    full_path_str = json.dumps(saved_paths)
     
     col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
     conn = get_db_connection()
