@@ -1,8 +1,8 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from google import genai
-from google.genai import types
+# --- CHANGED TO STANDARD LIBRARY ---
+import google.generativeai as genai
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -22,61 +22,15 @@ EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- INITIALIZE NEW CLIENT ---
-client = None
+# --- CONFIGURE GEMINI (STANDARD WAY) ---
 if GEMINI_API_KEY:
     try:
-        # Initialize client
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        print("✅ Gemini Client Initialized")
-        
-        # DEBUG: List available models to logs
-        try:
-            print("🔍 Checking available models...")
-            # Simple list check (handling might vary by SDK version, keeping it simple)
-            # This is just for your logs to see what works
-            pass 
-        except Exception as e:
-            print(f"⚠️ Could not list models (Non-fatal): {e}")
-
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("✅ Google Generative AI Configured")
     except Exception as e:
-        print(f"⚠️ Error initializing Gemini Client: {e}")
+        print(f"⚠️ Error configuring Gemini: {e}")
 else:
     print("⚠️ WARNING: GEMINI_API_KEY is missing!")
-
-# --- HELPER: ROBUST GENERATE CONTENT ---
-def generate_content_safe(pil_image, prompt):
-    """
-    Tries multiple model versions in case one returns 404 or fails.
-    """
-    # List of models to try in order of preference
-    models_to_try = [
-        'gemini-1.5-flash-002', # Latest stable flash
-        'gemini-1.5-flash',     # Generic alias
-        'gemini-1.5-flash-001', # Older stable
-        'gemini-1.5-flash-8b',  # High speed / lower cost
-        'gemini-1.5-pro'        # Fallback to Pro (slower but powerful)
-    ]
-
-    last_error = None
-
-    for model_name in models_to_try:
-        try:
-            print(f"🤖 Attempting to use model: {model_name}")
-            response = client.models.generate_content(
-                model=model_name,
-                contents=[pil_image, prompt]
-            )
-            return response
-        except Exception as e:
-            error_msg = str(e)
-            print(f"⚠️ Model {model_name} failed: {error_msg}")
-            last_error = e
-            # If it's NOT a 404 (Not Found), it might be a logic error, but we try next anyway
-            continue
-    
-    # If loop finishes without success
-    raise last_error
 
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = "admin"
@@ -231,7 +185,28 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (ROBUST MODEL SELECTION) ---
+# --- HELPER: GENERATE CONTENT WITH FALLBACK ---
+def generate_content_standard(pil_image, prompt):
+    """
+    Uses the standard google-generativeai library.
+    Tries gemini-1.5-flash first, then pro.
+    """
+    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
+    last_error = None
+
+    for m in models:
+        try:
+            print(f"🤖 Using Standard Model: {m}")
+            model = genai.GenerativeModel(m)
+            response = model.generate_content([pil_image, prompt])
+            return response
+        except Exception as e:
+            print(f"⚠️ Model {m} failed: {e}")
+            last_error = e
+    
+    raise last_error
+
+# --- 1. STRICT PSA SCANNING ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     print("🚀 REQUEST RECEIVED: /extract")
@@ -248,11 +223,7 @@ def extract_data():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        if not client:
-             return jsonify({"error": "Server Error: AI Client not initialized"}), 500
-
         try:
-            # Buksan ang image gamit ang Pillow
             pil_image = Image.open(filepath)
         except Exception as e:
              return jsonify({"error": f"Invalid Image File: {str(e)}"}), 400
@@ -284,9 +255,10 @@ def extract_data():
         }
         """
         
-        # USE ROBUST GENERATE FUNCTION
-        res = generate_content_safe(pil_image, prompt)
+        # USE STANDARD LIBRARY
+        res = generate_content_standard(pil_image, prompt)
         
+        # Clean response
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         start_idx = raw_text.find('{')
         end_idx = raw_text.rfind('}') + 1
@@ -313,7 +285,7 @@ def extract_data():
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- 2. FORM 137 SCANNING (ROBUST MODEL SELECTION) ---
+# --- 2. FORM 137 SCANNING ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFile' not in request.files:
@@ -330,9 +302,6 @@ def extract_form137():
     print(f"📸 Processing Form 137: {filename}")
 
     try:
-        if not client:
-             return jsonify({"error": "Server Error: AI Client not initialized"}), 500
-
         try:
             pil_image = Image.open(filepath)
         except Exception as e:
@@ -352,8 +321,8 @@ def extract_form137():
         Return ONLY the JSON. Do not add markdown backticks.
         """
         
-        # USE ROBUST GENERATE FUNCTION
-        res = generate_content_safe(pil_image, prompt)
+        # USE STANDARD LIBRARY
+        res = generate_content_standard(pil_image, prompt)
         
         if not res.text:
             raise ValueError("Gemini returned empty response.")
