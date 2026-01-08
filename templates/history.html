@@ -15,7 +15,7 @@
             --bg-dark: #050101;
             --text-light: #f0f0f0;
             --glass: rgba(20, 5, 5, 0.7);
-            --info-blue: #17a2b8; /* New Color for Edit */
+            --info-blue: #17a2b8;
         }
 
         body {
@@ -676,7 +676,8 @@
             const formData = new FormData();
             formData.append('id', id);
             formData.append('type', type);
-            formData.append('file', fileInput.files[0]);
+            // FIX: Changed 'file' to 'files' to match Python backend
+            formData.append('files', fileInput.files[0]);
 
             const btn = document.querySelector('#uploadModal .btn-modal-action');
             const originalText = btn.innerText;
@@ -688,16 +689,20 @@
                     method: 'POST',
                     body: formData
                 });
+                
+                // Get JSON response
                 const result = await res.json();
 
-                if (result.status === 'success') {
+                // Check HTTP status OK (200) AND backend status
+                if (res.ok) {
                     alert("Document uploaded successfully!");
                     closeModal('uploadModal');
                     loadData(); 
                 } else {
-                    alert("Error: " + result.error);
+                    alert("Error: " + (result.error || "Upload failed"));
                 }
             } catch (err) {
+                console.error(err);
                 alert("Server connection failed.");
             } finally {
                 btn.innerText = originalText;
