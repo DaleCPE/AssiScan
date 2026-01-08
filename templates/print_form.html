@@ -3,88 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>University of Batangas - Personal Data Form</title>
+    <title>UB Personal Data Form - {{ r.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
         
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f3f4f6;
-        }
-
+        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; }
         .ub-header { color: #800000; }
-        .ub-bg { background-color: #800000; }
-
         .form-section-title {
-            color: #333;
-            font-size: 1.25rem;
-            font-weight: 500;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 0.5rem;
-            margin-top: 2rem;
-            margin-bottom: 1.5rem;
+            color: #333; font-size: 1.25rem; font-weight: 500;
+            border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
+            margin-top: 2rem; margin-bottom: 1.5rem;
         }
-
-        /* Print styles */
+        /* Print Styling */
         @media print {
             body { background-color: white; }
             .no-print { display: none !important; }
-            .container {
-                box-shadow: none;
-                max-width: 100%;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                border: none;
+            .container { box-shadow: none; width: 100%; max-width: 100%; border: none; margin: 0; padding: 0; }
+            input, select, textarea { 
+                border: none !important; border-bottom: 1px solid #ccc !important; 
+                background: transparent !important; color: black !important; font-weight: bold;
             }
-            input, select, textarea {
-                border: 1px solid #ccc !important;
-                background-color: white !important;
-                color: black !important;
-                font-weight: bold;
-            }
-            /* Hide placeholder text when printing */
-            ::placeholder { color: transparent; }
+            .ub-header { color: black !important; }
         }
     </style>
 </head>
 <body class="py-8 px-4 sm:px-6 lg:px-8">
 
     <div class="max-w-5xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200 container">
-        
         <div class="p-8">
             <div class="text-center mb-8">
                 <h1 class="text-3xl font-bold ub-header tracking-wide">UNIVERSITY OF BATANGAS</h1>
                 <h2 class="text-xl ub-header mt-1 font-medium">Personal Data Form</h2>
             </div>
 
-            <div class="bg-yellow-50 border border-yellow-100 rounded-md p-4 mb-8 text-sm text-gray-700 text-center italic no-print">
-                <p>This form is auto-filled based on the scanned documents and verified data.</p>
-            </div>
-
             <form>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <div class="lg:col-span-3">
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Year</label>
-                        <input type="text" value="{{ r.school_year }}" class="w-full rounded border-gray-300 border p-2 font-bold text-red-900">
+                        <input type="text" value="{{ r.school_year }}" class="w-full border-gray-300 border p-2 text-red-900">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Student Classification</label>
-                        <input type="text" value="{{ r.student_type }}" class="w-full rounded border-gray-300 border p-2 font-bold">
+                        <input type="text" value="{{ r.student_type }}" class="w-full border-gray-300 border p-2">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Type of Student</label>
-                        <input type="text" value="{{ r.student_type }}" class="w-full rounded border-gray-300 border p-2 font-bold">
+                        <input type="text" value="{{ r.student_type }}" class="w-full border-gray-300 border p-2">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Preferred Schedule</label>
-                        <input type="text" value="Morning/Afternoon" class="w-full rounded border-gray-300 border p-2 font-bold">
+                        <input type="text" value="Morning/Afternoon" class="w-full border-gray-300 border p-2">
                     </div>
                     <div class="lg:col-span-3">
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Program</label>
-                        <input type="text" value="{{ r.program }}" class="w-full rounded border-gray-300 border p-2 font-bold text-red-900">
+                        <input type="text" value="{{ r.program }}" class="w-full border-gray-300 border p-2 text-red-900 font-bold">
                     </div>
                 </div>
 
@@ -92,114 +66,55 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div class="col-span-3">
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name (Last, First, Middle)</label>
-                        <input type="text" value="{{ r.name }}" class="w-full rounded border-gray-300 border p-2 font-bold text-lg">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name</label>
+                        <input type="text" value="{{ r.name }}" class="w-full border-gray-300 border p-2 font-bold text-lg">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Birthdate</label>
-                        <input type="text" value="{{ r.birthdate }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sex</label>
-                        <input type="text" value="{{ r.sex }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Civil Status</label>
-                        <input type="text" value="{{ r.civil_status }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Birthdate</label><input type="text" value="{{ r.birthdate }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sex</label><input type="text" value="{{ r.sex }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Civil Status</label><input type="text" value="{{ r.civil_status }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Religion</label>
-                        <input type="text" value="{{ r.religion }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nationality</label>
-                        <input type="text" value="{{ r.nationality }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Place of Birth</label>
-                        <input type="text" value="{{ r.birthplace }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Religion</label><input type="text" value="{{ r.religion }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nationality</label><input type="text" value="{{ r.nationality }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Place of Birth</label><input type="text" value="{{ r.birthplace }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="bg-gray-50 p-4 rounded border border-gray-200 mb-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Indigenous Peoples Group?</label>
-                            <input type="text" value="{{ r.is_ip }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Person with Disability (PWD)?</label>
-                            <input type="text" value="{{ r.is_pwd }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                        </div>
+                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Indigenous Peoples Group?</label><input type="text" value="{{ r.is_ip }}" class="w-full border-gray-300 border p-2"></div>
+                        <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Person with Disability (PWD)?</label><input type="text" value="{{ r.is_pwd }}" class="w-full border-gray-300 border p-2"></div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Regular Medication?</label>
-                        <input type="text" value="{{ r.has_medication }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                      <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Age</label>
-                        <input type="text" value="{{ r.age }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Currently Working?</label>
-                        <input type="text" value="{{ r.is_working }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Regular Medication?</label><input type="text" value="{{ r.has_medication }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Age</label><input type="text" value="{{ r.age }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Currently Working?</label><input type="text" value="{{ r.is_working }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="mb-4">
                     <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Complete Address</label>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                         <input type="text" value="{{ r.region }}" class="w-full rounded border-gray-300 border p-2 font-bold" placeholder="Region">
-                        <input type="text" value="{{ r.province }}" class="w-full rounded border-gray-300 border p-2 font-bold" placeholder="Province">
-                    </div>
-                    <textarea class="w-full rounded border-gray-300 border p-2 font-bold" rows="2">{{ r.specific_address }}</textarea>
+                    <input type="text" value="{{ r.specific_address }}, {{ r.province }}, {{ r.region }}" class="w-full border-gray-300 border p-2 font-bold">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Mobile No.</label>
-                        <input type="text" value="{{ r.mobile_no }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Telephone No.</label>
-                        <input type="text" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email</label>
-                        <input type="text" value="{{ r.email }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Mobile No.</label><input type="text" value="{{ r.mobile_no }}" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Telephone No.</label><input type="text" value="-" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email</label><input type="text" value="{{ r.email }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Residence</label>
-                         <input type="text" value="{{ r.residence_type }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Residence</label><input type="text" value="{{ r.residence_type }}" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 {% if r.is_working == 'Yes' %}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-blue-50 p-3 rounded">
-                      <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Employer Name</label>
-                        <input type="text" value="{{ r.employer_name }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                      <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Employer Address</label>
-                        <input type="text" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                      <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Occupation</label>
-                        <input type="text" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Employer Name</label><input type="text" value="{{ r.employer_name }}" class="w-full border-gray-300 border p-2"></div>
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Occupation</label><input type="text" value="-" class="w-full border-gray-300 border p-2"></div>
                 </div>
                 {% endif %}
 
@@ -207,30 +122,20 @@
 
                 <div class="mb-6">
                     <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Parent's Marital Status</label>
-                    <div class="p-2 border rounded bg-gray-50 font-bold text-red-900">
-                        {{ r.marital_status }}
-                    </div>
+                    <div class="p-2 border rounded bg-gray-50 font-bold text-red-900">{{ r.marital_status }}</div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    
                     <div class="bg-gray-50 p-5 rounded-lg border-l-4 border-red-800">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="font-bold text-gray-800">Father's Information</h4>
-                        </div>
-                        
+                        <h4 class="font-bold text-gray-800 mb-4">Father's Information</h4>
                         <div class="space-y-3">
                             <div><label class="text-xs text-gray-500 uppercase">Name</label><input type="text" value="{{ r.father_name }}" class="w-full border rounded p-1 font-bold"></div>
                             <div><label class="text-xs text-gray-500 uppercase">Occupation</label><input type="text" value="{{ r.father_occupation }}" class="w-full border rounded p-1 font-bold"></div>
                             <div><label class="text-xs text-gray-500 uppercase">Contact No.</label><input type="text" value="{{ r.father_contact }}" class="w-full border rounded p-1 font-bold"></div>
                         </div>
                     </div>
-
                     <div class="bg-gray-50 p-5 rounded-lg border-l-4 border-red-800">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="font-bold text-gray-800">Mother's Information</h4>
-                        </div>
-                        
+                        <h4 class="font-bold text-gray-800 mb-4">Mother's Information</h4>
                         <div class="space-y-3">
                             <div><label class="text-xs text-gray-500 uppercase">Name</label><input type="text" value="{{ r.mother_name }}" class="w-full border rounded p-1 font-bold"></div>
                             <div><label class="text-xs text-gray-500 uppercase">Occupation</label><input type="text" value="{{ r.mother_occupation }}" class="w-full border rounded p-1 font-bold"></div>
@@ -248,51 +153,70 @@
                     </div>
                 </div>
 
+                <div class="mb-6">
+                    <label class="inline-flex items-center mb-2"><span class="ml-2 text-sm font-bold text-gray-700">Siblings</span></label>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500 border border-gray-200">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 border">Name</th>
+                                    <th class="px-4 py-2 border">Age</th>
+                                    <th class="px-4 py-2 border">Sex</th>
+                                    <th class="px-4 py-2 border">Civil Status</th>
+                                    <th class="px-4 py-2 border">Occupation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="bg-white border-b"><td class="p-2 border h-8"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td></tr>
+                                <tr class="bg-white border-b"><td class="p-2 border h-8"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td><td class="p-2 border"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <h3 class="form-section-title">Educational Background</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Last Level Attended</label>
-                        <input type="text" value="{{ r.last_level_attended }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Name</label>
-                        <input type="text" value="{{ r.school_name }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
+                     <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Last Level Attended</label><input type="text" value="{{ r.last_level_attended }}" class="w-full border-gray-300 border p-2"></div>
+                     <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Name</label><input type="text" value="{{ r.school_name }}" class="w-full border-gray-300 border p-2 font-bold"></div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Address</label>
-                        <input type="text" value="{{ r.school_address }}" class="w-full rounded border-gray-300 border p-2 font-bold">
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Type</label><input type="text" value="Public/Private" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Year Attended</label><input type="text" value="-" class="w-full border-gray-300 border p-2"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Final Grade Avg</label><input type="text" value="{{ r.final_general_average }}" class="w-full border-gray-300 border p-2 font-bold bg-yellow-100"></div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Organizations / Clubs</label>
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                        <span>Student Council [ ]</span>
+                        <span>Sports Club [ ]</span>
+                        <span>School Paper [ ]</span>
+                        <span>Glee Club [ ]</span>
+                        <span>Theater [ ]</span>
                     </div>
-                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">LRN</label>
-                        <input type="text" value="{{ r.lrn }}" class="w-full rounded border-gray-300 border p-2 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Final Grade Avg</label>
-                        <input type="text" value="{{ r.final_general_average }}" class="w-full rounded border-gray-300 border p-2 font-bold bg-yellow-100">
-                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Special Talents / Skills</label><input type="text" class="w-full border-gray-300 border p-2"></div>
+                      <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Beneficiary of Scholarship?</label><input type="text" class="w-full border-gray-300 border p-2"></div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200 no-print">
-                    <button type="button" onclick="window.print()" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm">
+                    <button type="button" onclick="window.print()" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-sm">
                         <i class="fas fa-print mr-2"></i> Print Form
                     </button>
-                    <a href="/history.html" class="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors shadow-md">
+                    <a href="/history.html" class="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 shadow-md">
                         <i class="fas fa-arrow-left mr-2"></i> Back to History
                     </a>
                 </div>
-
             </form>
         </div>
         
         <div class="bg-gray-100 p-4 text-center text-xs text-gray-500 border-t border-gray-200 no-print">
             &copy; 2026 University of Batangas. All rights reserved.
         </div>
-
     </div>
-
 </body>
 </html>
