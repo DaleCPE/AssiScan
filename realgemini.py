@@ -1,7 +1,6 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-# --- CHANGED TO STANDARD LIBRARY ---
 import google.generativeai as genai
 import json
 import smtplib
@@ -185,26 +184,50 @@ def get_records():
     finally:
         conn.close()
 
-# --- HELPER: GENERATE CONTENT WITH FALLBACK ---
+# --- INTELLIGENT MODEL SELECTOR (UPDATED LOGIC HERE) ---
 def generate_content_standard(pil_image, prompt):
     """
-    Uses the standard google-generativeai library.
-    Tries gemini-1.5-flash first, then pro.
+    Subukan ang lahat ng available na models mula sa pinakabago hanggang sa luma.
+    Kapag nag-fail ang isa, lilipat sa susunod.
     """
-    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
-    last_error = None
-
-    for m in models:
-        try:
-            print(f"🤖 Using Standard Model: {m}")
-            model = genai.GenerativeModel(m)
-            response = model.generate_content([pil_image, prompt])
-            return response
-        except Exception as e:
-            print(f"⚠️ Model {m} failed: {e}")
-            last_error = e
     
-    raise last_error
+    # LIST OF MODELS TO TRY (In Order of Priority)
+    MODEL_PRIORITY_LIST = [
+        "gemini-2.0-flash-exp",  # Try Newest/Fastest
+        "gemini-1.5-pro",        # Try High Intelligence
+        "gemini-1.5-flash",      # Try Standard Stable
+        "gemini-1.0-pro"         # Legacy fallback
+    ]
+
+    last_error = None
+    
+    print("🤖 AI START: Attempting to find a working model...")
+
+    for model_name in MODEL_PRIORITY_LIST:
+        try:
+            print(f"   👉 Trying model: {model_name} ...")
+            model = genai.GenerativeModel(model_name)
+            
+            # Subukang mag-generate
+            response = model.generate_content([pil_image, prompt])
+            
+            # Check kung may laman ang response
+            if not response.text:
+                raise ValueError("Model returned empty text.")
+
+            # Kung walang error, success!
+            print(f"   ✅ SUCCESS using: {model_name}")
+            return response
+            
+        except Exception as e:
+            # Kung nagka-error (e.g. 404 Not Found), i-log lang at ituloy sa susunod
+            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
+            last_error = e
+            continue
+
+    # Kung naubos na ang listahan at wala pa ring gumana:
+    print("❌ ALL MODELS FAILED.")
+    raise last_error if last_error else Exception("No AI models available.")
 
 # --- 1. STRICT PSA SCANNING ---
 @app.route('/extract', methods=['POST'])
@@ -255,7 +278,7 @@ def extract_data():
         }
         """
         
-        # USE STANDARD LIBRARY
+        # USE INTELLIGENT MODEL SELECTOR
         res = generate_content_standard(pil_image, prompt)
         
         # Clean response
@@ -321,12 +344,9 @@ def extract_form137():
         Return ONLY the JSON. Do not add markdown backticks.
         """
         
-        # USE STANDARD LIBRARY
+        # USE INTELLIGENT MODEL SELECTOR
         res = generate_content_standard(pil_image, prompt)
         
-        if not res.text:
-            raise ValueError("Gemini returned empty response.")
-
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         start_idx = raw_text.find('{')
         end_idx = raw_text.rfind('}') + 1
