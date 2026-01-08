@@ -284,6 +284,8 @@
             <input type="text" id="fatherOccupation" placeholder="Occupation">
         </div>
 
+        <span class="section-label"><i class="fas fa-envelope"></i> Contact Notification</span>
+        <input type="email" id="contactEmail" placeholder="Enter Email Address (for copy of record)">
         <span class="section-label"><i class="fas fa-school"></i> School Record (F137)</span>
         <input type="text" id="lrn" placeholder="Learner Reference No. (LRN)">
         <input type="text" id="schoolName" placeholder="School Name">
@@ -454,6 +456,9 @@
                 father_citizenship: document.getElementById('fatherCitizenship').value,
                 father_occupation: document.getElementById('fatherOccupation').value,
 
+                // --- EMAIL ADDED HERE ---
+                email: document.getElementById('contactEmail').value,
+
                 psa_image_path: psaImagePath,
 
                 // F137 Data
@@ -479,7 +484,7 @@
                     await uploadExtra('fileForm138', 'form138', newID);
                     await uploadExtra('fileGoodMoral', 'goodmoral', newID);
 
-                    alert("✅ Record Saved Successfully!");
+                    alert("✅ Record Saved & Email Notification Sent!");
                     window.location.reload();
                 } else {
                     alert("Error: " + result.error);
