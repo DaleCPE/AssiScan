@@ -214,7 +214,7 @@
                     <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="psaPreview" class="img-preview">
-                <input type="file" id="psaInput" hidden accept="image/*" onchange="processPSA(this)">
+                <input type="file" id="psaInput" hidden accept="image/*" multiple onchange="processPSA(this)">
             </div>
         </div>
 
@@ -233,7 +233,7 @@
                     <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="f137Preview" class="img-preview">
-                <input type="file" id="f137Input" hidden accept="image/*" onchange="processForm137(this)">
+                <input type="file" id="f137Input" hidden accept="image/*" multiple onchange="processForm137(this)">
             </div>
         </div>
     </main>
@@ -486,25 +486,34 @@
             document.getElementById('childAge').value = age >= 0 ? age : 0;
         }
 
-        function showPreview(file, imgId, placeholderId) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                document.getElementById(imgId).src = e.target.result;
-                document.getElementById(imgId).style.display = 'block';
-                document.getElementById(placeholderId).style.display = 'none';
+        // --- PREVIEW LOGIC (Updated to handle file array, shows 1st image) ---
+        function showPreview(files, imgId, placeholderId) {
+            if (files && files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById(imgId).src = e.target.result;
+                    document.getElementById(imgId).style.display = 'block';
+                    document.getElementById(placeholderId).style.display = 'none';
+                }
+                // Preview only the first page to keep UI clean
+                reader.readAsDataURL(files[0]);
             }
-            reader.readAsDataURL(file);
         }
 
+        // --- PROCESS PSA (UPDATED FOR MULTIPLE FILES) ---
         async function processPSA(input) {
-            const file = input.files[0];
-            if (!file) return;
-            showPreview(file, 'psaPreview', 'psaPlaceholder');
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'psaPreview', 'psaPlaceholder');
             document.getElementById('psaLaser').style.display = 'block';
-            document.getElementById('psaStatus').innerText = "Scanning Data...";
+            document.getElementById('psaStatus').innerText = `Scanning ${files.length} Page(s)...`;
 
             const formData = new FormData();
-            formData.append('imageFile', file);
+            // Loop through all files
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imageFiles', files[i]);
+            }
 
             try {
                 const res = await fetch('/extract', { method: 'POST', body: formData });
@@ -514,6 +523,7 @@
                 if (data.structured_data) {
                     const d = data.structured_data;
                     document.getElementById('psaStatus').innerText = "✅ Data Extracted";
+                    
                     document.getElementById('childName').value = d.Name || "";
                     document.getElementById('childSex').value = d.Sex || "";
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
@@ -526,26 +536,32 @@
                     document.getElementById('fatherName').value = d.Father_Name || "";
                     document.getElementById('fatherCitizenship').value = d.Father_Citizenship || "";
                     document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
+                    
                     if(d.Birthdate) calculateAge();
-                    psaImagePath = data.image_path;
+                    psaImagePath = data.image_paths; 
                 } else {
                     document.getElementById('psaStatus').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
                 document.getElementById('psaLaser').style.display = 'none';
-                alert("Connection error.");
+                document.getElementById('psaStatus').innerText = "❌ Error";
             }
         }
 
+        // --- PROCESS FORM 137 (UPDATED FOR MULTIPLE FILES) ---
         async function processForm137(input) {
-            const file = input.files[0];
-            if (!file) return;
-            showPreview(file, 'f137Preview', 'f137Placeholder');
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'f137Preview', 'f137Placeholder');
             document.getElementById('f137Laser').style.display = 'block';
-            document.getElementById('f137Status').innerText = "Scanning Data...";
+            document.getElementById('f137Status').innerText = `Scanning ${files.length} Page(s)...`;
 
             const formData = new FormData();
-            formData.append('imageFile', file);
+            // Loop through all files
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imageFiles', files[i]);
+            }
 
             try {
                 const res = await fetch('/extract-form137', { method: 'POST', body: formData });
@@ -559,12 +575,13 @@
                     document.getElementById('schoolName').value = d.school_name || "";
                     document.getElementById('schoolAddress').value = d.school_address || "";
                     document.getElementById('genAverage').value = d.final_general_average || "";
-                    f137ImagePath = data.image_path;
+                    f137ImagePath = data.image_paths;
                 } else {
                     document.getElementById('f137Status').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
                 document.getElementById('f137Laser').style.display = 'none';
+                document.getElementById('f137Status').innerText = "❌ Error";
             }
         }
 
@@ -577,13 +594,10 @@
             btn.disabled = true;
 
             const recordData = {
-                // Enrollment
                 school_year: document.getElementById('schoolYear').value,
                 student_type: document.getElementById('studentType').value,
                 program: document.getElementById('programCourse').value,
                 last_level_attended: document.getElementById('lastLevel').value,
-
-                // Basic
                 name: name,
                 sex: document.getElementById('childSex').value,
                 birthdate: document.getElementById('childBirthdate').value,
@@ -591,28 +605,20 @@
                 birth_order: document.getElementById('birthOrder').value,
                 religion: document.getElementById('childReligion').value,
                 age: document.getElementById('childAge').value,
-                
-                // Profile
                 civil_status: document.getElementById('childCivilStatus').value,
                 nationality: document.getElementById('childNationality').value,
                 mobile_no: document.getElementById('childMobile').value,
-
-                // Special Groups (COMPLETE)
                 is_ip: document.getElementById('isIP').value,
                 is_pwd: document.getElementById('isPWD').value,
                 has_medication: document.getElementById('hasMedication').value,
                 is_working: document.getElementById('isWorking').value,
                 is_gifted: document.getElementById('isGifted').value, 
                 needs_assistance: document.getElementById('needsAssistance').value, 
-
-                // Address & Employer
                 region: document.getElementById('addressRegion').value,
                 province: document.getElementById('addressProvince').value,
                 specific_address: document.getElementById('addressSpecific').value,
                 residence_type: document.getElementById('residenceType').value,
                 employer_name: document.getElementById('employerName').value,
-
-                // Family
                 marital_status: document.getElementById('maritalStatus').value, 
                 mother_name: document.getElementById('motherName').value,
                 mother_citizenship: document.getElementById('motherCitizenship').value,
@@ -625,8 +631,6 @@
                 guardian_name: document.getElementById('guardianName').value,
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
-
-                // School Records (COMPLETE)
                 lrn: document.getElementById('lrn').value,
                 school_name: document.getElementById('schoolName').value,
                 school_address: document.getElementById('schoolAddress').value,
@@ -635,7 +639,6 @@
                 year_attended: document.getElementById('yearAttended').value, 
                 special_talents: document.getElementById('specialTalents').value, 
                 is_scholar: document.getElementById('isScholar').value, 
-
                 email: document.getElementById('contactEmail').value,
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath
@@ -650,28 +653,30 @@
 
                 if (result.status === "success") {
                     const newID = result.db_id;
-                    await uploadExtra('fileForm138', 'form138', newID);
-                    await uploadExtra('fileGoodMoral', 'goodmoral', newID);
-                    alert("✅ Record Saved & Email Notification Sent!");
-                    window.location.reload();
+                    await uploadExtra('fileForm138', newID, 'Form138');
+                    await uploadExtra('fileGoodMoral', newID, 'GoodMoral');
+                    alert("SUCCESS! Record Saved. ID: " + newID);
+                    window.location.reload(); 
                 } else {
-                    alert("Error: " + result.error);
+                    alert("Error saving: " + result.message);
+                    btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                    btn.disabled = false;
                 }
             } catch (e) {
-                alert("Network Error");
+                alert("Network Error: " + e.message);
+                btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                btn.disabled = false;
             }
-            btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
-            btn.disabled = false;
         }
 
-        async function uploadExtra(inputId, type, id) {
-            const fileInput = document.getElementById(inputId);
-            if (fileInput.files.length > 0) {
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
-                formData.append('id', id);
-                formData.append('type', type);
-                await fetch('/upload-additional', { method: 'POST', body: formData });
+        async function uploadExtra(inputId, dbId, fileType) {
+            const input = document.getElementById(inputId);
+            if(input.files.length > 0) {
+                const fd = new FormData();
+                fd.append('file', input.files[0]);
+                fd.append('db_id', dbId);
+                fd.append('file_type', fileType);
+                await fetch('/upload-extra', {method: 'POST', body: fd});
             }
         }
     </script>
