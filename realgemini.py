@@ -54,7 +54,7 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED FOR UB FORM + NEW FIELDS) ---
+# --- INIT DATABASE TABLE (UPDATED FOR ALL FIELDS) ---
 def init_db():
     conn = get_db_connection()
     if conn:
@@ -65,8 +65,6 @@ def init_db():
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
-                    
-                    -- Basic PSA
                     name VARCHAR(255),
                     sex VARCHAR(50),
                     birthdate DATE,
@@ -74,22 +72,16 @@ def init_db():
                     birth_order VARCHAR(50),
                     religion VARCHAR(100),
                     age INTEGER,
-                    
-                    -- Basic Parents
                     mother_name VARCHAR(255),
                     mother_citizenship VARCHAR(100),
                     mother_occupation VARCHAR(100),
                     father_name VARCHAR(255),
                     father_citizenship VARCHAR(100),
                     father_occupation VARCHAR(100),
-                    
-                    -- Basic F137
                     lrn VARCHAR(50),
                     school_name TEXT,
                     school_address TEXT,
                     final_general_average VARCHAR(50),
-                    
-                    -- Files
                     image_path TEXT,
                     form137_path TEXT,
                     form138_path TEXT,
@@ -98,8 +90,7 @@ def init_db():
                 );
             ''')
             
-            # 2. AUTO-MIGRATE: Add New Columns for UB Form
-            # Ito ang mag-a-add ng columns kung wala pa sila sa database mo
+            # 2. AUTO-MIGRATE: Add ALL New Columns
             new_columns = [
                 ("email", "VARCHAR(100)"),
                 ("civil_status", "VARCHAR(50)"),
@@ -118,27 +109,35 @@ def init_db():
                 ("program", "VARCHAR(100)"),
                 ("last_level_attended", "VARCHAR(100)"),
                 
-                # --- LATEST ADDITIONS (Missing Fields) ---
+                # Previous additions
                 ("is_ip", "VARCHAR(10)"),
                 ("is_pwd", "VARCHAR(10)"),
                 ("has_medication", "VARCHAR(10)"),
                 ("is_working", "VARCHAR(10)"),
                 ("residence_type", "VARCHAR(50)"),
                 ("employer_name", "VARCHAR(255)"),
-                ("marital_status", "VARCHAR(50)")
+                ("marital_status", "VARCHAR(50)"),
+
+                # --- NEWEST ADDITIONS (FINAL COMPLETION) ---
+                ("is_gifted", "VARCHAR(10)"),
+                ("needs_assistance", "VARCHAR(10)"),
+                ("school_type", "VARCHAR(50)"),
+                ("year_attended", "VARCHAR(50)"),
+                ("special_talents", "TEXT"),
+                ("is_scholar", "VARCHAR(10)")
             ]
             
             for col_name, col_type in new_columns:
                 try:
                     cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
                 except Exception:
-                    conn.rollback() # Ignore if error
+                    conn.rollback() 
                 else:
                     conn.commit()
 
             conn.commit()
             cur.close()
-            print("✅ Database Schema Updated for UB Form!")
+            print("✅ Database Schema Fully Updated!")
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
         finally:
@@ -235,10 +234,8 @@ def view_form(record_id):
         record = cur.fetchone()
         
         if record:
-            # Handle date formatting for HTML
             if record.get('birthdate'):
                 record['birthdate'] = str(record['birthdate'])
-            # Render the print template
             return render_template('print_form.html', r=record)
         else:
             return "Record not found", 404
@@ -247,26 +244,10 @@ def view_form(record_id):
     finally:
         conn.close()
 
-# --- DIAGNOSTIC ROUTE ---
-@app.route('/debug-ai', methods=['GET'])
-def debug_ai():
-    try:
-        model_list = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                model_list.append(m.name)
-        return jsonify({"status": "success", "models": model_list})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
 # --- INTELLIGENT MODEL SELECTOR ---
 def generate_content_standard(pil_image, prompt):
     MODEL_PRIORITY_LIST = [
-        "gemini-2.5-flash",      # 1st Choice (Your Request)
-        "gemini-2.0-flash-exp",  # 2nd Choice
-        "gemini-1.5-flash",      # 3rd Choice (Stable)
-        "gemini-1.5-pro",        
-        "gemini-1.0-pro"         
+        "gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"
     ]
     last_error = None
     print("🤖 AI START: Attempting to find a working model...")
@@ -381,19 +362,18 @@ def save_record():
     conn = None
     try:
         d = request.json
-        print(f"📥 Received Data for Saving: {d}")
+        print(f"📥 Received Data: {d}")
         
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
         cur = conn.cursor()
         
-        # Check duplicate
         if d.get('name') and d.get('birthdate'):
             cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", (d.get('name'), d.get('birthdate')))
             if cur.fetchone():
                 return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
 
-        # INSERT ALL FIELDS (Updated for Major Update)
+        # INSERT ALL FIELDS (Updated for Full Completion)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -402,16 +382,17 @@ def save_record():
                 lrn, school_name, school_address, final_general_average,
                 image_path, form137_path,
                 
-                -- NEW FIELDS
                 email, mobile_no, civil_status, nationality,
                 mother_contact, father_contact,
                 guardian_name, guardian_relation, guardian_contact,
                 region, province, specific_address,
                 school_year, student_type, program, last_level_attended,
                 
-                -- LATEST ADDITIONS (Missing Part)
                 is_ip, is_pwd, has_medication, is_working,
-                residence_type, employer_name, marital_status
+                residence_type, employer_name, marital_status,
+                
+                -- NEWEST COLUMNS
+                is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -424,7 +405,9 @@ def save_record():
                 %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s, %s, %s
             ) 
             RETURNING id
         ''', (
@@ -440,15 +423,16 @@ def save_record():
             d.get('region'), d.get('province'), d.get('specific_address'),
             d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
             
-            # New Values Mappings
             d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-            d.get('residence_type'), d.get('employer_name'), d.get('marital_status')
+            d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
+            
+            # New Values
+            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar')
         ))
         
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Send Email
         email_addr = d.get('email', '')
         full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(d.get('psa_image_path', ''))) if d.get('psa_image_path') else None
         if email_addr:
