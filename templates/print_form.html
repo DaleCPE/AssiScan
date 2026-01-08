@@ -1,0 +1,482 @@
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import google.generativeai as genai
+import json
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+from datetime import datetime
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+import traceback 
+from PIL import Image
+
+# --- CONFIGURATION ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# --- CONFIGURE GEMINI ---
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("✅ Google Generative AI Configured")
+    except Exception as e:
+        print(f"⚠️ Error configuring Gemini: {e}")
+else:
+    print("⚠️ WARNING: GEMINI_API_KEY is missing!")
+
+# --- ADMIN SECURITY CONFIG ---
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123"
+
+app = Flask(__name__)
+app.secret_key = "super_secret_security_key_change_me"
+CORS(app)
+
+# Setup Upload Folder
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# --- DATABASE CONNECTION ---
+def get_db_connection():
+    try:
+        return psycopg2.connect(DATABASE_URL)
+    except Exception as e:
+        print(f"❌ DB Connection Error: {e}")
+        return None
+
+# --- INIT DATABASE TABLE (UPDATED FOR UB FORM) ---
+def init_db():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            
+            # 1. Create Basic Table if not exists
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS records (
+                    id SERIAL PRIMARY KEY,
+                    
+                    -- Basic PSA
+                    name VARCHAR(255),
+                    sex VARCHAR(50),
+                    birthdate DATE,
+                    birthplace TEXT,
+                    birth_order VARCHAR(50),
+                    religion VARCHAR(100),
+                    age INTEGER,
+                    
+                    -- Basic Parents
+                    mother_name VARCHAR(255),
+                    mother_citizenship VARCHAR(100),
+                    mother_occupation VARCHAR(100),
+                    father_name VARCHAR(255),
+                    father_citizenship VARCHAR(100),
+                    father_occupation VARCHAR(100),
+                    
+                    -- Basic F137
+                    lrn VARCHAR(50),
+                    school_name TEXT,
+                    school_address TEXT,
+                    final_general_average VARCHAR(50),
+                    
+                    -- Files
+                    image_path TEXT,
+                    form137_path TEXT,
+                    form138_path TEXT,
+                    goodmoral_path TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            ''')
+            
+            # 2. AUTO-MIGRATE: Add New Columns for UB Form
+            # Ito ang mag-a-add ng columns kung wala pa sila sa database mo
+            new_columns = [
+                ("email", "VARCHAR(100)"),
+                ("civil_status", "VARCHAR(50)"),
+                ("nationality", "VARCHAR(100)"),
+                ("mother_contact", "VARCHAR(50)"),
+                ("father_contact", "VARCHAR(50)"),
+                ("guardian_name", "VARCHAR(255)"),
+                ("guardian_relation", "VARCHAR(100)"),
+                ("guardian_contact", "VARCHAR(50)"),
+                ("region", "VARCHAR(100)"),
+                ("province", "VARCHAR(100)"),
+                ("specific_address", "TEXT"),
+                ("mobile_no", "VARCHAR(50)"),
+                ("school_year", "VARCHAR(50)"),
+                ("student_type", "VARCHAR(50)"),
+                ("program", "VARCHAR(100)"),
+                ("last_level_attended", "VARCHAR(100)")
+            ]
+            
+            for col_name, col_type in new_columns:
+                try:
+                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                except Exception:
+                    conn.rollback() # Ignore if error
+                else:
+                    conn.commit()
+
+            conn.commit()
+            cur.close()
+            print("✅ Database Schema Updated for UB Form!")
+        except Exception as e:
+            print(f"❌ Table Creation Error: {e}")
+        finally:
+            conn.close()
+
+init_db()
+
+# --- EMAIL FUNCTION ---
+def send_email_notification(recipient_email, student_name, file_paths):
+    if not recipient_email or not EMAIL_SENDER: return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_SENDER
+        msg['To'] = recipient_email
+        msg['Subject'] = "AssiScan Verification Complete - Document Copy"
+        body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
+        msg.attach(MIMEText(body, 'plain'))
+        for fpath in file_paths:
+            if fpath and os.path.exists(fpath):
+                with open(fpath, "rb") as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(fpath)}")
+                    msg.attach(part)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_SENDER, recipient_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ Email Error: {e}")
+        return False
+
+# ================= ROUTES =================
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            return redirect('/history.html')
+        else:
+            return render_template('login.html', error="Invalid Credentials")
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect('/login')
+
+@app.route('/history.html')
+def history_page():
+    if not session.get('logged_in'):
+        return redirect('/login') 
+    return render_template('history.html')
+
+@app.route('/get-records', methods=['GET'])
+def get_records():
+    if not session.get('logged_in'):
+        return jsonify({"records": [], "error": "Unauthorized"}), 401
+    conn = get_db_connection()
+    if not conn: return jsonify({"records": []})
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM records ORDER BY id DESC")
+        rows = cur.fetchall()
+        for r in rows:
+            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
+        return jsonify({"records": rows})
+    except Exception as e:
+        return jsonify({"records": []})
+    finally:
+        conn.close()
+
+# --- NEW: VIEW FORM ROUTE (FOR PRINTING) ---
+@app.route('/view-form/<int:record_id>')
+def view_form(record_id):
+    if not session.get('logged_in'):
+        return redirect('/login')
+        
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if record:
+            # Handle date formatting for HTML
+            if record.get('birthdate'):
+                record['birthdate'] = str(record['birthdate'])
+            # Render the print template
+            return render_template('print_form.html', r=record)
+        else:
+            return "Record not found", 404
+    except Exception as e:
+        return f"Error loading form: {str(e)}", 500
+    finally:
+        conn.close()
+
+# --- DIAGNOSTIC ROUTE ---
+@app.route('/debug-ai', methods=['GET'])
+def debug_ai():
+    try:
+        model_list = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                model_list.append(m.name)
+        return jsonify({"status": "success", "models": model_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+# --- INTELLIGENT MODEL SELECTOR ---
+def generate_content_standard(pil_image, prompt):
+    MODEL_PRIORITY_LIST = [
+        "gemini-2.5-flash",      # 1st Choice (Your Request)
+        "gemini-2.0-flash-exp",  # 2nd Choice
+        "gemini-1.5-flash",      # 3rd Choice (Stable)
+        "gemini-1.5-pro",        
+        "gemini-1.0-pro"         
+    ]
+    last_error = None
+    print("🤖 AI START: Attempting to find a working model...")
+
+    for model_name in MODEL_PRIORITY_LIST:
+        try:
+            print(f"   👉 Trying model: {model_name} ...")
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content([pil_image, prompt])
+            if not response.text: raise ValueError("Empty text.")
+            print(f"   ✅ SUCCESS using: {model_name}")
+            return response
+        except Exception as e:
+            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
+            last_error = e
+            continue
+    print("❌ ALL MODELS FAILED.")
+    raise last_error if last_error else Exception("No AI models available.")
+
+# --- EXTRACT PSA ---
+@app.route('/extract', methods=['POST'])
+def extract_data():
+    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
+    file = request.files['imageFile']
+    if file.filename == '': return jsonify({"error": "No selected file"}), 400
+
+    try:
+        filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        try: pil_image = Image.open(filepath)
+        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
+
+        prompt = """
+        SYSTEM ROLE: Strict Philippine Document Verifier.
+        TASK: Analyze this image. It MUST be a "Certificate of Live Birth".
+        OUTPUT FORMAT (JSON ONLY):
+        {
+            "is_valid_document": boolean,
+            "rejection_reason": "string or null",
+            "Name": "string",
+            "Sex": "string",
+            "Birthdate": "YYYY-MM-DD",
+            "PlaceOfBirth": "string",
+            "BirthOrder": "string",
+            "Religion": "string",
+            "Mother_MaidenName": "string",
+            "Mother_Citizenship": "string",
+            "Mother_Occupation": "string",
+            "Father_Name": "string",
+            "Father_Citizenship": "string",
+            "Father_Occupation": "string"
+        }
+        """
+        res = generate_content_standard(pil_image, prompt)
+        raw_text = res.text.replace('```json', '').replace('```', '').strip()
+        s = raw_text.find('{')
+        e = raw_text.rfind('}') + 1
+        data = json.loads(raw_text[s:e])
+
+        if not data.get("is_valid_document", False):
+            return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
+
+        return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+    except Exception as e:
+        traceback.print_exc() 
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+
+# --- EXTRACT FORM 137 ---
+@app.route('/extract-form137', methods=['POST'])
+def extract_form137():
+    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
+    file = request.files['imageFile']
+    if file.filename == '': return jsonify({"error": "No selected file"}), 400
+    
+    filename = secure_filename(f"F137_SCAN_{int(datetime.now().timestamp())}_{file.filename}")
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    print(f"📸 Processing Form 137: {filename}")
+
+    try:
+        try: pil_image = Image.open(filepath)
+        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
+        
+        prompt = """
+        SYSTEM ROLE: Expert Data Encoder.
+        TASK: Extract details from Form 137 / SF10.
+        JSON FORMAT ONLY:
+        {
+            "lrn": "123456789012",
+            "school_name": "Name of School",
+            "school_address": "City, Province",
+            "final_general_average": "85"
+        }
+        """
+        res = generate_content_standard(pil_image, prompt)
+        raw_text = res.text.replace('```json', '').replace('```', '').strip()
+        s = raw_text.find('{')
+        e = raw_text.rfind('}') + 1
+        if s != -1 and e != -1: raw_text = raw_text[s:e]
+
+        try: data = json.loads(raw_text)
+        except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
+        
+        return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+    except Exception as e:
+        return jsonify({"error": f"AI Error: {str(e)}"}), 500
+
+# --- UPDATED SAVE RECORD (INCLUDES ALL UB FORM FIELDS) ---
+@app.route('/save-record', methods=['POST'])
+def save_record():
+    conn = None
+    try:
+        d = request.json
+        print(f"📥 Received Data for Saving: {d}")
+        
+        conn = get_db_connection()
+        if not conn: return jsonify({"error": "DB Connection Failed"}), 500
+        cur = conn.cursor()
+        
+        # Check duplicate
+        if d.get('name') and d.get('birthdate'):
+            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", (d.get('name'), d.get('birthdate')))
+            if cur.fetchone():
+                return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
+
+        # INSERT ALL FIELDS (Updated for Major Update)
+        cur.execute('''
+            INSERT INTO records (
+                name, sex, birthdate, birthplace, birth_order, religion, age,
+                mother_name, mother_citizenship, mother_occupation, 
+                father_name, father_citizenship, father_occupation, 
+                lrn, school_name, school_address, final_general_average,
+                image_path, form137_path,
+                
+                -- NEW FIELDS
+                email, mobile_no, civil_status, nationality,
+                mother_contact, father_contact,
+                guardian_name, guardian_relation, guardian_contact,
+                region, province, specific_address,
+                school_year, student_type, program, last_level_attended
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, 
+                %s, %s, %s, 
+                %s, %s, %s, %s, 
+                %s, %s,
+                %s, %s, %s, %s,
+                %s, %s,
+                %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s
+            ) 
+            RETURNING id
+        ''', (
+            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), d.get('birth_order'), d.get('religion'), d.get('age'),
+            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
+            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
+            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
+            os.path.basename(d.get('psa_image_path', '')), os.path.basename(d.get('f137_image_path', '')),
+            
+            # New Data Mappings
+            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
+            d.get('mother_contact'), d.get('father_contact'),
+            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
+            d.get('region'), d.get('province'), d.get('specific_address'),
+            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended')
+        ))
+        
+        new_id = cur.fetchone()[0]
+        conn.commit()
+
+        # Send Email
+        email_addr = d.get('email', '')
+        full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(d.get('psa_image_path', ''))) if d.get('psa_image_path') else None
+        if email_addr:
+            send_email_notification(email_addr, d.get('name'), [full_psa_path] if full_psa_path else [])
+
+        return jsonify({"status": "success", "db_id": new_id})
+    except Exception as e:
+        print(f"❌ SAVE ERROR: {e}")
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "error": str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+# --- OTHER ROUTES ---
+@app.route('/delete-record/<int:record_id>', methods=['DELETE'])
+def delete_record(record_id):
+    if not session.get('logged_in'): return jsonify({"error": "Unauthorized"}), 401
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
+
+@app.route('/upload-additional', methods=['POST'])
+def upload_additional():
+    file = request.files.get('file')
+    rid, dtype = request.form.get('id'), request.form.get('type')
+    if not file or not rid: return jsonify({"error": "Data Missing"}), 400
+    fname = secure_filename(f"{dtype}_{rid}_{file.filename}")
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (fname, rid))
+        conn.commit()
+        return jsonify({"status": "success"})
+    finally: conn.close()
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
