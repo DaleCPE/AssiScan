@@ -12,11 +12,11 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import traceback 
+import traceback
 from PIL import Image
 
 # --- CONFIGURATION ---
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -200,13 +200,20 @@ def save_multiple_files(files, prefix):
                 
     return saved_paths, pil_images
 
-# Helper: Intelligent Model Selector (UPDATED FOR MULTI-INPUT)
+# Helper: Intelligent Model Selector (UPDATED FOR GEMINI 2.5 FLASH)
 def generate_content_standard(parts):
     """
     parts: A list containing [prompt, image1, image2, ...]
     """
+    # --- UPDATED PRIORITY LIST ---
+    # Inuna natin ang gemini-2.5-flash.
+    # Kung wala pa ito, lilipat siya sa 2.0-flash-exp o 1.5-flash.
     MODEL_PRIORITY_LIST = [
-        "gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"
+        "gemini-2.5-flash", 
+        "gemini-2.0-flash-exp", 
+        "gemini-1.5-flash", 
+        "gemini-1.5-pro", 
+        "gemini-1.0-pro"
     ]
     last_error = None
     print("🤖 AI START: Attempting to find a working model...")
