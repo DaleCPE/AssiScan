@@ -156,7 +156,6 @@ def send_email_notification(recipient_email, student_name, file_paths):
         # Handle comma-separated paths
         for path_string in file_paths:
             if path_string:
-                # Split in case multiple files are stored in one string
                 individual_paths = path_string.split(',')
                 for clean_path in individual_paths:
                     if clean_path and os.path.exists(clean_path):
@@ -186,13 +185,11 @@ def save_multiple_files(files, prefix):
     
     for i, file in enumerate(files):
         if file and file.filename:
-            # Create unique filename: prefix_timestamp_index.jpg
             timestamp = int(datetime.now().timestamp())
             filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
             saved_paths.append(path)
-            # Open image for Gemini
             try:
                 img = Image.open(path)
                 pil_images.append(img)
@@ -201,43 +198,37 @@ def save_multiple_files(files, prefix):
                 
     return saved_paths, pil_images
 
-# Helper: Intelligent Model Selector
+# Helper: Intelligent Model Selector (UPDATED FOR GEMINI 2.5 FLASH)
 def generate_content_standard(parts):
-    print("🤖 AI START: Fetching list of ALL available models from Google...")
+    print("🤖 AI START: Initializing Model Selection...")
     
-    available_models = []
-    try:
-        # Fetch models dynamically
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                if 'gemini' in m.name:
-                    available_models.append(m.name)
-        
-        available_models.sort(reverse=True)
-        
-        if not available_models:
-             print("⚠️ No Gemini models found. Falling back to default list.")
-             available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
-             
-    except Exception as e:
-        print(f"⚠️ Error listing models: {e}. Using fallback.")
-        available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
-
-    print(f"📋 Model Candidates found: {available_models}")
+    # LISTahan ng Models (Inuuna ang request mo)
+    # Note: Kung wala pang 'gemini-2.5-flash' sa API, gagamitin niya ang next available (2.0 or 1.5)
+    target_models = [
+        "gemini-2.5-flash",        # <--- PRIORITY 1: Your Request
+        "models/gemini-2.5-flash", # Alternative format
+        "gemini-2.0-flash",        # <--- PRIORITY 2: Newest Standard
+        "models/gemini-2.0-flash",
+        "gemini-1.5-flash",        # <--- PRIORITY 3: Stable Fallback
+        "models/gemini-1.5-flash",
+        "gemini-1.5-pro"
+    ]
 
     last_error = None
 
-    for model_name in available_models:
+    for model_name in target_models:
         try:
-            print(f"   👉 Trying model: {model_name} ...")
+            print(f"    👉 Attempting to use: {model_name} ...")
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(parts)
             
             if response.text:
-                print(f"   ✅ SUCCESS using: {model_name}")
+                print(f"    ✅ SUCCESS using model: {model_name}")
                 return response
         except Exception as e:
-            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
+            # Kapag nag-fail (halimbawa: wala pang 2.5), itatry niya ang susunod sa listahan
+            # print(f"    ⚠️ Failed on {model_name}: {str(e)}") 
+            # (Optional: uncomment above line to see specific errors)
             last_error = e
             continue 
             
@@ -307,7 +298,6 @@ def view_form(record_id):
             if record.get('birthdate'):
                 record['birthdate'] = str(record['birthdate'])
             
-            # --- PARSE SIBLINGS JSON FOR VIEWING ---
             if record.get('siblings'):
                 try:
                     record['siblings'] = json.loads(record['siblings'])
@@ -315,7 +305,6 @@ def view_form(record_id):
                     record['siblings'] = []
             else:
                 record['siblings'] = []
-            # ---------------------------------------
 
             return render_template('print_form.html', r=record)
         else:
@@ -427,10 +416,8 @@ def save_record():
         d = request.json
         print(f"📥 Received Data: {d}")
         
-        # --- PREPARE SIBLINGS DATA ---
         siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list) # Convert List to JSON String
-        # -----------------------------
+        siblings_json = json.dumps(siblings_list)
         
         conn = get_db_connection()
         if not conn: return jsonify({"error": "DB Connection Failed"}), 500
@@ -441,7 +428,6 @@ def save_record():
             if cur.fetchone():
                 return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
 
-        # INSERT ALL FIELDS (Added siblings at the end)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -460,7 +446,7 @@ def save_record():
                 residence_type, employer_name, marital_status,
                 
                 is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings -- <--- ADDED COLUMN
+                siblings
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -476,7 +462,7 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s -- <--- ADDED PLACEHOLDER
+                %s
             ) 
             RETURNING id
         ''', (
@@ -496,13 +482,12 @@ def save_record():
             d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
             
             d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json # <--- PASSED THE JSON STRING
+            siblings_json
         ))
         
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Send Email
         email_addr = d.get('email', '')
         files_to_send = []
         if d.get('psa_image_path'): files_to_send.append(d.get('psa_image_path'))
