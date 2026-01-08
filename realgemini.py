@@ -185,7 +185,7 @@ def get_records():
     finally:
         conn.close()
 
-# --- 1. STRICT PSA SCANNING (NEW SDK) ---
+# --- 1. STRICT PSA SCANNING (FIXED PARAMETER) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     print("🚀 REQUEST RECEIVED: /extract")
@@ -202,11 +202,11 @@ def extract_data():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # --- NEW SDK UPLOAD ---
+        # --- NEW SDK UPLOAD (FIXED: used 'file=' instead of 'path=') ---
         if not client:
              return jsonify({"error": "Server Error: AI Client not initialized"}), 500
 
-        myfile = client.files.upload(path=filepath)
+        myfile = client.files.upload(file=filepath)
         
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
@@ -254,7 +254,7 @@ def extract_data():
             return jsonify({"error": "Failed to read document data. Please try clearer image."}), 500
 
         if not data.get("is_valid_document", False):
-            # Optional: Delete file if invalid, kept per original logic
+            # Optional: Delete file if invalid
             if os.path.exists(filepath):
                 try: os.remove(filepath)
                 except: pass
@@ -268,7 +268,7 @@ def extract_data():
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- 2. FORM 137 SCANNING (NEW SDK) ---
+# --- 2. FORM 137 SCANNING (FIXED PARAMETER) ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFile' not in request.files:
@@ -285,11 +285,11 @@ def extract_form137():
     print(f"📸 Processing Form 137: {filename}")
 
     try:
-        # --- NEW SDK UPLOAD ---
+        # --- NEW SDK UPLOAD (FIXED: used 'file=' instead of 'path=') ---
         if not client:
              return jsonify({"error": "Server Error: AI Client not initialized"}), 500
 
-        myfile = client.files.upload(path=filepath)
+        myfile = client.files.upload(file=filepath)
         
         prompt = """
         SYSTEM ROLE: Philippine School Document Analyzer.
