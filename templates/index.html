@@ -1,567 +1,736 @@
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import google.generativeai as genai
-import json
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
-import traceback
-from PIL import Image
-
-# --- CONFIGURATION ---
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# --- CONFIGURE GEMINI ---
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        print("✅ Google Generative AI Configured")
-    except Exception as e:
-        print(f"⚠️ Error configuring Gemini: {e}")
-else:
-    print("⚠️ WARNING: GEMINI_API_KEY is missing!")
-
-# --- ADMIN SECURITY CONFIG ---
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
-
-app = Flask(__name__)
-app.secret_key = "super_secret_security_key_change_me"
-CORS(app)
-
-# Setup Upload Folder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# --- DATABASE CONNECTION ---
-def get_db_connection():
-    try:
-        return psycopg2.connect(DATABASE_URL)
-    except Exception as e:
-        print(f"❌ DB Connection Error: {e}")
-        return None
-
-# --- INIT DATABASE TABLE ---
-def init_db():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            
-            # 1. Create Basic Table if not exists
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS records (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255),
-                    sex VARCHAR(50),
-                    birthdate DATE,
-                    birthplace TEXT,
-                    birth_order VARCHAR(50),
-                    religion VARCHAR(100),
-                    age INTEGER,
-                    mother_name VARCHAR(255),
-                    mother_citizenship VARCHAR(100),
-                    mother_occupation VARCHAR(100),
-                    father_name VARCHAR(255),
-                    father_citizenship VARCHAR(100),
-                    father_occupation VARCHAR(100),
-                    lrn VARCHAR(50),
-                    school_name TEXT,
-                    school_address TEXT,
-                    final_general_average VARCHAR(50),
-                    image_path TEXT,
-                    form137_path TEXT,
-                    form138_path TEXT,
-                    goodmoral_path TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            ''')
-            
-            # 2. AUTO-MIGRATE: Add ALL New Columns
-            new_columns = [
-                ("email", "VARCHAR(100)"),
-                ("civil_status", "VARCHAR(50)"),
-                ("nationality", "VARCHAR(100)"),
-                ("mother_contact", "VARCHAR(50)"),
-                ("father_contact", "VARCHAR(50)"),
-                ("guardian_name", "VARCHAR(255)"),
-                ("guardian_relation", "VARCHAR(100)"),
-                ("guardian_contact", "VARCHAR(50)"),
-                ("region", "VARCHAR(100)"),
-                ("province", "VARCHAR(100)"),
-                ("specific_address", "TEXT"),
-                ("mobile_no", "VARCHAR(50)"),
-                ("school_year", "VARCHAR(50)"),
-                ("student_type", "VARCHAR(50)"),
-                ("program", "VARCHAR(100)"),
-                ("last_level_attended", "VARCHAR(100)"),
-                ("is_ip", "VARCHAR(10)"),
-                ("is_pwd", "VARCHAR(10)"),
-                ("has_medication", "VARCHAR(10)"),
-                ("is_working", "VARCHAR(10)"),
-                ("residence_type", "VARCHAR(50)"),
-                ("employer_name", "VARCHAR(255)"),
-                ("marital_status", "VARCHAR(50)"),
-                ("is_gifted", "VARCHAR(10)"),
-                ("needs_assistance", "VARCHAR(10)"),
-                ("school_type", "VARCHAR(50)"),
-                ("year_attended", "VARCHAR(50)"),
-                ("special_talents", "TEXT"),
-                ("is_scholar", "VARCHAR(10)"),
-                ("siblings", "TEXT")  # <--- NEW: SIBLINGS FIELD (JSON)
-            ]
-            
-            for col_name, col_type in new_columns:
-                try:
-                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
-                except Exception:
-                    conn.rollback() 
-                else:
-                    conn.commit()
-
-            conn.commit()
-            cur.close()
-            print("✅ Database Schema Fully Updated!")
-        except Exception as e:
-            print(f"❌ Table Creation Error: {e}")
-        finally:
-            conn.close()
-
-init_db()
-
-# --- EMAIL FUNCTION ---
-def send_email_notification(recipient_email, student_name, file_paths):
-    if not recipient_email or not EMAIL_SENDER: return False
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_SENDER
-        msg['To'] = recipient_email
-        msg['Subject'] = "AssiScan Verification Complete - Document Copy"
-        body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Handle comma-separated paths
-        for path_string in file_paths:
-            if path_string:
-                # Split in case multiple files are stored in one string
-                individual_paths = path_string.split(',')
-                for clean_path in individual_paths:
-                    if clean_path and os.path.exists(clean_path):
-                        with open(clean_path, "rb") as attachment:
-                            part = MIMEBase('application', 'octet-stream')
-                            part.set_payload(attachment.read())
-                            encoders.encode_base64(part)
-                            part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(clean_path)}")
-                            msg.attach(part)
-
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, recipient_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"❌ Email Error: {e}")
-        return False
-
-# ================= HELPER FUNCTIONS =================
-
-# Helper: Save Multiple Files
-def save_multiple_files(files, prefix):
-    saved_paths = []
-    pil_images = []
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AssiScan | Dale Vincent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    for i, file in enumerate(files):
-        if file and file.filename:
-            # Create unique filename: prefix_timestamp_index.jpg
-            timestamp = int(datetime.now().timestamp())
-            filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(path)
-            saved_paths.append(path)
-            # Open image for Gemini
-            try:
-                img = Image.open(path)
-                pil_images.append(img)
-            except Exception as e:
-                print(f"Error opening image {filename}: {e}")
-                
-    return saved_paths, pil_images
-
-# Helper: Intelligent Model Selector
-def generate_content_standard(parts):
-    print("🤖 AI START: Fetching list of ALL available models from Google...")
-    
-    available_models = []
-    try:
-        # Fetch models dynamically
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                if 'gemini' in m.name:
-                    available_models.append(m.name)
-        
-        available_models.sort(reverse=True)
-        
-        if not available_models:
-             print("⚠️ No Gemini models found. Falling back to default list.")
-             available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
-             
-    except Exception as e:
-        print(f"⚠️ Error listing models: {e}. Using fallback.")
-        available_models = ["models/gemini-1.5-flash", "models/gemini-1.5-pro"]
-
-    print(f"📋 Model Candidates found: {available_models}")
-
-    last_error = None
-
-    for model_name in available_models:
-        try:
-            print(f"   👉 Trying model: {model_name} ...")
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(parts)
-            
-            if response.text:
-                print(f"   ✅ SUCCESS using: {model_name}")
-                return response
-        except Exception as e:
-            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
-            last_error = e
-            continue 
-            
-    print("❌ ALL AVAILABLE MODELS FAILED.")
-    raise last_error if last_error else Exception("No AI models available.")
-
-# ================= ROUTES =================
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-            session['logged_in'] = True
-            return redirect('/history.html')
-        else:
-            return render_template('login.html', error="Invalid Credentials")
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect('/login')
-
-@app.route('/history.html')
-def history_page():
-    if not session.get('logged_in'):
-        return redirect('/login') 
-    return render_template('history.html')
-
-@app.route('/get-records', methods=['GET'])
-def get_records():
-    if not session.get('logged_in'):
-        return jsonify({"records": [], "error": "Unauthorized"}), 401
-    conn = get_db_connection()
-    if not conn: return jsonify({"records": []})
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM records ORDER BY id DESC")
-        rows = cur.fetchall()
-        for r in rows:
-            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
-        return jsonify({"records": rows})
-    except Exception as e:
-        return jsonify({"records": []})
-    finally:
-        conn.close()
-
-@app.route('/view-form/<int:record_id>')
-def view_form(record_id):
-    if not session.get('logged_in'):
-        return redirect('/login')
-        
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
-        
-        if record:
-            if record.get('birthdate'):
-                record['birthdate'] = str(record['birthdate'])
-            
-            # --- PARSE SIBLINGS JSON FOR VIEWING ---
-            if record.get('siblings'):
-                try:
-                    record['siblings'] = json.loads(record['siblings'])
-                except Exception:
-                    record['siblings'] = []
-            else:
-                record['siblings'] = []
-            # ---------------------------------------
-
-            return render_template('print_form.html', r=record)
-        else:
-            return "Record not found", 404
-    except Exception as e:
-        return f"Error loading form: {str(e)}", 500
-    finally:
-        conn.close()
-
-# --- EXTRACT PSA ---
-@app.route('/extract', methods=['POST'])
-def extract_data():
-    if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
-
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "PSA")
-        
-        if not pil_images:
-             return jsonify({"error": "No valid images found"}), 400
-
-        prompt = """
-        SYSTEM ROLE: Strict Philippine Document Verifier.
-        TASK: Analyze these images. It MUST be a "Certificate of Live Birth".
-        If there are multiple pages, analyze them as one document.
-        OUTPUT FORMAT (JSON ONLY):
-        {
-            "is_valid_document": boolean,
-            "rejection_reason": "string or null",
-            "Name": "string",
-            "Sex": "string",
-            "Birthdate": "YYYY-MM-DD",
-            "PlaceOfBirth": "string",
-            "BirthOrder": "string",
-            "Religion": "string",
-            "Mother_MaidenName": "string",
-            "Mother_Citizenship": "string",
-            "Mother_Occupation": "string",
-            "Father_Name": "string",
-            "Father_Citizenship": "string",
-            "Father_Occupation": "string"
+    <style>
+        :root {
+            --bg-dark: #0f0404;
+            --panel-bg: rgba(10, 2, 2, 0.95); 
+            --primary-gold: #d4af37;
+            --bright-gold: #ffdf80;
+            --text-main: #f0f0f0;
+            --text-muted: #8a7a7a;
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --border-dim: rgba(212, 175, 55, 0.2);
         }
-        """
-        
-        res = generate_content_standard([prompt, *pil_images])
-        
-        raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        s = raw_text.find('{')
-        e = raw_text.rfind('}') + 1
-        data = json.loads(raw_text[s:e])
 
-        if not data.get("is_valid_document", False):
-            return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
-    except Exception as e:
-        traceback.print_exc() 
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
-
-# --- EXTRACT FORM 137 ---
-@app.route('/extract-form137', methods=['POST'])
-def extract_form137():
-    if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
-    
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137: {len(pil_images)} pages")
-
-        if not pil_images:
-            return jsonify({"error": "No valid images found"}), 400
-        
-        prompt = """
-        SYSTEM ROLE: Expert Data Encoder.
-        TASK: Extract details from Form 137 / SF10.
-        This document may span multiple pages. Look across ALL pages to find the requested info.
-        JSON FORMAT ONLY:
-        {
-            "lrn": "123456789012",
-            "school_name": "Name of School",
-            "school_address": "City, Province",
-            "final_general_average": "85" (Get the latest general average found)
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 20% 50%, #1a0505 0%, #000000 100%);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
         }
-        """
-        
-        res = generate_content_standard([prompt, *pil_images])
-        
-        raw_text = res.text.replace('```json', '').replace('```', '').strip()
-        s = raw_text.find('{')
-        e = raw_text.rfind('}') + 1
-        if s != -1 and e != -1: raw_text = raw_text[s:e]
 
-        try: data = json.loads(raw_text)
-        except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
-        
-        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
-    except Exception as e:
-        return jsonify({"error": f"AI Error: {str(e)}"}), 500
+        @keyframes scanLaser { 
+            0% { top: 0%; opacity: 0; box-shadow: 0 0 5px var(--primary-gold); } 
+            20% { opacity: 1; }
+            50% { box-shadow: 0 0 20px var(--bright-gold); }
+            100% { top: 100%; opacity: 0; } 
+        }
 
-# --- SAVE RECORD ---
-@app.route('/save-record', methods=['POST'])
-def save_record():
-    conn = None
-    try:
-        d = request.json
-        print(f"📥 Received Data: {d}")
+        /* --- SIDEBAR (Left) --- */
+        .sidebar {
+            width: 260px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border-dim);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            z-index: 20;
+        }
+        .brand-title { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 28px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .brand-subtitle { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 5px; padding-bottom: 20px; border-bottom: 1px solid var(--border-dim); }
         
-        # --- PREPARE SIBLINGS DATA ---
-        siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list) # Convert List to JSON String
-        # -----------------------------
-        
-        conn = get_db_connection()
-        if not conn: return jsonify({"error": "DB Connection Failed"}), 500
-        cur = conn.cursor()
-        
-        if d.get('name') and d.get('birthdate'):
-            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", (d.get('name'), d.get('birthdate')))
-            if cur.fetchone():
-                return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
+        .btn-access { margin-top: auto; background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-dim); color: var(--primary-gold); padding: 12px; border-radius: 6px; text-decoration: none; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+        .btn-access:hover { background: var(--primary-gold); color: #000; }
 
-        # INSERT ALL FIELDS (Added siblings at the end)
-        cur.execute('''
-            INSERT INTO records (
-                name, sex, birthdate, birthplace, birth_order, religion, age,
-                mother_name, mother_citizenship, mother_occupation, 
-                father_name, father_citizenship, father_occupation, 
-                lrn, school_name, school_address, final_general_average,
-                image_path, form137_path,
+        /* --- MAIN AREA (Middle - Scanners) --- */
+        .main-scan { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .scanner-wrapper {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scan-label {
+            font-family: 'Cinzel', serif;
+            color: var(--primary-gold);
+            margin-bottom: 10px;
+            font-size: 14px;
+            width: 100%;
+            display: flex; 
+            justify-content: space-between;
+        }
+
+        .scan-frame { 
+            position: relative; 
+            width: 100%; 
+            height: 250px; 
+            border: 1px solid var(--border-dim); 
+            background: rgba(0, 0, 0, 0.4); 
+            border-radius: 4px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            overflow: hidden; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); 
+        }
+        .scan-frame:hover { border-color: var(--primary-gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.15); }
+        
+        .img-preview { width: 100%; height: 100%; object-fit: contain; display: none; position: absolute; z-index: 1; background: #000; }
+        
+        .corner { position: absolute; width: 20px; height: 20px; border-color: var(--primary-gold); border-style: solid; transition: 0.3s; z-index: 5; pointer-events: none; }
+        .tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+        .tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+        .bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+        .br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+        
+        .upload-placeholder { text-align: center; color: var(--text-muted); z-index: 2; pointer-events: none; }
+        .upload-placeholder i { font-size: 30px; color: var(--border-dim); margin-bottom: 10px; }
+        
+        .scan-laser { position: absolute; width: 100%; height: 2px; background: var(--bright-gold); box-shadow: 0 0 15px var(--primary-gold); z-index: 10; display: none; animation: scanLaser 2s infinite linear; }
+        
+        /* --- FORM PANEL (Right - Editable) --- */
+        .form-panel { 
+            width: 420px; 
+            background: #110303; 
+            border-left: 1px solid var(--border-dim); 
+            padding: 25px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            height: 100vh; 
+            z-index: 15; 
+        }
+        .form-panel::-webkit-scrollbar { width: 5px; }
+        .form-panel::-webkit-scrollbar-thumb { background: #331010; border-radius: 3px; }
+        
+        .form-header { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 18px; border-bottom: 1px solid var(--border-dim); padding-bottom: 10px; margin-bottom: 5px; }
+        .section-label { font-size: 10px; color: var(--primary-gold); text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; font-weight: 600; border-bottom: 1px dashed rgba(212,175,55,0.1); padding-bottom: 2px;}
+        
+        .row { display: flex; gap: 10px; }
+        .col-half { flex: 1; }
+        .col-third { flex: 1; }
+
+        input, select { 
+            width: 100%; background: var(--input-bg); border: 1px solid #331010; color: #e0e0e0; 
+            padding: 10px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 12px; 
+            outline: none; transition: 0.3s; margin-top: 5px;
+        }
+        input:focus, select:focus { border-color: var(--primary-gold); background: rgba(212, 175, 55, 0.05); }
+        label { font-size: 9px; color: #888; margin-left: 2px; }
+
+        /* Custom File Upload Styling for Panel */
+        .file-upload-group { border: 1px dashed #331010; padding: 10px; border-radius: 4px; transition: 0.2s; margin-top: 5px; background: rgba(0,0,0,0.2); }
+        .file-upload-group:hover { border-color: var(--border-dim); background: rgba(255,255,255,0.02); }
+        .file-label { font-size: 10px; color: #aaa; display: block; margin-bottom: 4px; }
+        
+        /* Make file input look better */
+        input[type="file"] {
+            font-size: 10px;
+            color: #888;
+            padding: 5px;
+        }
+        input[type="file"]::file-selector-button {
+            background-color: #220a0a;
+            color: var(--primary-gold);
+            border: 1px solid #441515;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 10px;
+        }
+        
+        .btn-save { 
+            background: linear-gradient(90deg, #1e3c22, #2e7d32); color: #fff; border: none; padding: 15px; 
+            font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 20px; margin-bottom: 30px;
+            transition: 0.3s; text-transform: uppercase; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .btn-save:hover { background: #388e3c; box-shadow: 0 5px 15px rgba(50, 200, 50, 0.2); transform: translateY(-2px); }
+
+        .status-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: right; }
+
+        @media (max-width: 1024px) {
+            body { flex-direction: column; overflow-y: auto; height: auto; }
+            .sidebar { 
+                width: 100%; height: auto; flex-direction: row; justify-content: space-between; 
+                align-items: center; padding: 15px 20px; position: sticky; top: 0; border-right: none; border-bottom: 1px solid var(--border-dim);
+            }
+            .brand-subtitle { display: none; }
+            .btn-access { margin: 0; padding: 8px 12px; }
+            .main-scan { height: auto; padding: 20px 15px; }
+            .scan-frame { height: 200px; }
+            .form-panel { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border-dim); padding-bottom: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div><div class="brand-title">ASSISCAN</div><div class="brand-subtitle">University of Batangas Lipa</div></div>
+        <a href="history.html" class="btn-access"><i class="fas fa-database"></i> VIEW DATABASE</a>
+    </nav>
+
+    <main class="main-scan">
+        <div class="scanner-wrapper">
+            <div class="scan-label">
+                <span><i class="fas fa-baby"></i> PSA BIRTH CERTIFICATE</span>
+                <span id="psaStatus" class="status-text">Waiting for input...</span>
+            </div>
+            <div class="scan-frame" onclick="document.getElementById('psaInput').click()">
+                <div class="scan-laser" id="psaLaser"></div>
+                <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
                 
-                email, mobile_no, civil_status, nationality,
-                mother_contact, father_contact,
-                guardian_name, guardian_relation, guardian_contact,
-                region, province, specific_address,
-                school_year, student_type, program, last_level_attended,
+                <div class="upload-placeholder" id="psaPlaceholder">
+                    <i class="fas fa-camera"></i>
+                    <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN PSA</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                </div>
+                <img id="psaPreview" class="img-preview">
+                <input type="file" id="psaInput" hidden accept="image/*" multiple onchange="processPSA(this)">
+            </div>
+        </div>
+
+        <div class="scanner-wrapper">
+            <div class="scan-label">
+                <span><i class="fas fa-file-contract"></i> FORM 137 / SF10</span>
+                <span id="f137Status" class="status-text">Waiting for input...</span>
+            </div>
+            <div class="scan-frame" onclick="document.getElementById('f137Input').click()">
+                <div class="scan-laser" id="f137Laser"></div>
+                <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
                 
-                is_ip, is_pwd, has_medication, is_working,
-                residence_type, employer_name, marital_status,
-                
-                is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings -- <--- ADDED COLUMN
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, 
-                %s, %s, %s, 
-                %s, %s, %s, %s, 
-                %s, %s,
-                %s, %s, %s, %s,
-                %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s, %s, %s,
-                %s -- <--- ADDED PLACEHOLDER
-            ) 
-            RETURNING id
-        ''', (
-            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), d.get('birth_order'), d.get('religion'), d.get('age'),
-            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
-            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
-            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            d.get('psa_image_path', ''), d.get('f137_image_path', ''), 
-            
-            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
-            d.get('mother_contact'), d.get('father_contact'),
-            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
-            d.get('region'), d.get('province'), d.get('specific_address'),
-            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
-            
-            d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-            d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
-            
-            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json # <--- PASSED THE JSON STRING
-        ))
+                <div class="upload-placeholder" id="f137Placeholder">
+                    <i class="fas fa-camera"></i>
+                    <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN FORM 137</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                </div>
+                <img id="f137Preview" class="img-preview">
+                <input type="file" id="f137Input" hidden accept="image/*" multiple onchange="processForm137(this)">
+            </div>
+        </div>
+    </main>
+
+    <aside class="form-panel">
+        <div class="form-header">DATA VERIFICATION</div>
         
-        new_id = cur.fetchone()[0]
-        conn.commit()
+        <span class="section-label"><i class="fas fa-university"></i> Enrollment Details</span>
+        <div class="row">
+            <div class="col-half">
+                <label>School Year</label>
+                <input type="text" id="schoolYear" value="2025-2026">
+            </div>
+            <div class="col-half">
+                <label>Type</label>
+                <select id="studentType">
+                    <option value="Regular">Regular</option>
+                    <option value="Irregular">Irregular</option>
+                    <option value="Transferee">Transferee</option>
+                </select>
+            </div>
+        </div>
+        <input type="text" id="programCourse" placeholder="Program / Course">
+        <input type="text" id="lastLevel" placeholder="Last Level Attended (e.g. Grade 12)">
 
-        # Send Email
-        email_addr = d.get('email', '')
-        files_to_send = []
-        if d.get('psa_image_path'): files_to_send.append(d.get('psa_image_path'))
-        if d.get('f137_image_path'): files_to_send.append(d.get('f137_image_path'))
+        <span class="section-label"><i class="fas fa-user"></i> Personal Information</span>
+        <input type="text" id="childName" placeholder="Full Name">
+        
+        <div class="row">
+            <div class="col-half">
+                <label>Date of Birth</label>
+                <input type="date" id="childBirthdate" onchange="calculateAge()">
+            </div>
+            <div class="col-half">
+                <label>Age</label>
+                <input type="number" id="childAge" placeholder="0">
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-half"><input type="text" id="childSex" placeholder="Sex"></div>
+            <div class="col-half"><input type="text" id="birthOrder" placeholder="Birth Order"></div>
+        </div>
+        
+        <div class="row">
+            <div class="col-half"><input type="text" id="childCivilStatus" placeholder="Civil Status"></div>
+            <div class="col-half"><input type="text" id="childNationality" placeholder="Nationality"></div>
+        </div>
+        <input type="text" id="childMobile" placeholder="Mobile No.">
 
-        if email_addr:
-            send_email_notification(email_addr, d.get('name'), files_to_send)
+        <input type="text" id="childBirthplace" placeholder="Place of Birth">
+        <input type="text" id="childReligion" placeholder="Religion">
 
-        return jsonify({"status": "success", "db_id": new_id})
-    except Exception as e:
-        print(f"❌ SAVE ERROR: {e}")
-        if conn: conn.rollback()
-        return jsonify({"status": "error", "error": str(e)}), 500
-    finally:
-        if conn: conn.close()
+        <span class="section-label"><i class="fas fa-notes-medical"></i> Special Groups & Health</span>
+        <div class="row">
+            <div class="col-half">
+                <label>IP Member?</label>
+                <select id="isIP"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>PWD?</label>
+                <select id="isPWD"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-half">
+                <label>Medication?</label>
+                <select id="hasMedication"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>Working Student?</label>
+                <select id="isWorking"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-half">
+                <label>Gifted Child?</label>
+                <select id="isGifted"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+            <div class="col-half">
+                <label>Needs Assistance?</label>
+                <select id="needsAssistance"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
 
-# --- UPLOAD ADDITIONAL ---
-@app.route('/upload-additional', methods=['POST'])
-def upload_additional():
-    files = request.files.getlist('files')
-    rid, dtype = request.form.get('id'), request.form.get('type')
-    
-    if not files or not rid: return jsonify({"error": "Data Missing"}), 400
-    
-    saved_paths = []
-    for i, file in enumerate(files):
-        if file and file.filename:
-            timestamp = int(datetime.now().timestamp())
-            fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
-            file.save(path)
-            saved_paths.append(path)
+        <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
+        <div class="row">
+            <div class="col-half">
+                <label>Region</label>
+                <select id="addressRegion" onchange="updateProvinces()">
+                    <option value="">Select Region</option>
+                </select>
+            </div>
+            <div class="col-half">
+                <label>Province</label>
+                <select id="addressProvince">
+                    <option value="">Select Region First</option>
+                </select>
+            </div>
+        </div>
+        <input type="text" id="addressSpecific" placeholder="House No. / Street / Brgy / City">
+        
+        <div class="row">
+            <div class="col-half">
+                <label>Residence Type</label>
+                <select id="residenceType">
+                    <option value="With Parents">With Parents</option>
+                    <option value="Boarding House">Boarding House</option>
+                    <option value="Relative">Relative</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+        </div>
 
-    full_path_str = ",".join(saved_paths)
-    
-    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (full_path_str, rid))
-        conn.commit()
-        return jsonify({"status": "success"})
-    finally: conn.close()
+        <span class="section-label"><i class="fas fa-briefcase"></i> Employer (If Working)</span>
+        <input type="text" id="employerName" placeholder="Employer Name">
 
-@app.route('/delete-record/<int:record_id>', methods=['DELETE'])
-def delete_record(record_id):
-    if not session.get('logged_in'): return jsonify({"error": "Unauthorized"}), 401
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
-        conn.commit()
-        return jsonify({"success": True})
-    finally: conn.close()
+        <span class="section-label"><i class="fas fa-users"></i> Family Background</span>
+        
+        <label>Parents' Marital Status</label>
+        <select id="maritalStatus">
+            <option value="Married">Married</option>
+            <option value="Living Together">Living Together</option>
+            <option value="Separated">Separated</option>
+            <option value="Single Parent">Single Parent</option>
+            <option value="Widowed">Widowed</option>
+        </select>
 
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        <div style="margin-top:10px;"></div>
+        <span class="file-label">Mother's Info</span>
+        <input type="text" id="motherName" placeholder="Mother's Maiden Name">
+        <div class="row">
+            <input type="text" id="motherCitizenship" placeholder="Citizenship">
+            <input type="text" id="motherOccupation" placeholder="Occupation">
+        </div>
+        <input type="text" id="motherContact" placeholder="Mother's Contact No.">
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+        <div style="margin-top:10px;"></div>
+        <span class="file-label">Father's Info</span>
+        <input type="text" id="fatherName" placeholder="Father's Name">
+        <div class="row">
+            <input type="text" id="fatherCitizenship" placeholder="Citizenship">
+            <input type="text" id="fatherOccupation" placeholder="Occupation">
+        </div>
+        <input type="text" id="fatherContact" placeholder="Father's Contact No.">
+
+        <span class="section-label"><i class="fas fa-user-shield"></i> Guardian Info</span>
+        <input type="text" id="guardianName" placeholder="Guardian Name">
+        <div class="row">
+            <div class="col-half"><input type="text" id="guardianRelation" placeholder="Relationship"></div>
+            <div class="col-half"><input type="text" id="guardianContact" placeholder="Contact No."></div>
+        </div>
+
+        <div style="margin-top: 15px;"></div>
+        <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
+        
+        <div class="file-upload-group" style="padding: 0; background: transparent; border: none;">
+            <table id="siblingsTable" style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
+                <thead>
+                    <tr style="text-align: left; font-size: 9px; color: var(--primary-gold);">
+                        <th>Name</th>
+                        <th style="width: 50px;">Age</th>
+                        <th>Work/School</th>
+                        <th style="width: 25px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            
+            <button type="button" onclick="addSiblingRow()" style="
+                width: 100%; 
+                background: rgba(212, 175, 55, 0.1); 
+                border: 1px dashed var(--border-dim); 
+                color: var(--primary-gold); 
+                padding: 8px; 
+                font-size: 10px; 
+                cursor: pointer; 
+                margin-top: 5px;
+                transition: 0.3s;">
+                <i class="fas fa-plus"></i> ADD SIBLING
+            </button>
+        </div>
+        <span class="section-label"><i class="fas fa-envelope"></i> Contact Notification</span>
+        <input type="email" id="contactEmail" placeholder="Enter Email (for copy of record)">
+        
+        <span class="section-label"><i class="fas fa-school"></i> School Record (F137)</span>
+        <input type="text" id="lrn" placeholder="Learner Reference No. (LRN)">
+        <input type="text" id="schoolName" placeholder="School Name">
+        <div class="row">
+            <div class="col-half"><input type="text" id="schoolAddress" placeholder="School Address"></div>
+            <div class="col-half"><select id="schoolType"><option value="Public">Public</option><option value="Private">Private</option></select></div>
+        </div>
+        <div class="row">
+            <div class="col-half">
+                 <label>Year Attended</label>
+                 <input type="text" id="yearAttended" placeholder="e.g. 2023-2024">
+            </div>
+            <div class="col-half">
+                 <label>Final Gen. Average</label>
+                 <input type="text" id="genAverage" placeholder="e.g. 92.5">
+            </div>
+        </div>
+        
+        <span class="section-label"><i class="fas fa-star"></i> Additional Info</span>
+        <input type="text" id="specialTalents" placeholder="Special Talents / Skills">
+        <div class="row">
+            <div class="col-half">
+                <label>Scholar?</label>
+                <select id="isScholar"><option value="No">No</option><option value="Yes">Yes</option></select>
+            </div>
+        </div>
+
+        <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
+        <div class="file-upload-group">
+            <span class="file-label">Form 138 (Report Card)</span>
+            <input type="file" id="fileForm138" accept="image/*">
+        </div>
+        <div class="file-upload-group">
+            <span class="file-label">Good Moral Certificate</span>
+            <input type="file" id="fileGoodMoral" accept="image/*">
+        </div>
+
+        <button class="btn-save" onclick="saveRecord()">
+            <i class="fas fa-save"></i> Verify & Save Record
+        </button>
+    </aside>
+
+    <script>
+        let psaImagePath = "";
+        let f137ImagePath = "";
+
+        const philippineLocations = {
+            "NCR": ["Metro Manila"],
+            "Region IV-A (CALABARZON)": ["Batangas", "Cavite", "Laguna", "Quezon", "Rizal"],
+            "Region III (Central Luzon)": ["Bulacan", "Pampanga", "Tarlac", "Zambales"],
+            "Region I": ["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"],
+            "Region II": ["Cagayan", "Isabela", "Nueva Vizcaya"],
+            "Region V": ["Albay", "Camarines Sur", "Sorsogon"],
+            "Region VI": ["Iloilo", "Negros Occidental"],
+            "Region VII": ["Cebu", "Bohol"],
+            "Region VIII": ["Leyte", "Samar"],
+            "Region X": ["Bukidnon", "Misamis Oriental"],
+            "Region XI": ["Davao del Sur", "Davao del Norte"]
+        };
+
+        function populateRegions() {
+            const regionSelect = document.getElementById("addressRegion");
+            for (const region in philippineLocations) {
+                const option = document.createElement("option");
+                option.value = region;
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            }
+        }
+
+        function updateProvinces() {
+            const regionSelect = document.getElementById("addressRegion");
+            const provinceSelect = document.getElementById("addressProvince");
+            const selectedRegion = regionSelect.value;
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            if (selectedRegion && philippineLocations[selectedRegion]) {
+                philippineLocations[selectedRegion].forEach(province => {
+                    const option = document.createElement("option");
+                    option.value = province;
+                    option.textContent = province;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        }
+
+        window.addEventListener('load', populateRegions);
+
+        function calculateAge() {
+            const birthDate = new Date(document.getElementById('childBirthdate').value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+            document.getElementById('childAge').value = age >= 0 ? age : 0;
+        }
+
+        // --- PREVIEW LOGIC ---
+        function showPreview(files, imgId, placeholderId) {
+            if (files && files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById(imgId).src = e.target.result;
+                    document.getElementById(imgId).style.display = 'block';
+                    document.getElementById(placeholderId).style.display = 'none';
+                }
+                reader.readAsDataURL(files[0]);
+            }
+        }
+
+        // --- ADD SIBLING ROW FUNCTION ---
+        function addSiblingRow() {
+            const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            
+            newRow.innerHTML = `
+                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0;"></td>
+                <td><input type="number" class="sib-age" placeholder="0" style="margin:0;"></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0;"></td>
+                <td style="text-align: center;">
+                    <button type="button" onclick="this.closest('tr').remove()" style="
+                        background: #331010; 
+                        color: #ff6b6b; 
+                        border: none; 
+                        cursor: pointer; 
+                        font-size: 12px; 
+                        padding: 5px;">&times;</button>
+                </td>
+            `;
+        }
+
+        // --- PROCESS PSA ---
+        async function processPSA(input) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'psaPreview', 'psaPlaceholder');
+            document.getElementById('psaLaser').style.display = 'block';
+            document.getElementById('psaStatus').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imageFiles', files[i]);
+            }
+
+            try {
+                const res = await fetch('/extract', { method: 'POST', body: formData });
+                const data = await res.json();
+                document.getElementById('psaLaser').style.display = 'none';
+
+                if (data.structured_data) {
+                    const d = data.structured_data;
+                    document.getElementById('psaStatus').innerText = "✅ Data Extracted";
+                    
+                    document.getElementById('childName').value = d.Name || "";
+                    document.getElementById('childSex').value = d.Sex || "";
+                    document.getElementById('childBirthdate').value = d.Birthdate || "";
+                    document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
+                    document.getElementById('birthOrder').value = d.BirthOrder || "";
+                    document.getElementById('childReligion').value = d.Religion || "";
+                    document.getElementById('motherName').value = d.Mother_MaidenName || "";
+                    document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
+                    document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
+                    document.getElementById('fatherName').value = d.Father_Name || "";
+                    document.getElementById('fatherCitizenship').value = d.Father_Citizenship || "";
+                    document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
+                    
+                    if(d.Birthdate) calculateAge();
+                    psaImagePath = data.image_paths; 
+                } else {
+                    document.getElementById('psaStatus').innerText = "❌ Scan Failed";
+                }
+            } catch (e) {
+                document.getElementById('psaLaser').style.display = 'none';
+                document.getElementById('psaStatus').innerText = "❌ Error";
+            }
+        }
+
+        // --- PROCESS FORM 137 ---
+        async function processForm137(input) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'f137Preview', 'f137Placeholder');
+            document.getElementById('f137Laser').style.display = 'block';
+            document.getElementById('f137Status').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imageFiles', files[i]);
+            }
+
+            try {
+                const res = await fetch('/extract-form137', { method: 'POST', body: formData });
+                const data = await res.json();
+                document.getElementById('f137Laser').style.display = 'none';
+
+                if (data.structured_data) {
+                    const d = data.structured_data;
+                    document.getElementById('f137Status').innerText = "✅ Data Extracted";
+                    document.getElementById('lrn').value = d.lrn || "";
+                    document.getElementById('schoolName').value = d.school_name || "";
+                    document.getElementById('schoolAddress').value = d.school_address || "";
+                    document.getElementById('genAverage').value = d.final_general_average || "";
+                    f137ImagePath = data.image_paths;
+                } else {
+                    document.getElementById('f137Status').innerText = "❌ Scan Failed";
+                }
+            } catch (e) {
+                document.getElementById('f137Laser').style.display = 'none';
+                document.getElementById('f137Status').innerText = "❌ Error";
+            }
+        }
+
+        async function saveRecord() {
+            const btn = document.querySelector('.btn-save');
+            const name = document.getElementById('childName').value;
+            if(!name) return alert("Student Name is required!");
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+            btn.disabled = true;
+
+            // 1. COLLECT SIBLINGS DATA
+            let siblingsList = [];
+            document.querySelectorAll('#siblingsTable tbody tr').forEach(row => {
+                let sName = row.querySelector('.sib-name').value;
+                let sAge = row.querySelector('.sib-age').value;
+                let sOcc = row.querySelector('.sib-occ').value;
+                
+                if(sName && sName.trim() !== "") { 
+                    siblingsList.push({ name: sName, age: sAge, occupation: sOcc });
+                }
+            });
+
+            const recordData = {
+                school_year: document.getElementById('schoolYear').value,
+                student_type: document.getElementById('studentType').value,
+                program: document.getElementById('programCourse').value,
+                last_level_attended: document.getElementById('lastLevel').value,
+                name: name,
+                sex: document.getElementById('childSex').value,
+                birthdate: document.getElementById('childBirthdate').value,
+                birthplace: document.getElementById('childBirthplace').value,
+                birth_order: document.getElementById('birthOrder').value,
+                religion: document.getElementById('childReligion').value,
+                age: document.getElementById('childAge').value,
+                civil_status: document.getElementById('childCivilStatus').value,
+                nationality: document.getElementById('childNationality').value,
+                mobile_no: document.getElementById('childMobile').value,
+                is_ip: document.getElementById('isIP').value,
+                is_pwd: document.getElementById('isPWD').value,
+                has_medication: document.getElementById('hasMedication').value,
+                is_working: document.getElementById('isWorking').value,
+                is_gifted: document.getElementById('isGifted').value, 
+                needs_assistance: document.getElementById('needsAssistance').value, 
+                region: document.getElementById('addressRegion').value,
+                province: document.getElementById('addressProvince').value,
+                specific_address: document.getElementById('addressSpecific').value,
+                residence_type: document.getElementById('residenceType').value,
+                employer_name: document.getElementById('employerName').value,
+                marital_status: document.getElementById('maritalStatus').value, 
+                mother_name: document.getElementById('motherName').value,
+                mother_citizenship: document.getElementById('motherCitizenship').value,
+                mother_occupation: document.getElementById('motherOccupation').value,
+                mother_contact: document.getElementById('motherContact').value,
+                father_name: document.getElementById('fatherName').value,
+                father_citizenship: document.getElementById('fatherCitizenship').value,
+                father_occupation: document.getElementById('fatherOccupation').value,
+                father_contact: document.getElementById('fatherContact').value,
+                guardian_name: document.getElementById('guardianName').value,
+                guardian_relation: document.getElementById('guardianRelation').value,
+                guardian_contact: document.getElementById('guardianContact').value,
+                
+                // ADDED SIBLINGS HERE
+                siblings: siblingsList,
+
+                lrn: document.getElementById('lrn').value,
+                school_name: document.getElementById('schoolName').value,
+                school_address: document.getElementById('schoolAddress').value,
+                final_general_average: document.getElementById('genAverage').value,
+                school_type: document.getElementById('schoolType').value, 
+                year_attended: document.getElementById('yearAttended').value, 
+                special_talents: document.getElementById('specialTalents').value, 
+                is_scholar: document.getElementById('isScholar').value, 
+                email: document.getElementById('contactEmail').value,
+                
+                psa_image_path: psaImagePath,
+                f137_image_path: f137ImagePath
+            };
+
+            try {
+                const res = await fetch('/save-record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(recordData)
+                });
+                
+                const result = await res.json();
+                if(result.success) {
+                    alert('Record Saved Successfully!');
+                    location.reload(); 
+                } else {
+                    alert('Error saving record: ' + result.message);
+                    btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                alert('Connection Error!');
+                btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
