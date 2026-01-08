@@ -54,7 +54,7 @@ def get_db_connection():
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE (UPDATED FOR ALL FIELDS) ---
+# --- INIT DATABASE TABLE ---
 def init_db():
     conn = get_db_connection()
     if conn:
@@ -108,8 +108,6 @@ def init_db():
                 ("student_type", "VARCHAR(50)"),
                 ("program", "VARCHAR(100)"),
                 ("last_level_attended", "VARCHAR(100)"),
-                
-                # Previous additions
                 ("is_ip", "VARCHAR(10)"),
                 ("is_pwd", "VARCHAR(10)"),
                 ("has_medication", "VARCHAR(10)"),
@@ -117,8 +115,6 @@ def init_db():
                 ("residence_type", "VARCHAR(50)"),
                 ("employer_name", "VARCHAR(255)"),
                 ("marital_status", "VARCHAR(50)"),
-
-                # --- NEWEST ADDITIONS (FINAL COMPLETION) ---
                 ("is_gifted", "VARCHAR(10)"),
                 ("needs_assistance", "VARCHAR(10)"),
                 ("school_type", "VARCHAR(50)"),
@@ -155,14 +151,21 @@ def send_email_notification(recipient_email, student_name, file_paths):
         msg['Subject'] = "AssiScan Verification Complete - Document Copy"
         body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
         msg.attach(MIMEText(body, 'plain'))
-        for fpath in file_paths:
-            if fpath and os.path.exists(fpath):
-                with open(fpath, "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-                    encoders.encode_base64(part)
-                    part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(fpath)}")
-                    msg.attach(part)
+        
+        # Handle comma-separated paths
+        for path_string in file_paths:
+            if path_string:
+                # Split in case multiple files are stored in one string
+                individual_paths = path_string.split(',')
+                for clean_path in individual_paths:
+                    if clean_path and os.path.exists(clean_path):
+                        with open(clean_path, "rb") as attachment:
+                            part = MIMEBase('application', 'octet-stream')
+                            part.set_payload(attachment.read())
+                            encoders.encode_base64(part)
+                            part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(clean_path)}")
+                            msg.attach(part)
+
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
@@ -172,6 +175,57 @@ def send_email_notification(recipient_email, student_name, file_paths):
     except Exception as e:
         print(f"❌ Email Error: {e}")
         return False
+
+# ================= HELPER FUNCTIONS =================
+
+# Helper: Save Multiple Files
+def save_multiple_files(files, prefix):
+    saved_paths = []
+    pil_images = []
+    
+    for i, file in enumerate(files):
+        if file and file.filename:
+            # Create unique filename: prefix_timestamp_index.jpg
+            timestamp = int(datetime.now().timestamp())
+            filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(path)
+            saved_paths.append(path)
+            # Open image for Gemini
+            try:
+                img = Image.open(path)
+                pil_images.append(img)
+            except Exception as e:
+                print(f"Error opening image {filename}: {e}")
+                
+    return saved_paths, pil_images
+
+# Helper: Intelligent Model Selector (UPDATED FOR MULTI-INPUT)
+def generate_content_standard(parts):
+    """
+    parts: A list containing [prompt, image1, image2, ...]
+    """
+    MODEL_PRIORITY_LIST = [
+        "gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"
+    ]
+    last_error = None
+    print("🤖 AI START: Attempting to find a working model...")
+
+    for model_name in MODEL_PRIORITY_LIST:
+        try:
+            print(f"   👉 Trying model: {model_name} ...")
+            model = genai.GenerativeModel(model_name)
+            # Pass the list of parts directly
+            response = model.generate_content(parts)
+            if not response.text: raise ValueError("Empty text.")
+            print(f"   ✅ SUCCESS using: {model_name}")
+            return response
+        except Exception as e:
+            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
+            last_error = e
+            continue
+    print("❌ ALL MODELS FAILED.")
+    raise last_error if last_error else Exception("No AI models available.")
 
 # ================= ROUTES =================
 
@@ -221,7 +275,6 @@ def get_records():
     finally:
         conn.close()
 
-# --- NEW: VIEW FORM ROUTE (FOR PRINTING) ---
 @app.route('/view-form/<int:record_id>')
 def view_form(record_id):
     if not session.get('logged_in'):
@@ -244,46 +297,26 @@ def view_form(record_id):
     finally:
         conn.close()
 
-# --- INTELLIGENT MODEL SELECTOR ---
-def generate_content_standard(pil_image, prompt):
-    MODEL_PRIORITY_LIST = [
-        "gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"
-    ]
-    last_error = None
-    print("🤖 AI START: Attempting to find a working model...")
-
-    for model_name in MODEL_PRIORITY_LIST:
-        try:
-            print(f"   👉 Trying model: {model_name} ...")
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content([pil_image, prompt])
-            if not response.text: raise ValueError("Empty text.")
-            print(f"   ✅ SUCCESS using: {model_name}")
-            return response
-        except Exception as e:
-            print(f"   ⚠️ Failed on {model_name}: {str(e)}")
-            last_error = e
-            continue
-    print("❌ ALL MODELS FAILED.")
-    raise last_error if last_error else Exception("No AI models available.")
-
-# --- EXTRACT PSA ---
+# --- EXTRACT PSA (MULTI-PAGE READY) ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
-    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
-    file = request.files['imageFile']
-    if file.filename == '': return jsonify({"error": "No selected file"}), 400
+    if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
+    
+    # Get List of files
+    files = request.files.getlist('imageFiles')
+    if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
 
     try:
-        filename = secure_filename(f"PSA_{int(datetime.now().timestamp())}_{file.filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        try: pil_image = Image.open(filepath)
-        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
+        # Save all and get PIL images
+        saved_paths, pil_images = save_multiple_files(files, "PSA")
+        
+        if not pil_images:
+             return jsonify({"error": "No valid images found"}), 400
 
         prompt = """
         SYSTEM ROLE: Strict Philippine Document Verifier.
-        TASK: Analyze this image. It MUST be a "Certificate of Live Birth".
+        TASK: Analyze these images. It MUST be a "Certificate of Live Birth".
+        If there are multiple pages, analyze them as one document.
         OUTPUT FORMAT (JSON ONLY):
         {
             "is_valid_document": boolean,
@@ -302,7 +335,10 @@ def extract_data():
             "Father_Occupation": "string"
         }
         """
-        res = generate_content_standard(pil_image, prompt)
+        
+        # Pass PROMPT + ALL IMAGES
+        res = generate_content_standard([prompt, *pil_images])
+        
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         s = raw_text.find('{')
         e = raw_text.rfind('}') + 1
@@ -311,39 +347,45 @@ def extract_data():
         if not data.get("is_valid_document", False):
             return jsonify({"error": f"Invalid Document: {data.get('rejection_reason')}"}), 400
 
-        return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+        # Return comma-separated string for paths
+        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
     except Exception as e:
         traceback.print_exc() 
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
-# --- EXTRACT FORM 137 ---
+# --- EXTRACT FORM 137 (MULTI-PAGE READY) ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
-    if 'imageFile' not in request.files: return jsonify({"error": "No file uploaded"}), 400
-    file = request.files['imageFile']
-    if file.filename == '': return jsonify({"error": "No selected file"}), 400
+    if 'imageFiles' not in request.files: return jsonify({"error": "No files uploaded"}), 400
     
-    filename = secure_filename(f"F137_SCAN_{int(datetime.now().timestamp())}_{file.filename}")
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-    print(f"📸 Processing Form 137: {filename}")
-
+    # Get List of files
+    files = request.files.getlist('imageFiles')
+    if not files or files[0].filename == '': return jsonify({"error": "No selected file"}), 400
+    
     try:
-        try: pil_image = Image.open(filepath)
-        except Exception as e: return jsonify({"error": f"Invalid Image: {str(e)}"}), 400
+        # Save all and get PIL images
+        saved_paths, pil_images = save_multiple_files(files, "F137")
+        print(f"📸 Processing Form 137: {len(pil_images)} pages")
+
+        if not pil_images:
+            return jsonify({"error": "No valid images found"}), 400
         
         prompt = """
         SYSTEM ROLE: Expert Data Encoder.
         TASK: Extract details from Form 137 / SF10.
+        This document may span multiple pages. Look across ALL pages to find the requested info.
         JSON FORMAT ONLY:
         {
             "lrn": "123456789012",
             "school_name": "Name of School",
             "school_address": "City, Province",
-            "final_general_average": "85"
+            "final_general_average": "85" (Get the latest general average found)
         }
         """
-        res = generate_content_standard(pil_image, prompt)
+        
+        # Pass PROMPT + ALL IMAGES
+        res = generate_content_standard([prompt, *pil_images])
+        
         raw_text = res.text.replace('```json', '').replace('```', '').strip()
         s = raw_text.find('{')
         e = raw_text.rfind('}') + 1
@@ -352,11 +394,12 @@ def extract_form137():
         try: data = json.loads(raw_text)
         except: return jsonify({"error": "AI Extraction Failed (Invalid JSON)"}), 500
         
-        return jsonify({"message": "Success", "structured_data": data, "image_path": filename})
+        # Return comma-separated string for paths
+        return jsonify({"message": "Success", "structured_data": data, "image_paths": ",".join(saved_paths)})
     except Exception as e:
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-# --- UPDATED SAVE RECORD (INCLUDES ALL UB FORM FIELDS) ---
+# --- SAVE RECORD ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
@@ -373,7 +416,7 @@ def save_record():
             if cur.fetchone():
                 return jsonify({"status": "error", "error": "DUPLICATE_ENTRY", "message": f"Record already exists."}), 409
 
-        # INSERT ALL FIELDS (Updated for Full Completion)
+        # INSERT ALL FIELDS
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -415,7 +458,7 @@ def save_record():
             d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
             d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
             d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            os.path.basename(d.get('psa_image_path', '')), os.path.basename(d.get('f137_image_path', '')),
+            d.get('psa_image_path', ''), d.get('f137_image_path', ''), # Stores comma-separated strings
             
             d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
             d.get('mother_contact'), d.get('father_contact'),
@@ -433,10 +476,15 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
+        # Send Email
         email_addr = d.get('email', '')
-        full_psa_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(d.get('psa_image_path', ''))) if d.get('psa_image_path') else None
+        # Prepare paths for email (handle both PSA and F137)
+        files_to_send = []
+        if d.get('psa_image_path'): files_to_send.append(d.get('psa_image_path'))
+        if d.get('f137_image_path'): files_to_send.append(d.get('f137_image_path'))
+
         if email_addr:
-            send_email_notification(email_addr, d.get('name'), [full_psa_path] if full_psa_path else [])
+            send_email_notification(email_addr, d.get('name'), files_to_send)
 
         return jsonify({"status": "success", "db_id": new_id})
     except Exception as e:
@@ -446,7 +494,38 @@ def save_record():
     finally:
         if conn: conn.close()
 
-# --- OTHER ROUTES ---
+# --- UPLOAD ADDITIONAL (MULTI-FILE READY) ---
+@app.route('/upload-additional', methods=['POST'])
+def upload_additional():
+    # Use getlist to handle multiple files
+    files = request.files.getlist('files')
+    rid, dtype = request.form.get('id'), request.form.get('type')
+    
+    if not files or not rid: return jsonify({"error": "Data Missing"}), 400
+    
+    saved_paths = []
+    for i, file in enumerate(files):
+        if file and file.filename:
+            timestamp = int(datetime.now().timestamp())
+            fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
+            path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
+            file.save(path)
+            saved_paths.append(path)
+
+    # Join with commas if multiple
+    full_path_str = ",".join(saved_paths)
+    
+    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        # Note: This overwrites existing entry. If you want to append, you'd need to SELECT first.
+        # For now, we assume this is the main upload action.
+        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (full_path_str, rid))
+        conn.commit()
+        return jsonify({"status": "success"})
+    finally: conn.close()
+
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
     if not session.get('logged_in'): return jsonify({"error": "Unauthorized"}), 401
@@ -456,22 +535,6 @@ def delete_record(record_id):
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
-
-@app.route('/upload-additional', methods=['POST'])
-def upload_additional():
-    file = request.files.get('file')
-    rid, dtype = request.form.get('id'), request.form.get('type')
-    if not file or not rid: return jsonify({"error": "Data Missing"}), 400
-    fname = secure_filename(f"{dtype}_{rid}_{file.filename}")
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
-    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (fname, rid))
-        conn.commit()
-        return jsonify({"status": "success"})
     finally: conn.close()
 
 @app.route('/uploads/<path:filename>')
