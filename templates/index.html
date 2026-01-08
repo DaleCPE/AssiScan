@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AssiScan | Premium Console</title>
+    <title>AssiScan | Dale Vincent</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -387,6 +387,36 @@
             <div class="col-half"><input type="text" id="guardianContact" placeholder="Contact No."></div>
         </div>
 
+        <div style="margin-top: 15px;"></div>
+        <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
+        
+        <div class="file-upload-group" style="padding: 0; background: transparent; border: none;">
+            <table id="siblingsTable" style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
+                <thead>
+                    <tr style="text-align: left; font-size: 9px; color: var(--primary-gold);">
+                        <th>Name</th>
+                        <th style="width: 50px;">Age</th>
+                        <th>Work/School</th>
+                        <th style="width: 25px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            
+            <button type="button" onclick="addSiblingRow()" style="
+                width: 100%; 
+                background: rgba(212, 175, 55, 0.1); 
+                border: 1px dashed var(--border-dim); 
+                color: var(--primary-gold); 
+                padding: 8px; 
+                font-size: 10px; 
+                cursor: pointer; 
+                margin-top: 5px;
+                transition: 0.3s;">
+                <i class="fas fa-plus"></i> ADD SIBLING
+            </button>
+        </div>
         <span class="section-label"><i class="fas fa-envelope"></i> Contact Notification</span>
         <input type="email" id="contactEmail" placeholder="Enter Email (for copy of record)">
         
@@ -486,7 +516,7 @@
             document.getElementById('childAge').value = age >= 0 ? age : 0;
         }
 
-        // --- PREVIEW LOGIC (Updated to handle file array, shows 1st image) ---
+        // --- PREVIEW LOGIC ---
         function showPreview(files, imgId, placeholderId) {
             if (files && files.length > 0) {
                 const reader = new FileReader();
@@ -495,12 +525,32 @@
                     document.getElementById(imgId).style.display = 'block';
                     document.getElementById(placeholderId).style.display = 'none';
                 }
-                // Preview only the first page to keep UI clean
                 reader.readAsDataURL(files[0]);
             }
         }
 
-        // --- PROCESS PSA (UPDATED FOR MULTIPLE FILES) ---
+        // --- ADD SIBLING ROW FUNCTION ---
+        function addSiblingRow() {
+            const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            
+            newRow.innerHTML = `
+                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0;"></td>
+                <td><input type="number" class="sib-age" placeholder="0" style="margin:0;"></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0;"></td>
+                <td style="text-align: center;">
+                    <button type="button" onclick="this.closest('tr').remove()" style="
+                        background: #331010; 
+                        color: #ff6b6b; 
+                        border: none; 
+                        cursor: pointer; 
+                        font-size: 12px; 
+                        padding: 5px;">&times;</button>
+                </td>
+            `;
+        }
+
+        // --- PROCESS PSA ---
         async function processPSA(input) {
             const files = input.files;
             if (files.length === 0) return;
@@ -510,7 +560,6 @@
             document.getElementById('psaStatus').innerText = `Scanning ${files.length} Page(s)...`;
 
             const formData = new FormData();
-            // Loop through all files
             for (let i = 0; i < files.length; i++) {
                 formData.append('imageFiles', files[i]);
             }
@@ -548,7 +597,7 @@
             }
         }
 
-        // --- PROCESS FORM 137 (UPDATED FOR MULTIPLE FILES) ---
+        // --- PROCESS FORM 137 ---
         async function processForm137(input) {
             const files = input.files;
             if (files.length === 0) return;
@@ -558,7 +607,6 @@
             document.getElementById('f137Status').innerText = `Scanning ${files.length} Page(s)...`;
 
             const formData = new FormData();
-            // Loop through all files
             for (let i = 0; i < files.length; i++) {
                 formData.append('imageFiles', files[i]);
             }
@@ -592,6 +640,18 @@
 
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
+
+            // 1. COLLECT SIBLINGS DATA
+            let siblingsList = [];
+            document.querySelectorAll('#siblingsTable tbody tr').forEach(row => {
+                let sName = row.querySelector('.sib-name').value;
+                let sAge = row.querySelector('.sib-age').value;
+                let sOcc = row.querySelector('.sib-occ').value;
+                
+                if(sName && sName.trim() !== "") { 
+                    siblingsList.push({ name: sName, age: sAge, occupation: sOcc });
+                }
+            });
 
             const recordData = {
                 school_year: document.getElementById('schoolYear').value,
@@ -631,6 +691,10 @@
                 guardian_name: document.getElementById('guardianName').value,
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
+                
+                // ADDED SIBLINGS HERE
+                siblings: siblingsList,
+
                 lrn: document.getElementById('lrn').value,
                 school_name: document.getElementById('schoolName').value,
                 school_address: document.getElementById('schoolAddress').value,
@@ -640,43 +704,31 @@
                 special_talents: document.getElementById('specialTalents').value, 
                 is_scholar: document.getElementById('isScholar').value, 
                 email: document.getElementById('contactEmail').value,
+                
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath
             };
 
             try {
                 const res = await fetch('/save-record', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(recordData)
                 });
+                
                 const result = await res.json();
-
-                if (result.status === "success") {
-                    const newID = result.db_id;
-                    await uploadExtra('fileForm138', newID, 'Form138');
-                    await uploadExtra('fileGoodMoral', newID, 'GoodMoral');
-                    alert("SUCCESS! Record Saved. ID: " + newID);
-                    window.location.reload(); 
+                if(result.success) {
+                    alert('Record Saved Successfully!');
+                    location.reload(); 
                 } else {
-                    alert("Error saving: " + result.message);
+                    alert('Error saving record: ' + result.message);
                     btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                     btn.disabled = false;
                 }
-            } catch (e) {
-                alert("Network Error: " + e.message);
+            } catch(e) {
+                alert('Connection Error!');
                 btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                 btn.disabled = false;
-            }
-        }
-
-        async function uploadExtra(inputId, dbId, fileType) {
-            const input = document.getElementById(inputId);
-            if(input.files.length > 0) {
-                const fd = new FormData();
-                fd.append('file', input.files[0]);
-                fd.append('db_id', dbId);
-                fd.append('file_type', fileType);
-                await fetch('/upload-extra', {method: 'POST', body: fd});
             }
         }
     </script>
