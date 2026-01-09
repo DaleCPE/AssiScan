@@ -3,9 +3,9 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import json
-import requests  # Added for SendGrid
+import requests
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
@@ -39,42 +39,61 @@ else:
     print("❌ CRITICAL: GEMINI_API_KEY is missing!")
 
 # --- ADMIN SECURITY CONFIG ---
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 app = Flask(__name__)
-app.secret_key = "super_secret_security_key_change_me"
-CORS(app)
+app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
+
+# Setup CORS for Render
+CORS(app, resources={
+    r"/*": {
+        "origins": ["https://assiscan-app.onrender.com", "http://localhost:10000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"]
+    }
+})
 
 # Setup Upload Folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- DATABASE CONNECTION ---
+# Create uploads folder if it doesn't exist
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    print(f"📁 Created uploads folder at: {UPLOAD_FOLDER}")
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
+
+# ================= DATABASE FUNCTIONS =================
 def get_db_connection():
+    """Get database connection for Render PostgreSQL"""
     try:
-        # Fix Render PostgreSQL URL
-        if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-            DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-            conn = psycopg2.connect(DATABASE_URL_FIXED)
+        if DATABASE_URL:
+            # Fix for Render PostgreSQL URL
+            if DATABASE_URL.startswith("postgres://"):
+                DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+                conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
+            else:
+                conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            return conn
         else:
-            conn = psycopg2.connect(DATABASE_URL)
-        return conn
+            print("❌ DATABASE_URL not found in environment")
+            return None
     except Exception as e:
         print(f"❌ DB Connection Error: {e}")
         return None
 
-# --- INIT DATABASE TABLE ---
 def init_db():
+    """Initialize database tables"""
+    print("🔧 Initializing database...")
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
             
-            # Create main table
+            # Create main records table
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -132,81 +151,78 @@ def init_db():
                     special_talents TEXT,
                     is_scholar VARCHAR(10),
                     siblings TEXT
-                );
+                )
             ''')
             
             conn.commit()
-            print("✅ Database Schema Created/Updated!")
+            print("✅ Database table 'records' created/verified")
+            
+            # Check for missing columns
+            check_and_add_columns(cur, conn)
             
         except Exception as e:
-            print(f"❌ Table Creation Error: {e}")
-            # Try to add missing columns
-            try:
-                print("🔄 Attempting to add missing columns...")
-                missing_columns = [
-                    ("email_sent", "BOOLEAN DEFAULT FALSE"),
-                    ("email_sent_at", "TIMESTAMP"),
-                    ("email", "VARCHAR(100)"),
-                    ("civil_status", "VARCHAR(50)"),
-                    ("nationality", "VARCHAR(100)"),
-                    ("mother_contact", "VARCHAR(50)"),
-                    ("father_contact", "VARCHAR(50)"),
-                    ("guardian_name", "VARCHAR(255)"),
-                    ("guardian_relation", "VARCHAR(100)"),
-                    ("guardian_contact", "VARCHAR(50)"),
-                    ("region", "VARCHAR(100)"),
-                    ("province", "VARCHAR(100)"),
-                    ("specific_address", "TEXT"),
-                    ("mobile_no", "VARCHAR(50)"),
-                    ("school_year", "VARCHAR(50)"),
-                    ("student_type", "VARCHAR(50)"),
-                    ("program", "VARCHAR(100)"),
-                    ("last_level_attended", "VARCHAR(100)"),
-                    ("is_ip", "VARCHAR(10)"),
-                    ("is_pwd", "VARCHAR(10)"),
-                    ("has_medication", "VARCHAR(10)"),
-                    ("is_working", "VARCHAR(10)"),
-                    ("residence_type", "VARCHAR(50)"),
-                    ("employer_name", "VARCHAR(255)"),
-                    ("marital_status", "VARCHAR(50)"),
-                    ("is_gifted", "VARCHAR(10)"),
-                    ("needs_assistance", "VARCHAR(10)"),
-                    ("school_type", "VARCHAR(50)"),
-                    ("year_attended", "VARCHAR(50)"),
-                    ("special_talents", "TEXT"),
-                    ("is_scholar", "VARCHAR(10)"),
-                    ("siblings", "TEXT")
-                ]
-                
-                for col_name, col_type in missing_columns:
-                    try:
-                        cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
-                        print(f"   Added column: {col_name}")
-                        conn.commit()
-                    except Exception as col_error:
-                        print(f"   ⚠️ Could not add {col_name}: {col_error}")
-                        conn.rollback()
-                
-            except Exception as add_col_error:
-                print(f"❌ Column addition failed: {add_col_error}")
-                
+            print(f"❌ Database initialization error: {e}")
+            traceback.print_exc()
         finally:
             cur.close()
             conn.close()
 
-# Initialize database on startup
+def check_and_add_columns(cur, conn):
+    """Check and add missing columns to the records table"""
+    columns_to_add = [
+        ("email_sent", "BOOLEAN DEFAULT FALSE"),
+        ("email_sent_at", "TIMESTAMP"),
+        ("email", "VARCHAR(100)"),
+        ("civil_status", "VARCHAR(50)"),
+        ("nationality", "VARCHAR(100)"),
+        ("mother_contact", "VARCHAR(50)"),
+        ("father_contact", "VARCHAR(50)"),
+        ("guardian_name", "VARCHAR(255)"),
+        ("guardian_relation", "VARCHAR(100)"),
+        ("guardian_contact", "VARCHAR(50)"),
+        ("region", "VARCHAR(100)"),
+        ("province", "VARCHAR(100)"),
+        ("specific_address", "TEXT"),
+        ("mobile_no", "VARCHAR(50)"),
+        ("school_year", "VARCHAR(50)"),
+        ("student_type", "VARCHAR(50)"),
+        ("program", "VARCHAR(100)"),
+        ("last_level_attended", "VARCHAR(100)"),
+        ("is_ip", "VARCHAR(10)"),
+        ("is_pwd", "VARCHAR(10)"),
+        ("has_medication", "VARCHAR(10)"),
+        ("is_working", "VARCHAR(10)"),
+        ("residence_type", "VARCHAR(50)"),
+        ("employer_name", "VARCHAR(255)"),
+        ("marital_status", "VARCHAR(50)"),
+        ("is_gifted", "VARCHAR(10)"),
+        ("needs_assistance", "VARCHAR(10)"),
+        ("school_type", "VARCHAR(50)"),
+        ("year_attended", "VARCHAR(50)"),
+        ("special_talents", "TEXT"),
+        ("is_scholar", "VARCHAR(10)"),
+        ("siblings", "TEXT")
+    ]
+    
+    for column_name, column_type in columns_to_add:
+        try:
+            cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+            print(f"   ✅ Verified column: {column_name}")
+        except Exception as e:
+            print(f"   ⚠️ Column {column_name} already exists or error: {e}")
+    
+    conn.commit()
+
+# Initialize database
 init_db()
 
-# --- EMAIL FUNCTION USING SENDGRID API ---
+# ================= EMAIL FUNCTION =================
 def send_email_notification(recipient_email, student_name, file_paths):
-    """
-    Send email using SendGrid API (works on Render)
-    """
-    print(f"\n📧 [SENDGRID] Preparing email for: {recipient_email}")
+    """Send email notification using SendGrid"""
+    print(f"\n📧 Preparing email for: {recipient_email}")
     
-    # Quick validation
     if not recipient_email or not isinstance(recipient_email, str):
-        print("❌ Invalid email")
+        print("❌ Invalid email address")
         return False
     
     recipient_email = recipient_email.strip()
@@ -219,13 +235,10 @@ def send_email_notification(recipient_email, student_name, file_paths):
         print("❌ SendGrid credentials not configured")
         print(f"   SENDGRID_API_KEY: {'SET' if SENDGRID_API_KEY else 'NOT SET'}")
         print(f"   EMAIL_SENDER: {'SET' if EMAIL_SENDER else 'NOT SET'}")
-        return True  # Return True para tuloy ang process
+        return True
     
     try:
-        # Generate reference ID
         ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        
-        # Email content
         subject = "✅ AssiScan - Your Admission Record"
         
         body = f"""📋 ADMISSION RECORD VERIFICATION
@@ -270,9 +283,8 @@ Admissions Processing System
 University of Batangas Lipa
 {datetime.now().strftime('%Y')}"""
         
-        # SendGrid API request
+        # SendGrid API call
         url = "https://api.sendgrid.com/v3/mail/send"
-        
         headers = {
             "Authorization": f"Bearer {SENDGRID_API_KEY}",
             "Content-Type": "application/json"
@@ -300,22 +312,19 @@ University of Batangas Lipa
         else:
             print(f"❌ SendGrid API Error: {response.status_code}")
             print(f"   Response: {response.text[:200]}")
-            
-            # Fallback: Log the email instead
             print(f"📝 [FALLBACK] Would have sent email to {recipient_email}")
             print(f"   Subject: {subject}")
             print(f"   Reference: {ref_id}")
-            return True  # Still return True to continue
+            return True
             
     except Exception as e:
         print(f"⚠️ SendGrid failed: {e}")
-        # Fallback: Just log it
         print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
-        return True  # Always return True to not break the process
+        return True
 
 # ================= HELPER FUNCTIONS =================
-
 def save_multiple_files(files, prefix):
+    """Save uploaded files and return paths and PIL images"""
     saved_paths = []
     pil_images = []
     
@@ -325,16 +334,16 @@ def save_multiple_files(files, prefix):
             filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
-            saved_paths.append(path)
+            saved_paths.append(filename)  # Store only filename
             try:
                 img = Image.open(path)
                 pil_images.append(img)
+                print(f"   ✅ Saved: {filename}")
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
                 
     return saved_paths, pil_images
 
-# --- GEMINI 2.5 FLASH FUNCTION ---
 def extract_with_gemini(prompt, images):
     """Use Gemini 2.5 Flash or fallback to available models"""
     try:
@@ -424,23 +433,112 @@ def history_page():
         return redirect('/login') 
     return render_template('history.html')
 
+# ================= FIXED UPLOADED FILE ROUTE =================
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files - FIXED FOR RENDER"""
+    try:
+        # Security check
+        if '..' in filename or filename.startswith('/'):
+            return "Invalid filename", 400
+        
+        # Extract just the filename (handle cases where full path might be stored)
+        clean_filename = filename.split('/')[-1] if '/' in filename else filename
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"❌ File not found: {clean_filename}")
+            # Try to find similar file
+            if os.path.exists(app.config['UPLOAD_FOLDER']):
+                all_files = os.listdir(app.config['UPLOAD_FOLDER'])
+                matching = [f for f in all_files if clean_filename in f]
+                if matching:
+                    print(f"   Found similar: {matching[0]}")
+                    return send_from_directory(app.config['UPLOAD_FOLDER'], matching[0])
+            
+            print(f"   Available files: {os.listdir(app.config['UPLOAD_FOLDER'])[:10] if os.path.exists(app.config['UPLOAD_FOLDER']) else 'No uploads folder'}")
+            return jsonify({"error": f"File '{clean_filename}' not found"}), 404
+        
+        # Determine MIME type
+        mime_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.pdf': 'application/pdf',
+            '.txt': 'text/plain'
+        }
+        
+        ext = os.path.splitext(clean_filename)[1].lower()
+        mimetype = mime_types.get(ext, 'application/octet-stream')
+        
+        # Send file with proper headers for Render
+        response = send_file(
+            file_path,
+            mimetype=mimetype,
+            as_attachment=False,
+            download_name=clean_filename
+        )
+        
+        # Add CORS headers for Render
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error serving file {filename}: {e}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
 @app.route('/get-records', methods=['GET'])
 def get_records():
     if not session.get('logged_in'):
         return jsonify({"records": [], "error": "Unauthorized"}), 401
+    
     conn = get_db_connection()
-    if not conn: return jsonify({"records": []})
+    if not conn: 
+        return jsonify({"records": [], "error": "Database connection failed"})
+    
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM records ORDER BY id DESC")
         rows = cur.fetchall()
+        
         for r in rows:
-            if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-            if r['birthdate']: r['birthdate'] = str(r['birthdate'])
-            if r['email_sent_at']: r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
-        return jsonify({"records": rows})
+            if r['created_at']: 
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: 
+                r['birthdate'] = str(r['birthdate'])
+            if r['email_sent_at']: 
+                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            # FIX: Process image paths for frontend
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            for field in image_fields:
+                if r.get(field):
+                    # Handle comma-separated paths
+                    paths = str(r[field]).split(',')
+                    if paths and paths[0].strip():
+                        # Take first filename only
+                        first_path = paths[0].strip()
+                        # Extract just the filename (remove any directory path)
+                        if '/' in first_path:
+                            first_path = first_path.split('/')[-1]
+                        r[field] = first_path
+                    else:
+                        r[field] = None
+                else:
+                    r[field] = None
+        
+        return jsonify({
+            "records": rows,
+            "server_url": request.host_url.rstrip('/')
+        })
     except Exception as e:
-        return jsonify({"records": []})
+        print(f"❌ Error in get-records: {e}")
+        return jsonify({"records": [], "error": str(e)})
     finally:
         conn.close()
 
@@ -472,6 +570,59 @@ def view_form(record_id):
             return "Record not found", 404
     except Exception as e:
         return f"Error loading form: {str(e)}", 500
+    finally:
+        conn.close()
+
+@app.route('/update-record', methods=['POST'])
+def update_record():
+    """Update record from history page"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    record_id = data.get('id')
+    
+    if not record_id:
+        return jsonify({"error": "Record ID required"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        # Update the record
+        cur.execute('''
+            UPDATE records SET 
+                name = %s,
+                sex = %s,
+                birthdate = %s,
+                province = %s,
+                lrn = %s,
+                school_name = %s,
+                final_general_average = %s,
+                program = %s
+            WHERE id = %s
+        ''', (
+            data.get('name'),
+            data.get('sex'),
+            data.get('birthdate'),
+            data.get('province'),
+            data.get('lrn'),
+            data.get('school_name'),
+            data.get('final_general_average'),
+            data.get('program'),
+            record_id
+        ))
+        
+        conn.commit()
+        return jsonify({"success": True, "message": "Record updated successfully"})
+        
+    except Exception as e:
+        print(f"❌ Update error: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
@@ -1095,17 +1246,36 @@ def upload_additional():
             fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
             file.save(path)
-            saved_paths.append(path)
+            saved_paths.append(fname)  # Store only filename
 
     full_path_str = ",".join(saved_paths)
     
     col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
+    
+    if dtype not in col_map:
+        return jsonify({"error": "Invalid document type"}), 400
+    
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (full_path_str, rid))
+        
+        # Get existing paths
+        cur.execute(f"SELECT {col_map[dtype]} FROM records WHERE id = %s", (rid,))
+        existing = cur.fetchone()
+        
+        new_paths = []
+        if existing and existing[0]:
+            new_paths = existing[0].split(',')
+        
+        new_paths.extend(saved_paths)
+        new_path_str = ','.join([p for p in new_paths if p])
+        
+        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
         conn.commit()
-        return jsonify({"status": "success"})
+        return jsonify({"status": "success", "message": "File uploaded successfully"})
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        return jsonify({"error": str(e)}), 500
     finally: 
         conn.close()
 
@@ -1119,12 +1289,10 @@ def delete_record(record_id):
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
         conn.commit()
         return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally: 
         conn.close()
-
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # --- CHECK EMAIL STATUS ---
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
@@ -1144,9 +1312,76 @@ def check_email_status(record_id):
             })
         else:
             return jsonify({"error": "Record not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
+# ================= NEW ENDPOINTS FOR DEBUGGING =================
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Render"""
+    return jsonify({
+        "status": "healthy",
+        "service": "AssiScan Backend",
+        "timestamp": datetime.now().isoformat(),
+        "database": "connected" if get_db_connection() else "disconnected",
+        "uploads_folder": os.path.exists(UPLOAD_FOLDER),
+        "upload_files_count": len(os.listdir(UPLOAD_FOLDER)) if os.path.exists(UPLOAD_FOLDER) else 0,
+        "environment": "production"
+    })
+
+@app.route('/list-uploads', methods=['GET'])
+def list_uploads():
+    """List uploaded files for debugging"""
+    try:
+        if not os.path.exists(UPLOAD_FOLDER):
+            return jsonify({"error": "Uploads folder not found", "path": UPLOAD_FOLDER}), 404
+        
+        files = []
+        for filename in os.listdir(UPLOAD_FOLDER):
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            if os.path.isfile(filepath):
+                files.append({
+                    "name": filename,
+                    "size": os.path.getsize(filepath),
+                    "url": f"{request.host_url}uploads/{filename}",
+                    "full_path": filepath
+                })
+        
+        return jsonify({
+            "count": len(files),
+            "files": files[:20],
+            "folder": UPLOAD_FOLDER,
+            "server_url": request.host_url
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/check-file/<filename>')
+def check_file(filename):
+    """Check if a file exists in uploads"""
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    exists = os.path.exists(filepath)
+    
+    return jsonify({
+        "filename": filename,
+        "exists": exists,
+        "path": filepath,
+        "url": f"{request.host_url}uploads/{filename}" if exists else None
+    })
+
+# ================= ERROR HANDLERS =================
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def server_error(error):
+    return jsonify({"error": "Internal server error"}), 500
+
+# ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
@@ -1157,15 +1392,14 @@ if __name__ == '__main__':
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"📨 Email Sender: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
+    print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
-    print("📊 NEW FEATURES:")
+    print("📊 FEATURES:")
     print("   • Separate SAVE and SEND endpoints")
     print("   • SendGrid API for email (works on Render)")
     print("   • Database tracks email status")
     print("   • Resend email capability")
-    print("="*60)
-    print("🔗 IMPORTANT: If you get database errors, visit:")
-    print("   /fix-db-schema - to manually fix database columns")
+    print("   • Fixed image serving for Render")
     print("="*60)
     
     if GEMINI_API_KEY:
@@ -1187,16 +1421,21 @@ if __name__ == '__main__':
             print(f"⚠️ Model listing failed: {e}")
     
     print("="*60)
-    print("🔗 NEW Endpoints:")
-    print("   POST /send-email/<record_id> - Send email for saved record")
-    print("   POST /resend-email/<record_id> - Resend email")
-    print("   GET /check-email-status/<record_id> - Check email status")
-    print("   GET /fix-db-schema - Fix missing database columns")
+    print("🔗 IMPORTANT ENDPOINTS:")
+    print("   GET  /health - Health check")
+    print("   GET  /list-uploads - List uploaded files")
+    print("   GET  /uploads/<filename> - Access uploaded files")
+    print("   GET  /fix-db-schema - Fix missing database columns")
     print("="*60)
-    print("🔗 Diagnostic endpoints:")
-    print("   /list-models - List available Gemini models")
-    print("   /test-gemini - Test Gemini API")
-    print("   /test-email-endpoint?email=youremail@example.com - Test email")
+    print("🔗 DIAGNOSTIC ENDPOINTS:")
+    print("   GET  /list-models - List available Gemini models")
+    print("   GET  /test-gemini - Test Gemini API")
+    print("   GET  /test-email-endpoint?email=test@example.com - Test email")
+    print("   GET  /check-file/<filename> - Check if file exists")
     print("="*60)
+    
+    if os.path.exists(UPLOAD_FOLDER):
+        file_count = len([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])
+        print(f"📊 Uploads folder contains {file_count} files")
     
     app.run(host='0.0.0.0', port=port, debug=False)
