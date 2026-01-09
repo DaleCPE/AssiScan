@@ -462,6 +462,23 @@
         </button>
     </aside>
 
+    <!-- DEBUG BUTTON -->
+    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
+        <button onclick="testEmailDebug()" style="
+            background: #ff9800;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;">
+            🐞 Debug Email
+        </button>
+    </div>
+
     <script>
         let psaImagePath = "";
         let f137ImagePath = "";
@@ -633,10 +650,35 @@
             }
         }
 
+        // --- EMAIL VALIDATION FUNCTION ---
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // --- SAVE RECORD FUNCTION (FIXED) ---
         async function saveRecord() {
             const btn = document.querySelector('.btn-save');
             const name = document.getElementById('childName').value;
-            if(!name) return alert("Student Name is required!");
+            
+            if(!name) {
+                alert("Student Name is required!");
+                return;
+            }
+
+            // 🔥 EMAIL VALIDATION
+            const emailInput = document.getElementById('contactEmail');
+            const emailValue = emailInput ? emailInput.value.trim() : '';
+            
+            // If email is provided, validate it
+            if (emailValue && !validateEmail(emailValue)) {
+                alert("Please enter a valid email address!");
+                emailInput.focus();
+                emailInput.style.borderColor = 'red';
+                return;
+            } else if (emailInput) {
+                emailInput.style.borderColor = ''; // Reset border color
+            }
 
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
@@ -703,11 +745,17 @@
                 year_attended: document.getElementById('yearAttended').value, 
                 special_talents: document.getElementById('specialTalents').value, 
                 is_scholar: document.getElementById('isScholar').value, 
-                email: document.getElementById('contactEmail').value,
+                
+                // 🔥 FIXED: EMAIL FIELD - using the correct ID and value
+                email: emailValue,
                 
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath
             };
+
+            // 🔥 ADD DEBUGGING
+            console.log("📤 Full data being sent:", recordData);
+            console.log("📧 Email being sent:", emailValue);
 
             try {
                 const res = await fetch('/save-record', {
@@ -717,18 +765,71 @@
                 });
                 
                 const result = await res.json();
-                if(result.success) {
-                    alert('Record Saved Successfully!');
+                
+                // 🔥 BETTER ERROR HANDLING
+                console.log("Backend response:", result);
+                
+                if(result.status === "success") {
+                    alert('✅ Record Saved Successfully! Email sent to student.');
                     location.reload(); 
+                } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
+                    alert('⚠️ Record already exists in the system!');
+                    btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                    btn.disabled = false;
                 } else {
-                    alert('Error saving record: ' + result.message);
+                    alert('❌ Error saving record: ' + (result.error || result.message || "Unknown error"));
                     btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                     btn.disabled = false;
                 }
             } catch(e) {
-                alert('Connection Error!');
+                console.error('Connection Error:', e);
+                alert('❌ Connection Error! Check console for details.');
                 btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
                 btn.disabled = false;
+            }
+        }
+
+        // --- DEBUG FUNCTION ---
+        async function testEmailDebug() {
+            const testEmail = prompt("Enter test email address:", "test@example.com");
+            
+            if (!testEmail) return;
+            
+            // Validate email
+            if (!validateEmail(testEmail)) {
+                alert("Please enter a valid email address!");
+                return;
+            }
+            
+            const testData = {
+                name: "TEST STUDENT",
+                email: testEmail,
+                birthdate: "2000-01-01",
+                mobile_no: "09123456789",
+                psa_image_path: "",
+                f137_image_path: ""
+            };
+            
+            console.log("🧪 Test data:", testData);
+            
+            try {
+                const response = await fetch('/save-record', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                console.log("Test result:", result);
+                
+                if (result.status === "success") {
+                    alert("✅ Test successful! Check your email: " + testEmail);
+                } else {
+                    alert("❌ Test failed: " + (result.error || result.message));
+                }
+            } catch (error) {
+                console.error("Test error:", error);
+                alert("❌ Test error: " + error.message);
             }
         }
     </script>
