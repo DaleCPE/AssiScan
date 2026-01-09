@@ -217,8 +217,8 @@ def check_and_add_columns(cur, conn):
 init_db()
 
 # ================= EMAIL FUNCTION =================
-def send_email_notification(recipient_email, student_name, file_paths):
-    """Send email notification using SendGrid"""
+def send_email_notification(recipient_email, student_name, file_paths, student_data=None):
+    """Send email notification using SendGrid with student information"""
     print(f"\n📧 Preparing email for: {recipient_email}")
     
     if not recipient_email or not isinstance(recipient_email, str):
@@ -239,13 +239,71 @@ def send_email_notification(recipient_email, student_name, file_paths):
     
     try:
         ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        subject = "✅ AssiScan - Your Admission Record"
+        subject = f"✅ AssiScan - Admission Record for {student_name}"
+        
+        # Format student data for email
+        student_info = ""
+        if student_data:
+            student_info = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+📋 STUDENT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Full Name: {student_data.get('name', 'N/A')}
+• LRN: {student_data.get('lrn', 'N/A')}
+• Sex: {student_data.get('sex', 'N/A')}
+• Birthdate: {student_data.get('birthdate', 'N/A')}
+• Birthplace: {student_data.get('birthplace', 'N/A')}
+• Age: {student_data.get('age', 'N/A')}
+• Civil Status: {student_data.get('civil_status', 'N/A')}
+• Nationality: {student_data.get('nationality', 'N/A')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+👨‍👩‍👧‍👦 PARENT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Mother's Name: {student_data.get('mother_name', 'N/A')}
+• Mother's Citizenship: {student_data.get('mother_citizenship', 'N/A')}
+• Mother's Contact: {student_data.get('mother_contact', 'N/A')}
+• Father's Name: {student_data.get('father_name', 'N/A')}
+• Father's Citizenship: {student_data.get('father_citizenship', 'N/A')}
+• Father's Contact: {student_data.get('father_contact', 'N/A')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏠 ADDRESS & CONTACT
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Province: {student_data.get('province', 'N/A')}
+• Specific Address: {student_data.get('specific_address', 'N/A')}
+• Mobile Number: {student_data.get('mobile_no', 'N/A')}
+• Email: {recipient_email}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎓 EDUCATIONAL BACKGROUND
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Previous School: {student_data.get('school_name', 'N/A')}
+• School Address: {student_data.get('school_address', 'N/A')}
+• Final General Average: {student_data.get('final_general_average', 'N/A')}
+• Last Level Attended: {student_data.get('last_level_attended', 'N/A')}
+• Student Type: {student_data.get('student_type', 'N/A')}
+• Program Applied: {student_data.get('program', 'N/A')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📝 ADDITIONAL INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━
+• School Year: {student_data.get('school_year', 'N/A')}
+• Is IP: {student_data.get('is_ip', 'No')}
+• Is PWD: {student_data.get('is_pwd', 'No')}
+• Has Medication: {student_data.get('has_medication', 'No')}
+• Special Talents: {student_data.get('special_talents', 'N/A')}
+"""
+        else:
+            student_info = "⚠️ Student information not available in this record."
         
         body = f"""📋 ADMISSION RECORD VERIFICATION
 
 Dear {student_name},
 
-Your admission documents have been successfully processed through the AssiScan System.
+Your admission documents have been successfully processed through the AssiScan System. Below is a summary of your extracted information:
+
+{student_info}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📅 VERIFICATION DETAILS
@@ -274,7 +332,9 @@ Your admission documents have been successfully processed through the AssiScan S
 📌 IMPORTANT REMINDER
 ━━━━━━━━━━━━━━━━━━━━━━━━
 This is an automated notification from the AssiScan System.
-Please do not reply to this email.
+All information above was extracted from your submitted documents.
+Please verify the accuracy of the information.
+For corrections, please contact the Admissions Office.
 
 Best regards,
 
@@ -939,8 +999,21 @@ def send_email_only(record_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record details
-        cur.execute("SELECT name, email, email_sent FROM records WHERE id = %s", (record_id,))
+        # Get record details WITH ALL STUDENT DATA
+        cur.execute("""
+            SELECT name, email, email_sent, 
+                   lrn, sex, birthdate, birthplace, age, 
+                   civil_status, nationality,
+                   mother_name, mother_citizenship, mother_contact,
+                   father_name, father_citizenship, father_contact,
+                   province, specific_address, mobile_no,
+                   school_name, school_address, final_general_average,
+                   last_level_attended, student_type, program,
+                   school_year, is_ip, is_pwd, has_medication,
+                   special_talents
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
         record = cur.fetchone()
         
         if not record:
@@ -955,12 +1028,15 @@ def send_email_only(record_id):
         if not email_addr:
             return jsonify({"error": "No email address found for this record"}), 400
         
-        # Send email
+        # Send email with student data
         print(f"\n📧 [SEND EMAIL] Sending email for record ID: {record_id}")
         print(f"   Student: {student_name}")
         print(f"   Email: {email_addr}")
         
-        email_sent = send_email_notification(email_addr, student_name, [])
+        # Convert record dict to regular dict for email function
+        student_data = dict(record)
+        
+        email_sent = send_email_notification(email_addr, student_name, [], student_data)
         
         if email_sent:
             # Update database to mark email as sent
@@ -1008,8 +1084,21 @@ def resend_email(record_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record details
-        cur.execute("SELECT name, email FROM records WHERE id = %s", (record_id,))
+        # Get record details WITH ALL STUDENT DATA
+        cur.execute("""
+            SELECT name, email, 
+                   lrn, sex, birthdate, birthplace, age, 
+                   civil_status, nationality,
+                   mother_name, mother_citizenship, mother_contact,
+                   father_name, father_citizenship, father_contact,
+                   province, specific_address, mobile_no,
+                   school_name, school_address, final_general_average,
+                   last_level_attended, student_type, program,
+                   school_year, is_ip, is_pwd, has_medication,
+                   special_talents
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
         record = cur.fetchone()
         
         if not record:
@@ -1021,12 +1110,15 @@ def resend_email(record_id):
         if not email_addr:
             return jsonify({"error": "No email address found for this record"}), 400
         
-        # Send email
+        # Send email with student data
         print(f"\n📧 [RESEND EMAIL] Resending email for record ID: {record_id}")
         print(f"   Student: {student_name}")
         print(f"   Email: {email_addr}")
         
-        email_sent = send_email_notification(email_addr, student_name, [])
+        # Convert record dict to regular dict for email function
+        student_data = dict(record)
+        
+        email_sent = send_email_notification(email_addr, student_name, [], student_data)
         
         if email_sent:
             # Update timestamp even if resending
@@ -1134,12 +1226,45 @@ def test_email_endpoint():
     
     print(f"\n🧪 Testing email to: {test_email}")
     
-    result = send_email_notification(test_email, test_name, [])
+    # Create sample student data for testing
+    sample_data = {
+        'name': test_name,
+        'lrn': '123456789012',
+        'sex': 'Male',
+        'birthdate': '2005-06-15',
+        'birthplace': 'Batangas City, Batangas',
+        'age': 19,
+        'civil_status': 'Single',
+        'nationality': 'Filipino',
+        'mother_name': 'Maria Santos',
+        'mother_citizenship': 'Filipino',
+        'mother_contact': '09123456789',
+        'father_name': 'Juan Santos',
+        'father_citizenship': 'Filipino',
+        'father_contact': '09198765432',
+        'province': 'Batangas',
+        'specific_address': '123 Main Street, Batangas City',
+        'mobile_no': '09123456789',
+        'school_name': 'Batangas National High School',
+        'school_address': 'Batangas City, Batangas',
+        'final_general_average': '92.5',
+        'last_level_attended': 'Grade 12',
+        'student_type': 'New Student',
+        'program': 'BS Computer Science',
+        'school_year': '2024-2025',
+        'is_ip': 'No',
+        'is_pwd': 'No',
+        'has_medication': 'No',
+        'special_talents': 'Singing, Dancing'
+    }
+    
+    result = send_email_notification(test_email, test_name, [], sample_data)
     
     return jsonify({
         "success": result,
         "test_email": test_email,
-        "message": "Check console for email logs"
+        "message": "Check console for email logs",
+        "sample_data_included": True
     })
 
 # --- FIX DATABASE SCHEMA ENDPOINT ---
@@ -1395,6 +1520,8 @@ if __name__ == '__main__':
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
     print("📊 FEATURES:")
+    print("   • Updated email with student information")
+    print("   • Student data extracted from scanned documents")
     print("   • Separate SAVE and SEND endpoints")
     print("   • SendGrid API for email (works on Render)")
     print("   • Database tracks email status")
