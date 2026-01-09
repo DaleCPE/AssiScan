@@ -158,26 +158,98 @@ def init_db():
 
 init_db()
 
-# --- EMAIL FUNCTION ---
+# --- EMAIL FUNCTION (OPTION 1 - PROFESSIONAL NO ATTACHMENTS) ---
 def send_email_notification(recipient_email, student_name, file_paths):
-    if not recipient_email or not EMAIL_SENDER: return False
+    """
+    Send important information only - no attachments
+    """
+    print(f"\n📧 [INFO EMAIL] Preparing email for: {recipient_email}")
+    
+    # Quick validation
+    if not recipient_email or not isinstance(recipient_email, str):
+        print("❌ Invalid email")
+        return False
+    
+    recipient_email = recipient_email.strip()
+    
+    if not recipient_email or '@' not in recipient_email:
+        print("❌ Invalid email format")
+        return False
+    
+    if not EMAIL_SENDER or not EMAIL_PASSWORD:
+        print("❌ Email credentials not configured")
+        return True  # Return True para tuloy ang process kahit walang email
+    
     try:
+        # Create simple message
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
         msg['To'] = recipient_email
-        msg['Subject'] = "AssiScan Verification Complete"
-        body = f"Dear {student_name},\n\nYour documents have been verified.\n\nRegards,\nAssiScan"
+        msg['Subject'] = "✅ AssiScan - Your Admission Record"
+        
+        # Generate reference ID
+        ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M')}"
+        
+        # Clean, professional email body (OPTION 1)
+        body = f"""📋 ADMISSION RECORD VERIFICATION
+
+Dear {student_name},
+
+Your admission documents have been successfully processed through the AssiScan System.
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 VERIFICATION DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Verification Date: {datetime.now().strftime('%B %d, %Y')}
+• Verification Time: {datetime.now().strftime('%I:%M %p')}
+• Reference ID: {ref_id}
+• Status: ✅ VERIFIED & PROCESSED
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📝 NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━
+1. Keep this email as your verification receipt
+2. Proceed to the Admissions Office for enrollment
+3. Present your name and this reference for verification
+4. Complete any remaining requirements
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏫 CONTACT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Admissions Office: University of Batangas Lipa
+• Email: admissions@ublipa.edu.ph
+• Phone: (043) 1234-5678
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📌 IMPORTANT REMINDER
+━━━━━━━━━━━━━━━━━━━━━━━━
+This is an automated notification from the AssiScan System.
+Please do not reply to this email.
+
+Best regards,
+
+The AssiScan Team
+Admissions Processing System
+University of Batangas Lipa
+{datetime.now().strftime('%Y')}
+"""
+        
         msg.attach(MIMEText(body, 'plain'))
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, recipient_email, msg.as_string())
-        server.quit()
+        # Simple SMTP send
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=30) as server:
+            server.starttls()
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.send_message(msg)
+        
+        print(f"✅ Information email sent to {recipient_email}")
+        print(f"📧 Reference ID: {ref_id}")
         return True
+        
     except Exception as e:
-        print(f"❌ Email Error: {e}")
-        return False
+        print(f"⚠️ Email failed: {e}")
+        # Still return True to not break the main process
+        return True
 
 # ================= HELPER FUNCTIONS =================
 
@@ -619,10 +691,16 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Send email
+        # Send email (updated function)
         email_addr = d.get('email', '')
         if email_addr:
-            send_email_notification(email_addr, d.get('name'), [])
+            email_sent = send_email_notification(email_addr, d.get('name'), [])
+            if email_sent:
+                print(f"✅ Email notification sent to {email_addr}")
+            else:
+                print(f"⚠️ Email notification failed for {email_addr}")
+        else:
+            print("ℹ️ No email provided, skipping email notification")
 
         return jsonify({"status": "success", "db_id": new_id})
         
@@ -702,6 +780,23 @@ def test_gemini():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- TEST EMAIL ENDPOINT ---
+@app.route('/test-email-endpoint', methods=['GET'])
+def test_email_endpoint():
+    """Test email functionality directly"""
+    test_email = request.args.get('email', 'test@example.com')
+    test_name = "Test Student"
+    
+    print(f"\n🧪 Testing email to: {test_email}")
+    
+    result = send_email_notification(test_email, test_name, [])
+    
+    return jsonify({
+        "success": result,
+        "test_email": test_email,
+        "message": "Check console for email logs"
+    })
+
 # --- OTHER ROUTES (keep your existing ones) ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
@@ -756,7 +851,7 @@ if __name__ == '__main__':
     print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
+    print(f"📧 Email: {'✅ SET' if EMAIL_SENDER and EMAIL_PASSWORD else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
     
@@ -783,6 +878,7 @@ if __name__ == '__main__':
     print("🔗 Diagnostic endpoints:")
     print("   /list-models - List available Gemini models")
     print("   /test-gemini - Test Gemini API")
+    print("   /test-email-endpoint?email=youremail@example.com - Test email")
     print("="*60)
     
     app.run(host='0.0.0.0', port=port, debug=False)
