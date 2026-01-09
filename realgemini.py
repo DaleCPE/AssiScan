@@ -27,15 +27,15 @@ if GEMINI_API_KEY:
         genai.configure(api_key=GEMINI_API_KEY)
         print("✅ Google Generative AI Configured")
         
-        # Test the API key immediately
+        # List available models to debug
         try:
-            models = genai.list_models()
-            model_list = list(models)
-            print(f"✅ Gemini API Test: {len(model_list)} models available")
-            for model in model_list[:3]:  # Show first 3 models
-                print(f"   - {model.name}")
+            models = list(genai.list_models())
+            print(f"📋 Available Gemini Models ({len(models)} total):")
+            for model in models:
+                if "gemini" in model.name.lower():
+                    print(f"   - {model.name} (supports: {', '.join(model.supported_generation_methods)})")
         except Exception as e:
-            print(f"⚠️ Gemini API Test Failed: {e}")
+            print(f"⚠️ Could not list models: {e}")
             
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
@@ -200,28 +200,62 @@ def save_multiple_files(files, prefix):
                 
     return saved_paths, pil_images
 
-# --- SIMPLE & WORKING GEMINI FUNCTION ---
+# --- GEMINI 2.5 FLASH FUNCTION ---
 def extract_with_gemini(prompt, images):
-    """Simple working Gemini function"""
+    """Use Gemini 2.5 Flash or fallback to available models"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        # Use the most reliable model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Try different model names in order of preference
+        model_versions = [
+            "gemini-2.5-flash",        # Latest version
+            "gemini-2.5-flash-exp",     # Experimental
+            "gemini-2.0-flash",         # Version 2.0
+            "gemini-2.0-flash-exp",     # Experimental 2.0
+            "gemini-1.5-flash-8b",      # 8B parameter version
+            "gemini-1.5-flash",         # Original 1.5 flash
+            "gemini-1.5-pro",           # Pro version
+            "gemini-pro",               # Legacy pro
+            "gemini-flash"              # Basic flash
+        ]
         
-        # Prepare content
-        content_parts = [prompt]
-        for img in images:
-            content_parts.append(img)
+        last_error = None
         
-        # Generate response
-        response = model.generate_content(content_parts)
+        for model_name in model_versions:
+            try:
+                print(f"🤖 Trying model: {model_name}")
+                model = genai.GenerativeModel(model_name)
+                
+                # Prepare content
+                content_parts = [prompt]
+                for img in images:
+                    content_parts.append(img)
+                
+                # Generate response with timeout
+                response = model.generate_content(
+                    content_parts,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        top_p=0.8,
+                        top_k=40,
+                        max_output_tokens=2048,
+                    )
+                )
+                
+                if response.text:
+                    print(f"✅ Success with model: {model_name}")
+                    return response.text
+                else:
+                    raise Exception("No response text")
+                    
+            except Exception as model_error:
+                print(f"   ⚠️ {model_name} failed: {str(model_error)[:100]}")
+                last_error = model_error
+                continue
         
-        if response.text:
-            return response.text
-        else:
-            raise Exception("No response from Gemini")
+        # If all models fail
+        raise Exception(f"All models failed. Last error: {str(last_error)[:200]}")
             
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
@@ -306,7 +340,7 @@ def view_form(record_id):
     finally:
         conn.close()
 
-# --- EXTRACT PSA (WORKING VERSION) ---
+# --- EXTRACT PSA WITH GEMINI 2.5 FLASH ---
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFiles' not in request.files: 
@@ -322,57 +356,85 @@ def extract_data():
         if not pil_images:
              return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📸 Processing {len(pil_images)} PSA pages")
+        print(f"📸 Processing {len(pil_images)} PSA pages with Gemini 2.5 Flash")
         
-        prompt = """Extract information from this PSA Birth Certificate. 
-        Return ONLY valid JSON without any markdown or code blocks.
+        prompt = """You are an expert document processor specializing in Philippine PSA Birth Certificates.
+        
+        Extract ALL information from this document accurately.
+        
+        Return ONLY a valid JSON object with the following structure:
         {
             "is_valid_document": true,
-            "Name": "extract full name",
+            "rejection_reason": null,
+            "Name": "Full Name Here",
             "Sex": "Male or Female",
-            "Birthdate": "YYYY-MM-DD",
-            "PlaceOfBirth": "city/municipality",
-            "BirthOrder": "1st, 2nd, etc",
-            "Religion": "religion",
-            "Mother_MaidenName": "mother's maiden name",
-            "Mother_Citizenship": "citizenship",
-            "Mother_Occupation": "occupation",
-            "Father_Name": "father's name",
-            "Father_Citizenship": "citizenship",
-            "Father_Occupation": "occupation"
-        }"""
+            "Birthdate": "YYYY-MM-DD format",
+            "PlaceOfBirth": "City/Municipality, Province",
+            "BirthOrder": "1st, 2nd, 3rd, etc",
+            "Religion": "Religion if stated",
+            "Mother_MaidenName": "Mother's Maiden Name",
+            "Mother_Citizenship": "Citizenship",
+            "Mother_Occupation": "Occupation if stated",
+            "Father_Name": "Father's Full Name",
+            "Father_Citizenship": "Citizenship",
+            "Father_Occupation": "Occupation if stated"
+        }
+        
+        If the document is not a valid PSA Birth Certificate, set "is_valid_document": false and provide "rejection_reason".
+        
+        IMPORTANT: Return ONLY the JSON, no additional text, no markdown, no code blocks."""
         
         # Extract using Gemini
         try:
             response_text = extract_with_gemini(prompt, pil_images)
-            print(f"✅ Gemini Response: {response_text[:200]}...")
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
             
             # Clean the response
             cleaned_text = response_text.strip()
-            if '```json' in cleaned_text:
-                cleaned_text = cleaned_text.replace('```json', '').replace('```', '')
+            
+            # Remove markdown code blocks if present
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
             
             # Find JSON
             start = cleaned_text.find('{')
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                return jsonify({"error": "Invalid response from AI"}), 500
+                print(f"❌ Could not find JSON in response: {cleaned_text[:200]}")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
                 
             json_str = cleaned_text[start:end]
-            data = json.loads(json_str)
             
-            return jsonify({
-                "message": "Success", 
-                "structured_data": data, 
-                "image_paths": ",".join(saved_paths)
-            })
+            try:
+                data = json.loads(json_str)
+                print(f"✅ Successfully parsed JSON data")
+                
+                # Validate required fields
+                if not data.get("is_valid_document", False):
+                    return jsonify({
+                        "error": f"Invalid document: {data.get('rejection_reason', 'Not a valid PSA')}"
+                    }), 400
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+                
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Problematic JSON: {json_str[:500]}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
             
         except Exception as ai_error:
             print(f"❌ AI Extraction Failed: {ai_error}")
+            traceback.print_exc()
             return jsonify({
-                "error": "AI service unavailable. Please check Gemini API configuration.",
-                "details": str(ai_error)[:100]
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
             }), 500
             
     except Exception as e:
@@ -380,7 +442,7 @@ def extract_data():
         traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
-# --- EXTRACT FORM 137 (WORKING VERSION) ---
+# --- EXTRACT FORM 137 WITH GEMINI 2.5 FLASH ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFiles' not in request.files: 
@@ -392,50 +454,79 @@ def extract_form137():
     
     try:
         saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137: {len(pil_images)} pages")
+        print(f"📸 Processing Form 137: {len(pil_images)} pages with Gemini 2.5 Flash")
 
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
         
-        prompt = """Extract information from this Form 137 document.
-        Return ONLY valid JSON without any markdown or code blocks.
+        prompt = """You are an expert document processor for Philippine educational records.
+        
+        Extract information from this Form 137 / SF10 document.
+        
+        Return ONLY a valid JSON object with the following structure:
         {
-            "lrn": "12-digit number",
-            "school_name": "name of school",
-            "school_address": "city, province",
-            "final_general_average": "grade like 85.5 or 90"
-        }"""
+            "lrn": "12-digit Learner Reference Number",
+            "school_name": "Complete School Name",
+            "school_address": "Complete School Address (Barangay, City/Municipality, Province)",
+            "final_general_average": "Numerical grade (e.g., 85.5, 90.0)"
+        }
+        
+        IMPORTANT:
+        1. LRN must be exactly 12 digits if available
+        2. School name should be the complete official name
+        3. School address should include barangay, city/municipality, and province
+        4. Final general average should be the most recent average found
+        
+        Return ONLY the JSON, no additional text, no markdown, no code blocks."""
         
         try:
             response_text = extract_with_gemini(prompt, pil_images)
-            print(f"✅ Gemini Response: {response_text[:200]}...")
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
             
             # Clean the response
             cleaned_text = response_text.strip()
-            if '```json' in cleaned_text:
-                cleaned_text = cleaned_text.replace('```json', '').replace('```', '')
+            
+            # Remove markdown code blocks if present
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
             
             # Find JSON
             start = cleaned_text.find('{')
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                return jsonify({"error": "Invalid response from AI"}), 500
+                print(f"❌ Could not find JSON in response: {cleaned_text[:200]}")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
                 
             json_str = cleaned_text[start:end]
-            data = json.loads(json_str)
             
-            return jsonify({
-                "message": "Success", 
-                "structured_data": data, 
-                "image_paths": ",".join(saved_paths)
-            })
+            try:
+                data = json.loads(json_str)
+                print(f"✅ Successfully parsed Form 137 data")
+                
+                # Format LRN to ensure it's a string
+                if 'lrn' in data and data['lrn']:
+                    data['lrn'] = str(data['lrn']).strip()
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+                
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Problematic JSON: {json_str[:500]}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
             
         except Exception as ai_error:
             print(f"❌ AI Extraction Failed: {ai_error}")
+            traceback.print_exc()
             return jsonify({
-                "error": "AI service unavailable. Please check Gemini API configuration.",
-                "details": str(ai_error)[:100]
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
             }), 500
             
     except Exception as e:
@@ -546,16 +637,70 @@ def save_record():
         if conn: 
             conn.close()
 
-# --- DIAGNOSTIC ENDPOINT ---
-@app.route('/check-api', methods=['GET'])
-def check_api():
-    """Check if API keys are configured"""
-    return jsonify({
-        "gemini_api_key": "SET" if GEMINI_API_KEY else "NOT SET",
-        "email_sender": "SET" if EMAIL_SENDER else "NOT SET",
-        "database_url": "SET" if DATABASE_URL else "NOT SET",
-        "note": "Check https://your-app.onrender.com/check-api for status"
-    })
+# --- DIAGNOSTIC ENDPOINTS ---
+@app.route('/list-models', methods=['GET'])
+def list_models():
+    """List available Gemini models"""
+    try:
+        if not GEMINI_API_KEY:
+            return jsonify({"error": "GEMINI_API_KEY not set"}), 400
+        
+        models = list(genai.list_models())
+        gemini_models = []
+        
+        for model in models:
+            if "gemini" in model.name.lower():
+                gemini_models.append({
+                    "name": model.name,
+                    "display_name": model.display_name,
+                    "supported_methods": model.supported_generation_methods,
+                    "description": model.description[:100] if model.description else ""
+                })
+        
+        return jsonify({
+            "total_models": len(models),
+            "gemini_models": gemini_models,
+            "note": "Use the 'name' field in your code"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test-gemini', methods=['GET'])
+def test_gemini():
+    """Test Gemini API with a simple prompt"""
+    try:
+        if not GEMINI_API_KEY:
+            return jsonify({"error": "GEMINI_API_KEY not set"}), 400
+        
+        # Try different models
+        test_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+        results = []
+        
+        for model_name in test_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content("Say 'Hello from Gemini'")
+                results.append({
+                    "model": model_name,
+                    "status": "SUCCESS",
+                    "response": response.text
+                })
+            except Exception as e:
+                results.append({
+                    "model": model_name,
+                    "status": "FAILED",
+                    "error": str(e)[:200]
+                })
+        
+        return jsonify({
+            "api_key": "SET (hidden)",
+            "test_results": results,
+            "recommended_model": "gemini-2.0-flash" if any(r["status"] == "SUCCESS" for r in results) else "NONE"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- OTHER ROUTES (keep your existing ones) ---
 @app.route('/upload-additional', methods=['POST'])
@@ -607,17 +752,37 @@ def uploaded_file(filename):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
-    print("\n" + "="*50)
-    print("🚀 ASSISCAN SYSTEM STARTING")
-    print("="*50)
+    print("\n" + "="*60)
+    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH")
+    print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
-    print("="*50)
+    print("="*60)
     
-    if not GEMINI_API_KEY:
-        print("❌ CRITICAL: GEMINI_API_KEY is missing!")
-        print("👉 Go to Render Dashboard → Environment")
-        print("👉 Add: GEMINI_API_KEY = your_key_from_google_ai_studio")
+    if GEMINI_API_KEY:
+        print("🔍 Testing available models...")
+        try:
+            models = list(genai.list_models())
+            print(f"📋 Found {len(models)} total models")
+            
+            gemini_models = [m for m in models if "gemini" in m.name.lower()]
+            print(f"🤖 Gemini models available: {len(gemini_models)}")
+            
+            for model in gemini_models[:5]:  # Show first 5
+                print(f"   - {model.name}")
+                
+            # Check for 2.5 Flash specifically
+            has_25_flash = any("2.5-flash" in m.name.lower() for m in gemini_models)
+            print(f"✅ Gemini 2.5 Flash: {'AVAILABLE' if has_25_flash else 'NOT AVAILABLE'}")
+            
+        except Exception as e:
+            print(f"⚠️ Model listing failed: {e}")
+    
+    print("="*60)
+    print("🔗 Diagnostic endpoints:")
+    print("   /list-models - List available Gemini models")
+    print("   /test-gemini - Test Gemini API")
+    print("="*60)
     
     app.run(host='0.0.0.0', port=port, debug=False)
