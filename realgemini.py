@@ -102,7 +102,9 @@ def init_db():
                     form137_path TEXT,
                     form138_path TEXT,
                     goodmoral_path TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    email_sent BOOLEAN DEFAULT FALSE,
+                    email_sent_at TIMESTAMP
                 );
             ''')
             
@@ -188,7 +190,7 @@ def send_email_notification(recipient_email, student_name, file_paths):
         msg['Subject'] = "✅ AssiScan - Your Admission Record"
         
         # Generate reference ID
-        ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M')}"
+        ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         # Clean, professional email body (OPTION 1)
         body = f"""📋 ADMISSION RECORD VERIFICATION
@@ -375,6 +377,7 @@ def get_records():
         for r in rows:
             if r['created_at']: r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: r['birthdate'] = str(r['birthdate'])
+            if r['email_sent_at']: r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
         return jsonify({"records": rows})
     except Exception as e:
         return jsonify({"records": []})
@@ -606,13 +609,13 @@ def extract_form137():
         traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
-# --- SAVE RECORD ---
+# --- SAVE RECORD TO DATABASE (NO EMAIL) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
     conn = None
     try:
         d = request.json
-        print(f"📥 Saving record")
+        print(f"📥 Saving record to database only (no email)")
         
         siblings_list = d.get('siblings', [])
         siblings_json = json.dumps(siblings_list)
@@ -634,7 +637,7 @@ def save_record():
                     "message": "Record already exists."
                 }), 409
 
-        # Insert record
+        # Insert record WITHOUT sending email
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -650,7 +653,7 @@ def save_record():
                 is_ip, is_pwd, has_medication, is_working,
                 residence_type, employer_name, marital_status,
                 is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings
+                siblings, email_sent
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -666,7 +669,7 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s
+                %s, FALSE
             ) 
             RETURNING id
         ''', (
@@ -691,18 +694,14 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
-        # Send email (updated function)
-        email_addr = d.get('email', '')
-        if email_addr:
-            email_sent = send_email_notification(email_addr, d.get('name'), [])
-            if email_sent:
-                print(f"✅ Email notification sent to {email_addr}")
-            else:
-                print(f"⚠️ Email notification failed for {email_addr}")
-        else:
-            print("ℹ️ No email provided, skipping email notification")
+        print(f"✅ Record saved to database with ID: {new_id}")
+        print("ℹ️ Email will be sent separately when user clicks Send button")
 
-        return jsonify({"status": "success", "db_id": new_id})
+        return jsonify({
+            "status": "success", 
+            "db_id": new_id,
+            "message": "Record saved successfully. You can now send the email separately."
+        })
         
     except Exception as e:
         print(f"❌ SAVE ERROR: {e}")
@@ -713,6 +712,141 @@ def save_record():
         
     finally:
         if conn: 
+            conn.close()
+
+# --- SEND EMAIL ONLY (SEPARATE ENDPOINT) ---
+@app.route('/send-email/<int:record_id>', methods=['POST'])
+def send_email_only(record_id):
+    """
+    Separate endpoint to send email for a saved record
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "DB Connection Failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get record details
+        cur.execute("SELECT name, email, email_sent FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        if record['email_sent']:
+            return jsonify({"warning": "Email has already been sent for this record"}), 400
+        
+        email_addr = record['email']
+        student_name = record['name']
+        
+        if not email_addr:
+            return jsonify({"error": "No email address found for this record"}), 400
+        
+        # Send email
+        print(f"\n📧 [SEND EMAIL] Sending email for record ID: {record_id}")
+        print(f"   Student: {student_name}")
+        print(f"   Email: {email_addr}")
+        
+        email_sent = send_email_notification(email_addr, student_name, [])
+        
+        if email_sent:
+            # Update database to mark email as sent
+            cur.execute("""
+                UPDATE records 
+                SET email_sent = TRUE, email_sent_at = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (record_id,))
+            conn.commit()
+            
+            print(f"✅ Email sent and record updated for ID: {record_id}")
+            return jsonify({
+                "status": "success",
+                "message": f"Email sent successfully to {email_addr}",
+                "record_id": record_id
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "error": "Failed to send email. Please check email configuration."
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ EMAIL SEND ERROR: {e}")
+        traceback.print_exc()
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
+        
+    finally:
+        if conn:
+            conn.close()
+
+# --- RESEND EMAIL ENDPOINT ---
+@app.route('/resend-email/<int:record_id>', methods=['POST'])
+def resend_email(record_id):
+    """
+    Resend email even if already sent
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "DB Connection Failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get record details
+        cur.execute("SELECT name, email FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        email_addr = record['email']
+        student_name = record['name']
+        
+        if not email_addr:
+            return jsonify({"error": "No email address found for this record"}), 400
+        
+        # Send email
+        print(f"\n📧 [RESEND EMAIL] Resending email for record ID: {record_id}")
+        print(f"   Student: {student_name}")
+        print(f"   Email: {email_addr}")
+        
+        email_sent = send_email_notification(email_addr, student_name, [])
+        
+        if email_sent:
+            # Update timestamp even if resending
+            cur.execute("""
+                UPDATE records 
+                SET email_sent_at = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (record_id,))
+            conn.commit()
+            
+            print(f"✅ Email resent for ID: {record_id}")
+            return jsonify({
+                "status": "success",
+                "message": f"Email resent successfully to {email_addr}",
+                "record_id": record_id
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "error": "Failed to send email. Please check email configuration."
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ EMAIL RESEND ERROR: {e}")
+        traceback.print_exc()
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
+        
+    finally:
+        if conn:
             conn.close()
 
 # --- DIAGNOSTIC ENDPOINTS ---
@@ -844,6 +978,27 @@ def delete_record(record_id):
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# --- NEW ENDPOINT TO CHECK EMAIL STATUS ---
+@app.route('/check-email-status/<int:record_id>', methods=['GET'])
+def check_email_status(record_id):
+    """Check if email has been sent for a record"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT email_sent, email_sent_at FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if record:
+            email_sent_at = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S') if record['email_sent_at'] else None
+            return jsonify({
+                "email_sent": record['email_sent'],
+                "email_sent_at": email_sent_at
+            })
+        else:
+            return jsonify({"error": "Record not found"}), 404
+    finally:
+        conn.close()
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
@@ -853,6 +1008,11 @@ if __name__ == '__main__':
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER and EMAIL_PASSWORD else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
+    print("="*60)
+    print("📊 NEW FEATURES:")
+    print("   • Separate SAVE and SEND endpoints")
+    print("   • Database tracks email status")
+    print("   • Resend email capability")
     print("="*60)
     
     if GEMINI_API_KEY:
@@ -874,6 +1034,11 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️ Model listing failed: {e}")
     
+    print("="*60)
+    print("🔗 NEW Endpoints:")
+    print("   POST /send-email/<record_id> - Send email for saved record")
+    print("   POST /resend-email/<record_id> - Resend email")
+    print("   GET /check-email-status/<record_id> - Check email status")
     print("="*60)
     print("🔗 Diagnostic endpoints:")
     print("   /list-models - List available Gemini models")
