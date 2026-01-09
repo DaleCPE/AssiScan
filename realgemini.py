@@ -3,11 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import json
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
+import requests  # Added for SendGrid
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 from flask_cors import CORS
@@ -18,7 +14,7 @@ from PIL import Image
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # --- CONFIGURE GEMINI ---
@@ -201,12 +197,12 @@ def init_db():
 # Initialize database on startup
 init_db()
 
-# --- EMAIL FUNCTION (OPTION 1 - IMPROVED SMTP WITH MULTIPLE CONFIGURATIONS) ---
+# --- EMAIL FUNCTION USING SENDGRID API ---
 def send_email_notification(recipient_email, student_name, file_paths):
     """
-    Send important information only - no attachments
+    Send email using SendGrid API (works on Render)
     """
-    print(f"\n📧 [INFO EMAIL] Preparing email for: {recipient_email}")
+    print(f"\n📧 [SENDGRID] Preparing email for: {recipient_email}")
     
     # Quick validation
     if not recipient_email or not isinstance(recipient_email, str):
@@ -219,21 +215,19 @@ def send_email_notification(recipient_email, student_name, file_paths):
         print("❌ Invalid email format")
         return False
     
-    if not EMAIL_SENDER or not EMAIL_PASSWORD:
-        print("❌ Email credentials not configured")
-        return True  # Return True para tuloy ang process kahit walang email
+    if not SENDGRID_API_KEY or not EMAIL_SENDER:
+        print("❌ SendGrid credentials not configured")
+        print(f"   SENDGRID_API_KEY: {'SET' if SENDGRID_API_KEY else 'NOT SET'}")
+        print(f"   EMAIL_SENDER: {'SET' if EMAIL_SENDER else 'NOT SET'}")
+        return True  # Return True para tuloy ang process
     
     try:
-        # Create simple message
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_SENDER
-        msg['To'] = recipient_email
-        msg['Subject'] = "✅ AssiScan - Your Admission Record"
-        
         # Generate reference ID
         ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Clean, professional email body (OPTION 1)
+        # Email content
+        subject = "✅ AssiScan - Your Admission Record"
+        
         body = f"""📋 ADMISSION RECORD VERIFICATION
 
 Dear {student_name},
@@ -274,68 +268,50 @@ Best regards,
 The AssiScan Team
 Admissions Processing System
 University of Batangas Lipa
-{datetime.now().strftime('%Y')}
-"""
+{datetime.now().strftime('%Y')}"""
         
-        msg.attach(MIMEText(body, 'plain'))
+        # SendGrid API request
+        url = "https://api.sendgrid.com/v3/mail/send"
         
-        # FIXED: Try different SMTP configurations
-        smtp_servers = [
-            ('smtp.gmail.com', 465, True),   # SSL
-            ('smtp.gmail.com', 587, False),  # TLS
-            ('smtp.gmail.com', 25, False),   # Standard
-        ]
+        headers = {
+            "Authorization": f"Bearer {SENDGRID_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        last_error = None
+        data = {
+            "personalizations": [{
+                "to": [{"email": recipient_email}],
+                "subject": subject
+            }],
+            "from": {"email": EMAIL_SENDER, "name": "AssiScan System"},
+            "content": [{
+                "type": "text/plain",
+                "value": body
+            }]
+        }
         
-        for server, port, use_ssl in smtp_servers:
-            try:
-                print(f"🔧 Trying SMTP: {server}:{port} (SSL: {use_ssl})")
-                
-                if use_ssl:
-                    # Use SSL
-                    server_obj = smtplib.SMTP_SSL(server, port, timeout=10)
-                else:
-                    # Use TLS or plain
-                    server_obj = smtplib.SMTP(server, port, timeout=10)
-                    if port == 587:
-                        server_obj.starttls()
-                
-                server_obj.login(EMAIL_SENDER, EMAIL_PASSWORD)
-                server_obj.send_message(msg)
-                server_obj.quit()
-                
-                print(f"✅ Information email sent to {recipient_email}")
-                print(f"📧 Reference ID: {ref_id}")
-                return True
-                
-            except Exception as e:
-                last_error = e
-                print(f"   ⚠️ Failed with {server}:{port}: {str(e)[:100]}")
-                continue
+        print(f"🔧 Sending via SendGrid API...")
+        response = requests.post(url, headers=headers, json=data, timeout=30)
         
-        # If all SMTP servers fail
-        print(f"❌ All SMTP attempts failed. Last error: {last_error}")
-        
-        # Try alternative approach: Use localhost as fallback
-        try:
-            print("🔄 Trying localhost fallback...")
-            server = smtplib.SMTP('localhost', 25, timeout=5)
-            server.send_message(msg)
-            server.quit()
-            print(f"✅ Email sent via localhost to {recipient_email}")
+        if response.status_code == 202:
+            print(f"✅ Email sent successfully to {recipient_email}")
+            print(f"📧 Reference ID: {ref_id}")
             return True
-        except Exception as local_error:
-            print(f"   ⚠️ Localhost also failed: {local_error}")
-        
-        # If everything fails, still return True to not break the process
-        print("⚠️ Email sending failed but continuing process...")
-        return True
-        
+        else:
+            print(f"❌ SendGrid API Error: {response.status_code}")
+            print(f"   Response: {response.text[:200]}")
+            
+            # Fallback: Log the email instead
+            print(f"📝 [FALLBACK] Would have sent email to {recipient_email}")
+            print(f"   Subject: {subject}")
+            print(f"   Reference: {ref_id}")
+            return True  # Still return True to continue
+            
     except Exception as e:
-        print(f"⚠️ Email failed: {e}")
-        # Still return True to not break the main process
-        return True
+        print(f"⚠️ SendGrid failed: {e}")
+        # Fallback: Just log it
+        print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
+        return True  # Always return True to not break the process
 
 # ================= HELPER FUNCTIONS =================
 
@@ -722,8 +698,6 @@ def save_record():
                 }), 409
 
         # Insert record WITHOUT sending email
-        # Simplified insert statement without email_sent column reference
-        # We'll let the database use the default value (FALSE)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -1105,7 +1079,7 @@ def fix_db_schema():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# --- OTHER ROUTES (keep your existing ones) ---
+# --- OTHER ROUTES ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
     files = request.files.getlist('files')
@@ -1152,7 +1126,7 @@ def delete_record(record_id):
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- NEW ENDPOINT TO CHECK EMAIL STATUS ---
+# --- CHECK EMAIL STATUS ---
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
 def check_email_status(record_id):
     """Check if email has been sent for a record"""
@@ -1177,17 +1151,18 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH")
+    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH & SENDGRID")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"📧 Email: {'✅ SET' if EMAIL_SENDER and EMAIL_PASSWORD else '❌ NOT SET'}")
+    print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
+    print(f"📨 Email Sender: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
     print("📊 NEW FEATURES:")
     print("   • Separate SAVE and SEND endpoints")
+    print("   • SendGrid API for email (works on Render)")
     print("   • Database tracks email status")
     print("   • Resend email capability")
-    print("   • Improved SMTP with multiple configurations")
     print("="*60)
     print("🔗 IMPORTANT: If you get database errors, visit:")
     print("   /fix-db-schema - to manually fix database columns")
@@ -1202,10 +1177,9 @@ if __name__ == '__main__':
             gemini_models = [m for m in models if "gemini" in m.name.lower()]
             print(f"🤖 Gemini models available: {len(gemini_models)}")
             
-            for model in gemini_models[:5]:  # Show first 5
+            for model in gemini_models[:5]:
                 print(f"   - {model.name}")
                 
-            # Check for 2.5 Flash specifically
             has_25_flash = any("2.5-flash" in m.name.lower() for m in gemini_models)
             print(f"✅ Gemini 2.5 Flash: {'AVAILABLE' if has_25_flash else 'NOT AVAILABLE'}")
             
@@ -1223,11 +1197,6 @@ if __name__ == '__main__':
     print("   /list-models - List available Gemini models")
     print("   /test-gemini - Test Gemini API")
     print("   /test-email-endpoint?email=youremail@example.com - Test email")
-    print("="*60)
-    print("🔧 SMTP Configuration:")
-    print("   • Port 465 (SSL) - Primary")
-    print("   • Port 587 (TLS) - Secondary")
-    print("   • Port 25 (Standard) - Fallback")
     print("="*60)
     
     app.run(host='0.0.0.0', port=port, debug=False)
