@@ -78,6 +78,7 @@ def init_db():
         try:
             cur = conn.cursor()
             
+            # Create main table
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -104,60 +105,100 @@ def init_db():
                     goodmoral_path TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     email_sent BOOLEAN DEFAULT FALSE,
-                    email_sent_at TIMESTAMP
+                    email_sent_at TIMESTAMP,
+                    email VARCHAR(100),
+                    civil_status VARCHAR(50),
+                    nationality VARCHAR(100),
+                    mother_contact VARCHAR(50),
+                    father_contact VARCHAR(50),
+                    guardian_name VARCHAR(255),
+                    guardian_relation VARCHAR(100),
+                    guardian_contact VARCHAR(50),
+                    region VARCHAR(100),
+                    province VARCHAR(100),
+                    specific_address TEXT,
+                    mobile_no VARCHAR(50),
+                    school_year VARCHAR(50),
+                    student_type VARCHAR(50),
+                    program VARCHAR(100),
+                    last_level_attended VARCHAR(100),
+                    is_ip VARCHAR(10),
+                    is_pwd VARCHAR(10),
+                    has_medication VARCHAR(10),
+                    is_working VARCHAR(10),
+                    residence_type VARCHAR(50),
+                    employer_name VARCHAR(255),
+                    marital_status VARCHAR(50),
+                    is_gifted VARCHAR(10),
+                    needs_assistance VARCHAR(10),
+                    school_type VARCHAR(50),
+                    year_attended VARCHAR(50),
+                    special_talents TEXT,
+                    is_scholar VARCHAR(10),
+                    siblings TEXT
                 );
             ''')
             
-            # Add other columns...
-            new_columns = [
-                ("email", "VARCHAR(100)"),
-                ("civil_status", "VARCHAR(50)"),
-                ("nationality", "VARCHAR(100)"),
-                ("mother_contact", "VARCHAR(50)"),
-                ("father_contact", "VARCHAR(50)"),
-                ("guardian_name", "VARCHAR(255)"),
-                ("guardian_relation", "VARCHAR(100)"),
-                ("guardian_contact", "VARCHAR(50)"),
-                ("region", "VARCHAR(100)"),
-                ("province", "VARCHAR(100)"),
-                ("specific_address", "TEXT"),
-                ("mobile_no", "VARCHAR(50)"),
-                ("school_year", "VARCHAR(50)"),
-                ("student_type", "VARCHAR(50)"),
-                ("program", "VARCHAR(100)"),
-                ("last_level_attended", "VARCHAR(100)"),
-                ("is_ip", "VARCHAR(10)"),
-                ("is_pwd", "VARCHAR(10)"),
-                ("has_medication", "VARCHAR(10)"),
-                ("is_working", "VARCHAR(10)"),
-                ("residence_type", "VARCHAR(50)"),
-                ("employer_name", "VARCHAR(255)"),
-                ("marital_status", "VARCHAR(50)"),
-                ("is_gifted", "VARCHAR(10)"),
-                ("needs_assistance", "VARCHAR(10)"),
-                ("school_type", "VARCHAR(50)"),
-                ("year_attended", "VARCHAR(50)"),
-                ("special_talents", "TEXT"),
-                ("is_scholar", "VARCHAR(10)"),
-                ("siblings", "TEXT")
-            ]
-            
-            for col_name, col_type in new_columns:
-                try:
-                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
-                except Exception:
-                    conn.rollback() 
-                else:
-                    conn.commit()
-
             conn.commit()
-            cur.close()
-            print("✅ Database Schema Updated!")
+            print("✅ Database Schema Created/Updated!")
+            
         except Exception as e:
             print(f"❌ Table Creation Error: {e}")
+            # Try to add missing columns
+            try:
+                print("🔄 Attempting to add missing columns...")
+                missing_columns = [
+                    ("email_sent", "BOOLEAN DEFAULT FALSE"),
+                    ("email_sent_at", "TIMESTAMP"),
+                    ("email", "VARCHAR(100)"),
+                    ("civil_status", "VARCHAR(50)"),
+                    ("nationality", "VARCHAR(100)"),
+                    ("mother_contact", "VARCHAR(50)"),
+                    ("father_contact", "VARCHAR(50)"),
+                    ("guardian_name", "VARCHAR(255)"),
+                    ("guardian_relation", "VARCHAR(100)"),
+                    ("guardian_contact", "VARCHAR(50)"),
+                    ("region", "VARCHAR(100)"),
+                    ("province", "VARCHAR(100)"),
+                    ("specific_address", "TEXT"),
+                    ("mobile_no", "VARCHAR(50)"),
+                    ("school_year", "VARCHAR(50)"),
+                    ("student_type", "VARCHAR(50)"),
+                    ("program", "VARCHAR(100)"),
+                    ("last_level_attended", "VARCHAR(100)"),
+                    ("is_ip", "VARCHAR(10)"),
+                    ("is_pwd", "VARCHAR(10)"),
+                    ("has_medication", "VARCHAR(10)"),
+                    ("is_working", "VARCHAR(10)"),
+                    ("residence_type", "VARCHAR(50)"),
+                    ("employer_name", "VARCHAR(255)"),
+                    ("marital_status", "VARCHAR(50)"),
+                    ("is_gifted", "VARCHAR(10)"),
+                    ("needs_assistance", "VARCHAR(10)"),
+                    ("school_type", "VARCHAR(50)"),
+                    ("year_attended", "VARCHAR(50)"),
+                    ("special_talents", "TEXT"),
+                    ("is_scholar", "VARCHAR(10)"),
+                    ("siblings", "TEXT")
+                ]
+                
+                for col_name, col_type in missing_columns:
+                    try:
+                        cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                        print(f"   Added column: {col_name}")
+                        conn.commit()
+                    except Exception as col_error:
+                        print(f"   ⚠️ Could not add {col_name}: {col_error}")
+                        conn.rollback()
+                
+            except Exception as add_col_error:
+                print(f"❌ Column addition failed: {add_col_error}")
+                
         finally:
+            cur.close()
             conn.close()
 
+# Initialize database on startup
 init_db()
 
 # --- EMAIL FUNCTION (OPTION 1 - PROFESSIONAL NO ATTACHMENTS) ---
@@ -638,6 +679,8 @@ def save_record():
                 }), 409
 
         # Insert record WITHOUT sending email
+        # Simplified insert statement without email_sent column reference
+        # We'll let the database use the default value (FALSE)
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -653,7 +696,7 @@ def save_record():
                 is_ip, is_pwd, has_medication, is_working,
                 residence_type, employer_name, marital_status,
                 is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings, email_sent
+                siblings
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -669,7 +712,7 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s, FALSE
+                %s
             ) 
             RETURNING id
         ''', (
@@ -735,7 +778,7 @@ def send_email_only(record_id):
         if not record:
             return jsonify({"error": "Record not found"}), 404
         
-        if record['email_sent']:
+        if record.get('email_sent'):
             return jsonify({"warning": "Email has already been sent for this record"}), 400
         
         email_addr = record['email']
@@ -931,6 +974,94 @@ def test_email_endpoint():
         "message": "Check console for email logs"
     })
 
+# --- FIX DATABASE SCHEMA ENDPOINT ---
+@app.route('/fix-db-schema', methods=['GET'])
+def fix_db_schema():
+    """Manually fix the database schema"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "DB Connection Failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Check if email_sent column exists
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'records' AND column_name = 'email_sent'
+        """)
+        
+        if not cur.fetchone():
+            print("🔄 Adding missing columns...")
+            
+            # Add missing columns
+            missing_columns = [
+                ("email_sent", "BOOLEAN DEFAULT FALSE"),
+                ("email_sent_at", "TIMESTAMP"),
+                ("email", "VARCHAR(100)"),
+                ("civil_status", "VARCHAR(50)"),
+                ("nationality", "VARCHAR(100)"),
+                ("mother_contact", "VARCHAR(50)"),
+                ("father_contact", "VARCHAR(50)"),
+                ("guardian_name", "VARCHAR(255)"),
+                ("guardian_relation", "VARCHAR(100)"),
+                ("guardian_contact", "VARCHAR(50)"),
+                ("region", "VARCHAR(100)"),
+                ("province", "VARCHAR(100)"),
+                ("specific_address", "TEXT"),
+                ("mobile_no", "VARCHAR(50)"),
+                ("school_year", "VARCHAR(50)"),
+                ("student_type", "VARCHAR(50)"),
+                ("program", "VARCHAR(100)"),
+                ("last_level_attended", "VARCHAR(100)"),
+                ("is_ip", "VARCHAR(10)"),
+                ("is_pwd", "VARCHAR(10)"),
+                ("has_medication", "VARCHAR(10)"),
+                ("is_working", "VARCHAR(10)"),
+                ("residence_type", "VARCHAR(50)"),
+                ("employer_name", "VARCHAR(255)"),
+                ("marital_status", "VARCHAR(50)"),
+                ("is_gifted", "VARCHAR(10)"),
+                ("needs_assistance", "VARCHAR(10)"),
+                ("school_type", "VARCHAR(50)"),
+                ("year_attended", "VARCHAR(50)"),
+                ("special_talents", "TEXT"),
+                ("is_scholar", "VARCHAR(10)"),
+                ("siblings", "TEXT")
+            ]
+            
+            added_columns = []
+            for col_name, col_type in missing_columns:
+                try:
+                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                    added_columns.append(col_name)
+                    print(f"   ✅ Added column: {col_name}")
+                except Exception as col_error:
+                    print(f"   ❌ Failed to add {col_name}: {col_error}")
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return jsonify({
+                "status": "success",
+                "message": f"Database schema fixed. Added {len(added_columns)} columns.",
+                "added_columns": added_columns
+            })
+        else:
+            cur.close()
+            conn.close()
+            return jsonify({
+                "status": "info",
+                "message": "All columns already exist. No changes needed."
+            })
+            
+    except Exception as e:
+        print(f"❌ Schema fix error: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # --- OTHER ROUTES (keep your existing ones) ---
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
@@ -1014,6 +1145,9 @@ if __name__ == '__main__':
     print("   • Database tracks email status")
     print("   • Resend email capability")
     print("="*60)
+    print("🔗 IMPORTANT: If you get database errors, visit:")
+    print("   /fix-db-schema - to manually fix database columns")
+    print("="*60)
     
     if GEMINI_API_KEY:
         print("🔍 Testing available models...")
@@ -1039,6 +1173,7 @@ if __name__ == '__main__':
     print("   POST /send-email/<record_id> - Send email for saved record")
     print("   POST /resend-email/<record_id> - Resend email")
     print("   GET /check-email-status/<record_id> - Check email status")
+    print("   GET /fix-db-schema - Fix missing database columns")
     print("="*60)
     print("🔗 Diagnostic endpoints:")
     print("   /list-models - List available Gemini models")
