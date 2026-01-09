@@ -14,6 +14,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
 from PIL import Image
+import ssl
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -142,38 +143,140 @@ def init_db():
 
 init_db()
 
-# --- EMAIL FUNCTION ---
+# --- EMAIL FUNCTION (UPDATED) ---
 def send_email_notification(recipient_email, student_name, file_paths):
-    if not recipient_email or not EMAIL_SENDER: return False
+    """
+    Send email notification with attachments
+    """
+    print(f"\n📧 Email Function Called")
+    print(f"   To: {recipient_email}")
+    print(f"   Student: {student_name}")
+    
+    # Validation
+    if not recipient_email or recipient_email.strip() == "":
+        print("❌ No recipient email provided")
+        return False
+    
+    if not EMAIL_SENDER:
+        print("❌ Email sender not configured")
+        return False
+    
+    if not EMAIL_PASSWORD:
+        print("❌ Email password not configured")
+        return False
+    
+    # Clean email
+    recipient_email = recipient_email.strip()
+    
     try:
+        # Create message
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
         msg['To'] = recipient_email
         msg['Subject'] = "AssiScan Verification Complete - Document Copy"
-        body = f"Dear {student_name},\n\nYour documents have been verified by the AssiScan System.\n\nRegards,\nAssiScan Admin"
+        
+        # Email body
+        body = f"""Dear {student_name},
+
+Your documents have been successfully verified by the AssiScan System.
+
+Attached are copies of your submitted documents:
+1. PSA/Birth Certificate
+2. Form 137/SF10
+
+Please keep these documents for your records.
+
+Regards,
+AssiScan Admissions System
+{datetime.now().strftime('%B %d, %Y %I:%M %p')}
+"""
+        
         msg.attach(MIMEText(body, 'plain'))
         
-        # Handle comma-separated paths
-        for path_string in file_paths:
-            if path_string:
-                individual_paths = path_string.split(',')
-                for clean_path in individual_paths:
-                    if clean_path and os.path.exists(clean_path):
-                        with open(clean_path, "rb") as attachment:
-                            part = MIMEBase('application', 'octet-stream')
-                            part.set_payload(attachment.read())
-                            encoders.encode_base64(part)
-                            part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(clean_path)}")
-                            msg.attach(part)
-
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, recipient_email, msg.as_string())
-        server.quit()
-        return True
+        # Add attachments (if any)
+        attachment_count = 0
+        if file_paths and isinstance(file_paths, list):
+            for path_item in file_paths:
+                if path_item and isinstance(path_item, str):
+                    # Handle comma-separated paths
+                    paths = path_item.split(',')
+                    for file_path in paths:
+                        file_path = file_path.strip()
+                        if file_path and os.path.exists(file_path):
+                            try:
+                                # Get file size
+                                file_size = os.path.getsize(file_path)
+                                if file_size > 25 * 1024 * 1024:  # 25MB limit
+                                    print(f"⚠️ File too large: {file_path} ({file_size/1024/1024:.1f}MB)")
+                                    continue
+                                
+                                # Open and attach file
+                                with open(file_path, "rb") as f:
+                                    filename = os.path.basename(file_path)
+                                    part = MIMEBase('application', 'octet-stream')
+                                    part.set_payload(f.read())
+                                    encoders.encode_base64(part)
+                                    part.add_header(
+                                        'Content-Disposition',
+                                        f'attachment; filename="{filename}"'
+                                    )
+                                    msg.attach(part)
+                                    attachment_count += 1
+                                    print(f"   ✅ Attached: {filename}")
+                            except Exception as file_error:
+                                print(f"   ⚠️ Failed to attach {file_path}: {file_error}")
+        
+        print(f"📎 Total attachments: {attachment_count}")
+        
+        # SMTP Configuration
+        smtp_server = "smtp.gmail.com"
+        
+        # APPROACH 1: Try TLS (Port 587)
+        try:
+            print(f"🔗 Trying TLS (Port 587)...")
+            server = smtplib.SMTP(smtp_server, 587, timeout=30)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print(f"✅ Email sent successfully to {recipient_email}")
+            return True
+            
+        except smtplib.SMTPAuthenticationError as auth_error:
+            print(f"❌ SMTP Authentication Failed: {auth_error}")
+            print("   Please check:")
+            print("   1. Email address and password are correct")
+            print("   2. For Gmail: Enable 'Less Secure Apps' at:")
+            print("      https://myaccount.google.com/lesssecureapps")
+            print("   3. If 2FA is enabled, use App Password")
+            return False
+            
+        except smtplib.SMTPRecipientsRefused as recip_error:
+            print(f"❌ Recipient refused: {recip_error}")
+            print("   Invalid email address format")
+            return False
+            
+        except Exception as tls_error:
+            print(f"⚠️ TLS failed: {tls_error}")
+            
+            # APPROACH 2: Try SSL (Port 465) as fallback
+            try:
+                print(f"🔗 Trying SSL (Port 465)...")
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(smtp_server, 465, context=context, timeout=30) as server:
+                    server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                    server.send_message(msg)
+                print(f"✅ Email sent successfully via SSL")
+                return True
+                
+            except Exception as ssl_error:
+                print(f"❌ SSL also failed: {ssl_error}")
+                return False
+                
     except Exception as e:
-        print(f"❌ Email Error: {e}")
+        print(f"❌ General Email Error: {type(e).__name__}: {e}")
         return False
 
 # ================= HELPER FUNCTIONS =================
@@ -488,13 +591,23 @@ def save_record():
         new_id = cur.fetchone()[0]
         conn.commit()
 
+        # Send email notification
         email_addr = d.get('email', '')
         files_to_send = []
-        if d.get('psa_image_path'): files_to_send.append(d.get('psa_image_path'))
-        if d.get('f137_image_path'): files_to_send.append(d.get('f137_image_path'))
+        if d.get('psa_image_path'): 
+            files_to_send.append(d.get('psa_image_path'))
+        if d.get('f137_image_path'): 
+            files_to_send.append(d.get('f137_image_path'))
 
         if email_addr:
-            send_email_notification(email_addr, d.get('name'), files_to_send)
+            print(f"📧 Attempting to send email to: {email_addr}")
+            email_sent = send_email_notification(email_addr, d.get('name'), files_to_send)
+            if email_sent:
+                print(f"✅ Email notification sent to {email_addr}")
+            else:
+                print(f"⚠️ Email notification failed for {email_addr}")
+        else:
+            print("ℹ️ No email provided, skipping email notification")
 
         return jsonify({"status": "success", "db_id": new_id})
     except Exception as e:
@@ -547,6 +660,150 @@ def delete_record(record_id):
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# --- EMAIL TESTING ENDPOINT ---
+@app.route('/test-email', methods=['GET'])
+def test_email():
+    """
+    Test email functionality
+    """
+    print("\n" + "="*50)
+    print("🧪 TESTING EMAIL FUNCTION")
+    print("="*50)
+    
+    # Check if credentials are loaded
+    print(f"Email Sender: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
+    print(f"Email Password: {'✅ SET' if EMAIL_PASSWORD else '❌ NOT SET'}")
+    
+    if not EMAIL_SENDER or not EMAIL_PASSWORD:
+        return jsonify({
+            "status": "error",
+            "message": "Email credentials not configured",
+            "instructions": [
+                "1. Set EMAIL_SENDER in environment variables",
+                "2. Set EMAIL_PASSWORD in environment variables",
+                "3. For Gmail: Enable 'Less Secure Apps' or use App Password"
+            ]
+        })
+    
+    # Test email
+    test_recipient = "your-test-email@gmail.com"  # ⬅️ PALITAN MO ITO NG ACTUAL EMAIL MO
+    test_name = "Test Student"
+    
+    # Create a test file
+    test_file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'test_email.txt')
+    try:
+        with open(test_file_path, 'w') as f:
+            f.write("This is a test attachment for AssiScan email testing.")
+        print(f"📁 Created test file: {test_file_path}")
+    except Exception as e:
+        print(f"⚠️ Could not create test file: {e}")
+        test_file_path = None
+    
+    # Send test email
+    print(f"\n📤 Sending test email to: {test_recipient}")
+    result = send_email_notification(
+        recipient_email=test_recipient,
+        student_name=test_name,
+        file_paths=[test_file_path] if test_file_path else []
+    )
+    
+    return jsonify({
+        "status": "success" if result else "error",
+        "message": "Test email sent successfully" if result else "Failed to send test email",
+        "sender": EMAIL_SENDER,
+        "recipient": test_recipient,
+        "result": result,
+        "note": "Check terminal for detailed logs"
+    })
+
+# --- EMAIL DEBUG ENDPOINT ---
+@app.route('/debug-email', methods=['GET'])
+def debug_email():
+    """
+    Debug email configuration
+    """
+    print("\n" + "="*50)
+    print("🔧 DEBUGGING EMAIL CONFIGURATION")
+    print("="*50)
+    
+    debug_info = {
+        "env_variables": {
+            "EMAIL_SENDER": EMAIL_SENDER if EMAIL_SENDER else "NOT SET",
+            "EMAIL_PASSWORD": "SET" if EMAIL_PASSWORD else "NOT SET (but hidden)"
+        },
+        "checks": []
+    }
+    
+    # Check 1: Environment variables
+    if not EMAIL_SENDER:
+        debug_info["checks"].append({"check": "EMAIL_SENDER", "status": "❌ NOT SET"})
+    else:
+        debug_info["checks"].append({"check": "EMAIL_SENDER", "status": "✅ SET", "value": EMAIL_SENDER})
+    
+    if not EMAIL_PASSWORD:
+        debug_info["checks"].append({"check": "EMAIL_PASSWORD", "status": "❌ NOT SET"})
+    else:
+        debug_info["checks"].append({"check": "EMAIL_PASSWORD", "status": "✅ SET", "value": "********"})
+    
+    # Check 2: Test SMTP connection
+    try:
+        print("Testing SMTP connection to smtp.gmail.com:587...")
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+        debug_info["checks"].append({"check": "SMTP Connection", "status": "✅ Connected"})
+        
+        server.ehlo()
+        debug_info["checks"].append({"check": "EHLO", "status": "✅ Successful"})
+        
+        server.starttls()
+        debug_info["checks"].append({"check": "TLS", "status": "✅ Started"})
+        
+        server.ehlo()
+        debug_info["checks"].append({"check": "EHLO after TLS", "status": "✅ Successful"})
+        
+        # Try login if credentials are available
+        if EMAIL_SENDER and EMAIL_PASSWORD:
+            try:
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                debug_info["checks"].append({"check": "SMTP Login", "status": "✅ Successful"})
+            except smtplib.SMTPAuthenticationError as e:
+                debug_info["checks"].append({
+                    "check": "SMTP Login", 
+                    "status": "❌ Failed", 
+                    "error": str(e),
+                    "solution": "Enable 'Less Secure Apps' or use App Password"
+                })
+            except Exception as e:
+                debug_info["checks"].append({
+                    "check": "SMTP Login", 
+                    "status": "❌ Failed", 
+                    "error": str(e)
+                })
+        
+        server.quit()
+        
+    except Exception as e:
+        debug_info["checks"].append({
+            "check": "SMTP Connection", 
+            "status": "❌ Failed", 
+            "error": str(e)
+        })
+    
+    return jsonify(debug_info)
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
+    
+    print("\n" + "="*50)
+    print("🚀 ASSISCAN SYSTEM STARTING")
+    print("="*50)
+    print(f"📧 Email Sender: {'✅ ' + EMAIL_SENDER if EMAIL_SENDER else '❌ NOT SET'}")
+    print(f"🔑 Email Password: {'✅ SET' if EMAIL_PASSWORD else '❌ NOT SET'}")
+    print(f"🤖 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
+    print(f"🗄️ Database URL: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
+    print("="*50)
+    print(f"🌐 Server running on: http://0.0.0.0:{port}")
+    print(f"🔗 Test email: http://localhost:{port}/test-email")
+    print(f"🔧 Debug email: http://localhost:{port}/debug-email")
+    print("="*50 + "\n")
+    
     app.run(host='0.0.0.0', port=port)
