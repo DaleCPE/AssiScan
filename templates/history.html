@@ -477,11 +477,15 @@
 
     <script>
         let allRecords = [];
+        let serverBaseUrl = window.location.origin; // Gets https://assiscan-app.onrender.com
 
         async function loadData() {
             try {
                 const res = await fetch('/get-records');
-                if (res.status === 401) { window.location.href = '/login'; return; }
+                if (res.status === 401) { 
+                    window.location.href = '/login'; 
+                    return; 
+                }
 
                 const data = await res.json();
                 allRecords = data.records; 
@@ -496,9 +500,23 @@
                 }
 
                 tbody.innerHTML = data.records.map(r => {
-                    const psaPath = r.psa_image_path || r.image_path;
-                    const f137Path = r.f137_image_path || r.form137_path;
+                    const psaPath = r.image_path || r.psa_image_path;
+                    const f137Path = r.form137_path || r.f137_image_path;
                     const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
+
+                    // FIXED: Helper function to get correct image URL for Render
+                    const getImageUrl = (filename) => {
+                        if (!filename) return null;
+                        
+                        // Handle comma-separated filenames (take first one)
+                        const firstFilename = filename.split(',')[0].trim();
+                        
+                        // Extract just the filename (remove any path)
+                        const cleanFilename = firstFilename.split('/').pop();
+                        
+                        // Return full URL for Render
+                        return `${serverBaseUrl}/uploads/${cleanFilename}`;
+                    };
 
                     return `
                     <tr id="row-${r.id}">
@@ -530,10 +548,29 @@
                         </td>
 
                         <td>
-                            ${psaPath ? `<a href="/${psaPath}" target="_blank" class="doc-link psa"><i class="fas fa-id-card"></i> PSA</a>` : ''}
-                            ${f137Path ? `<a href="/${f137Path}" target="_blank" class="doc-link f137"><i class="fas fa-file-contract"></i> F137</a>` : ''}
-                            ${r.form138_path ? `<a href="/${r.form138_path}" target="_blank" class="doc-link"><i class="fas fa-file-invoice"></i> F138</a>` : ''}
-                            ${r.goodmoral_path ? `<a href="/${r.goodmoral_path}" target="_blank" class="doc-link gm"><i class="fas fa-certificate"></i> GM</a>` : ''}
+                            ${psaPath ? `
+                                <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="View PSA Document">
+                                    <i class="fas fa-id-card"></i> PSA
+                                </a>
+                            ` : ''}
+                            
+                            ${f137Path ? `
+                                <a href="${getImageUrl(f137Path)}" target="_blank" class="doc-link f137" title="View Form 137">
+                                    <i class="fas fa-file-contract"></i> F137
+                                </a>
+                            ` : ''}
+                            
+                            ${r.form138_path ? `
+                                <a href="${getImageUrl(r.form138_path)}" target="_blank" class="doc-link" title="View Form 138">
+                                    <i class="fas fa-file-invoice"></i> F138
+                                </a>
+                            ` : ''}
+                            
+                            ${r.goodmoral_path ? `
+                                <a href="${getImageUrl(r.goodmoral_path)}" target="_blank" class="doc-link gm" title="View Good Moral Certificate">
+                                    <i class="fas fa-certificate"></i> GM
+                                </a>
+                            ` : ''}
                         </td>
 
                         <td style="text-align: center; white-space: nowrap;">
@@ -549,10 +586,11 @@
                                 <i class="fas fa-edit"></i>
                             </button>
 
-                            <button onclick="openUploadModal(${r.id}, '${r.name}')" class="action-btn btn-upload" title="Upload Missing File">
+                            <button onclick="openUploadModal(${r.id}, '${r.name || ''}')" class="action-btn btn-upload" title="Upload Missing File">
                                 <i class="fas fa-cloud-upload-alt"></i>
                             </button>
-                            <button onclick="deleteRecord(${r.id})" class="action-btn btn-delete" title="Delete">
+                            
+                            <button onclick="deleteRecord(${r.id})" class="action-btn btn-delete" title="Delete Record">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -560,15 +598,19 @@
                 `}).join('');
 
             } catch (err) { 
-                console.error(err);
-                document.getElementById('loading').innerText = "ERROR LOADING DATABASE.";
+                console.error('Error loading data:', err);
+                document.getElementById('loading').innerText = "ERROR LOADING DATABASE. Please check console.";
+                document.getElementById('loading').style.color = "#ff6b6b";
             }
         }
 
         // ================= VIEW LOGIC =================
         function openViewModal(id) {
             const r = allRecords.find(item => item.id === id);
-            if(!r) return;
+            if(!r) {
+                alert("Record not found!");
+                return;
+            }
 
             const row = (lbl, val) => `
                 <div class="info-row">
@@ -584,7 +626,7 @@
                 ${row('Mother', r.mother_name)}
                 ${row('Father', r.father_name)}
                 ${row('Religion', r.religion)}
-                ${row('Address', r.specific_address + ' ' + (r.province||''))}
+                ${row('Address', (r.specific_address || '') + ' ' + (r.province || ''))}
             `;
 
             document.getElementById('view-school-content').innerHTML = `
@@ -594,16 +636,19 @@
                 ${row('School Year', r.school_year)}
                 ${row('Student Type', r.student_type)}
                 ${row('Program', r.program)}
-                <div style="margin-top:10px; font-size:11px; color:#555">Created: ${r.created_at}</div>
+                <div style="margin-top:10px; font-size:11px; color:#555">Created: ${r.created_at || 'N/A'}</div>
             `;
 
             document.getElementById('viewModal').style.display = 'flex';
         }
 
-        // ================= EDIT LOGIC (NEW) =================
+        // ================= EDIT LOGIC =================
         function openEditModal(id) {
             const r = allRecords.find(item => item.id === id);
-            if(!r) return;
+            if(!r) {
+                alert("Record not found!");
+                return;
+            }
 
             // Populate form
             document.getElementById('edit_id').value = r.id;
@@ -641,6 +686,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
+                
                 const result = await res.json();
 
                 if (result.success) {
@@ -648,9 +694,10 @@
                     closeModal('editModal');
                     loadData(); // Refresh table
                 } else {
-                    alert("Error updating: " + result.error);
+                    alert("Error updating: " + (result.error || "Unknown error"));
                 }
             } catch (err) {
+                console.error('Save error:', err);
                 alert("Failed to connect to server.");
             }
         }
@@ -658,7 +705,7 @@
         // ================= UPLOAD LOGIC =================
         function openUploadModal(id, name) {
             document.getElementById('upload_id').value = id;
-            document.getElementById('upload_name').value = name;
+            document.getElementById('upload_name').value = name || 'Unknown Student';
             document.getElementById('fileInput').value = ""; 
             document.getElementById('uploadModal').style.display = 'flex';
         }
@@ -676,7 +723,6 @@
             const formData = new FormData();
             formData.append('id', id);
             formData.append('type', type);
-            // FIX: Changed 'file' to 'files' to match Python backend
             formData.append('files', fileInput.files[0]);
 
             const btn = document.querySelector('#uploadModal .btn-modal-action');
@@ -693,8 +739,7 @@
                 // Get JSON response
                 const result = await res.json();
 
-                // Check HTTP status OK (200) AND backend status
-                if (res.ok) {
+                if (res.ok && result.status === "success") {
                     alert("Document uploaded successfully!");
                     closeModal('uploadModal');
                     loadData(); 
@@ -702,7 +747,7 @@
                     alert("Error: " + (result.error || "Upload failed"));
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Upload error:', err);
                 alert("Server connection failed.");
             } finally {
                 btn.innerText = originalText;
@@ -717,21 +762,36 @@
 
         async function deleteRecord(id) {
             if(!confirm("⚠️ WARNING: This will PERMANENTLY delete this record.\n\nContinue?")) return;
+            
             try {
-                const res = await fetch(`/delete-record/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/delete-record/${id}`, { 
+                    method: 'DELETE' 
+                });
+                
                 const data = await res.json();
+                
                 if (data.success) {
+                    // Remove from table
                     const row = document.getElementById(`row-${id}`);
-                    row.style.opacity = '0';
-                    setTimeout(() => row.remove(), 300);
+                    if (row) {
+                        row.style.opacity = '0';
+                        row.style.transition = 'opacity 0.3s';
+                        setTimeout(() => {
+                            row.remove();
+                            // Update allRecords array
+                            allRecords = allRecords.filter(r => r.id !== id);
+                        }, 300);
+                    }
                 } else {
-                    alert("Error: " + data.error);
+                    alert("Error: " + (data.error || "Failed to delete record"));
                 }
             } catch (e) {
+                console.error('Delete error:', e);
                 alert("Server connection failed.");
             }
         }
 
+        // ================= SEARCH FUNCTIONALITY =================
         document.getElementById('searchInput').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();
             let rows = document.querySelectorAll('#tableBody tr');
@@ -752,13 +812,19 @@
             document.getElementById('no-match-msg').style.display = hasMatch ? 'none' : 'block';
         });
 
+        // Close modal when clicking outside
         window.onclick = function(event) {
             if (event.target.classList.contains('modal-overlay')) {
                 event.target.style.display = "none";
             }
         }
 
+        // Load data when page loads
         loadData();
+        
+        // Debug info
+        console.log('AssiScan History Page Loaded');
+        console.log('Server URL:', serverBaseUrl);
     </script>
 </body>
 </html>
