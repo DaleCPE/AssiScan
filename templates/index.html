@@ -17,6 +17,9 @@
             --text-muted: #8a7a7a;
             --input-bg: rgba(255, 255, 255, 0.05);
             --border-dim: rgba(212, 175, 55, 0.2);
+            --success-green: #4CAF50;
+            --warning-yellow: #FFC107;
+            --info-blue: #2196F3;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -168,12 +171,57 @@
             font-size: 10px;
         }
         
+        /* Button Styles */
         .btn-save { 
             background: linear-gradient(90deg, #1e3c22, #2e7d32); color: #fff; border: none; padding: 15px; 
-            font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 20px; margin-bottom: 30px;
+            font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 10px;
             transition: 0.3s; text-transform: uppercase; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-save:hover { background: #388e3c; box-shadow: 0 5px 15px rgba(50, 200, 50, 0.2); transform: translateY(-2px); }
+        
+        .btn-send { 
+            background: linear-gradient(90deg, #1976D2, #2196F3); color: #fff; border: none; padding: 15px; 
+            font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 10px;
+            transition: 0.3s; text-transform: uppercase; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-send:hover { background: #1E88E5; box-shadow: 0 5px 15px rgba(33, 150, 243, 0.2); transform: translateY(-2px); }
+        
+        .btn-send:disabled {
+            background: #546E7A;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .save-status {
+            font-size: 10px;
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .save-status.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+        
+        .save-status.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #F44336;
+        }
+        
+        .save-status.info {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            color: #2196F3;
+        }
 
         .status-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: right; }
 
@@ -457,14 +505,24 @@
             <input type="file" id="fileGoodMoral" accept="image/*">
         </div>
 
-        <button class="btn-save" onclick="saveRecord()">
-            <i class="fas fa-save"></i> Verify & Save Record
+        <!-- SAVE BUTTON (Save to Database Only) -->
+        <button class="btn-save" onclick="saveRecord()" id="saveBtn">
+            <i class="fas fa-database"></i> Save to Database
         </button>
+        
+        <div id="saveStatus" class="save-status"></div>
+        
+        <!-- SEND EMAIL BUTTON (Disabled until saved) -->
+        <button class="btn-send" onclick="sendEmail()" id="sendBtn" disabled>
+            <i class="fas fa-paper-plane"></i> Send Email to Student
+        </button>
+        
+        <div id="sendStatus" class="save-status"></div>
     </aside>
 
     <!-- DEBUG BUTTON -->
     <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
-        <button onclick="testEmailDebug()" style="
+        <button onclick="showRecordInfo()" style="
             background: #ff9800;
             color: white;
             padding: 8px 12px;
@@ -475,13 +533,14 @@
             display: flex;
             align-items: center;
             gap: 5px;">
-            🐞 Debug Email
+            ℹ️ Show Record Info
         </button>
     </div>
 
     <script>
         let psaImagePath = "";
         let f137ImagePath = "";
+        let currentRecordId = null; // Store the record ID after saving
 
         const philippineLocations = {
             "NCR": ["Metro Manila"],
@@ -656,9 +715,24 @@
             return re.test(email);
         }
 
-        // --- SAVE RECORD FUNCTION (FIXED) ---
+        // --- UPDATE STATUS MESSAGE ---
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'save-status ' + type;
+            element.style.display = 'block';
+            
+            // Auto-hide after 5 seconds for info/success messages
+            if (type === 'info' || type === 'success') {
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // --- SAVE RECORD TO DATABASE ONLY ---
         async function saveRecord() {
-            const btn = document.querySelector('.btn-save');
+            const btn = document.getElementById('saveBtn');
             const name = document.getElementById('childName').value;
             
             if(!name) {
@@ -666,7 +740,7 @@
                 return;
             }
 
-            // 🔥 EMAIL VALIDATION
+            // 🔥 EMAIL VALIDATION (optional for save, required for send)
             const emailInput = document.getElementById('contactEmail');
             const emailValue = emailInput ? emailInput.value.trim() : '';
             
@@ -746,16 +820,14 @@
                 special_talents: document.getElementById('specialTalents').value, 
                 is_scholar: document.getElementById('isScholar').value, 
                 
-                // 🔥 FIXED: EMAIL FIELD - using the correct ID and value
+                // EMAIL FIELD
                 email: emailValue,
                 
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath
             };
 
-            // 🔥 ADD DEBUGGING
-            console.log("📤 Full data being sent:", recordData);
-            console.log("📧 Email being sent:", emailValue);
+            console.log("📤 Saving record data:", recordData);
 
             try {
                 const res = await fetch('/save-record', {
@@ -766,72 +838,224 @@
                 
                 const result = await res.json();
                 
-                // 🔥 BETTER ERROR HANDLING
                 console.log("Backend response:", result);
                 
                 if(result.status === "success") {
-                    alert('✅ Record Saved Successfully! Email sent to student.');
-                    location.reload(); 
+                    currentRecordId = result.db_id;
+                    
+                    updateStatus('saveStatus', 
+                        `✅ Record Saved Successfully! ID: ${currentRecordId}`, 
+                        'success');
+                    
+                    // Enable the Send button
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('sendBtn').innerHTML = 
+                        '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                    
+                    // Update Save button
+                    btn.innerHTML = '<i class="fas fa-check"></i> Saved to Database';
+                    btn.style.background = 'linear-gradient(90deg, #2E7D32, #388E3C)';
+                    
+                    console.log(`Record saved with ID: ${currentRecordId}`);
+                    
                 } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
-                    alert('⚠️ Record already exists in the system!');
-                    btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                    updateStatus('saveStatus', '⚠️ Record already exists in the system!', 'error');
+                    btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
                     btn.disabled = false;
+                    
                 } else {
-                    alert('❌ Error saving record: ' + (result.error || result.message || "Unknown error"));
-                    btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                    updateStatus('saveStatus', 
+                        '❌ Error saving record: ' + (result.error || result.message || "Unknown error"), 
+                        'error');
+                    btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
                     btn.disabled = false;
                 }
             } catch(e) {
                 console.error('Connection Error:', e);
-                alert('❌ Connection Error! Check console for details.');
-                btn.innerHTML = '<i class="fas fa-save"></i> Verify & Save Record';
+                updateStatus('saveStatus', '❌ Connection Error! Check console for details.', 'error');
+                btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
+                btn.disabled = false;
+            }
+        }
+
+        // --- SEND EMAIL ONLY ---
+        async function sendEmail() {
+            if (!currentRecordId) {
+                alert("Please save the record first before sending email!");
+                return;
+            }
+            
+            const emailValue = document.getElementById('contactEmail').value.trim();
+            if (!emailValue) {
+                alert("Email address is required to send notification!");
+                return;
+            }
+            
+            if (!validateEmail(emailValue)) {
+                alert("Please enter a valid email address!");
+                document.getElementById('contactEmail').focus();
+                document.getElementById('contactEmail').style.borderColor = 'red';
+                return;
+            }
+            
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
+            btn.disabled = true;
+            
+            updateStatus('sendStatus', '📧 Preparing to send email...', 'info');
+            
+            try {
+                const response = await fetch(`/send-email/${currentRecordId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                console.log("Email send response:", result);
+                
+                if (response.ok) {
+                    if (result.status === "success") {
+                        updateStatus('sendStatus', 
+                            `✅ Email sent successfully to ${emailValue}`, 
+                            'success');
+                        
+                        btn.innerHTML = '<i class="fas fa-check"></i> Email Sent';
+                        btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
+                        btn.disabled = true;
+                        
+                    } else if (result.warning === "Email has already been sent for this record") {
+                        updateStatus('sendStatus', 
+                            '⚠️ Email was already sent for this record. You can resend if needed.', 
+                            'info');
+                        
+                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
+                        btn.disabled = false;
+                        
+                        // Add resend functionality
+                        btn.onclick = function() { resendEmail(); };
+                    }
+                } else {
+                    updateStatus('sendStatus', 
+                        `❌ Failed to send email: ${result.error || 'Unknown error'}`, 
+                        'error');
+                    
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error("Email send error:", error);
+                updateStatus('sendStatus', 
+                    '❌ Connection error while sending email', 
+                    'error');
+                
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                btn.disabled = false;
+            }
+        }
+
+        // --- RESEND EMAIL ---
+        async function resendEmail() {
+            if (!currentRecordId) return;
+            
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> RESENDING...';
+            btn.disabled = true;
+            
+            updateStatus('sendStatus', '📧 Resending email...', 'info');
+            
+            try {
+                const response = await fetch(`/resend-email/${currentRecordId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.status === "success") {
+                    updateStatus('sendStatus', 
+                        `✅ Email resent successfully!`, 
+                        'success');
+                    
+                    btn.innerHTML = '<i class="fas fa-check"></i> Email Resent';
+                    btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
+                    btn.disabled = true;
+                } else {
+                    updateStatus('sendStatus', 
+                        `❌ Failed to resend email: ${result.error || 'Unknown error'}`, 
+                        'error');
+                    
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error("Resend error:", error);
+                updateStatus('sendStatus', '❌ Connection error', 'error');
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
                 btn.disabled = false;
             }
         }
 
         // --- DEBUG FUNCTION ---
-        async function testEmailDebug() {
-            const testEmail = prompt("Enter test email address:", "test@example.com");
+        function showRecordInfo() {
+            const info = {
+                currentRecordId: currentRecordId,
+                psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
+                f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
+                studentName: document.getElementById('childName').value || "Not entered",
+                email: document.getElementById('contactEmail').value || "Not entered"
+            };
             
-            if (!testEmail) return;
-            
-            // Validate email
-            if (!validateEmail(testEmail)) {
-                alert("Please enter a valid email address!");
+            alert(`Record Information:\n
+📋 Record ID: ${info.currentRecordId || "Not saved yet"}
+📸 PSA Images: ${info.psaImagePath}
+📄 Form 137: ${info.f137ImagePath}
+👤 Student: ${info.studentName}
+📧 Email: ${info.email}
+\nSave the record first to enable email sending.`);
+        }
+
+        // --- UPLOAD ADDITIONAL FILES (if needed) ---
+        async function uploadAdditionalFiles(recordId, fileType, files) {
+            if (!recordId) {
+                alert("Please save the record first!");
                 return;
             }
             
-            const testData = {
-                name: "TEST STUDENT",
-                email: testEmail,
-                birthdate: "2000-01-01",
-                mobile_no: "09123456789",
-                psa_image_path: "",
-                f137_image_path: ""
-            };
+            const formData = new FormData();
+            formData.append('id', recordId);
+            formData.append('type', fileType);
             
-            console.log("🧪 Test data:", testData);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
             
             try {
-                const response = await fetch('/save-record', {
+                const response = await fetch('/upload-additional', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(testData)
+                    body: formData
                 });
                 
                 const result = await response.json();
-                console.log("Test result:", result);
-                
                 if (result.status === "success") {
-                    alert("✅ Test successful! Check your email: " + testEmail);
-                } else {
-                    alert("❌ Test failed: " + (result.error || result.message));
+                    console.log(`${fileType} uploaded successfully`);
                 }
             } catch (error) {
-                console.error("Test error:", error);
-                alert("❌ Test error: " + error.message);
+                console.error("Upload error:", error);
             }
         }
+
+        // Handle Form 138 and Good Moral uploads when record is saved
+        document.getElementById('fileForm138').addEventListener('change', function(e) {
+            if (currentRecordId && e.target.files.length > 0) {
+                uploadAdditionalFiles(currentRecordId, 'form138', e.target.files);
+            }
+        });
+        
+        document.getElementById('fileGoodMoral').addEventListener('change', function(e) {
+            if (currentRecordId && e.target.files.length > 0) {
+                uploadAdditionalFiles(currentRecordId, 'goodmoral', e.target.files);
+            }
+        });
     </script>
 </body>
 </html>
