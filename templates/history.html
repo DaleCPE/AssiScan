@@ -174,11 +174,13 @@
             align-items: center;
             gap: 5px;
             margin-bottom: 4px;
+            cursor: pointer;
         }
         .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
         .doc-link.f137 { border-color: var(--gold); color: #f3d576; }
         .doc-link.gm { border-color: #55a630; color: #80b918; }
         .doc-link.f138 { border-color: #9C27B0; color: #e1bee7; }
+        .doc-link.other { border-color: #FF9800; color: #FFCC80; }
         
         .doc-link:hover { transform: translateY(-2px); filter: brightness(1.2); }
         
@@ -218,6 +220,8 @@
             margin-top: 5px;
             padding-left: 5px;
             border-left: 2px solid #444;
+            max-width: 200px;
+            word-wrap: break-word;
         }
         
         .reason-bad {
@@ -253,9 +257,6 @@
 
         .btn-view { border-color: #4a6fa5; color: #4a6fa5; }
         .btn-view:hover { background: #4a6fa5; color: white; }
-
-        .btn-edit { border-color: var(--info-blue); color: var(--info-blue); }
-        .btn-edit:hover { background: var(--info-blue); color: white; }
 
         .btn-images { border-color: #9C27B0; color: #9C27B0; }
         .btn-images:hover { background: #9C27B0; color: white; }
@@ -380,6 +381,7 @@
         .type-f137 { background: var(--gold); color: black; }
         .type-f138 { background: #9C27B0; color: white; }
         .type-goodmoral { background: #28a745; color: white; }
+        .type-other { background: #FF9800; color: black; }
         
         /* Good Moral Analysis Box */
         .analysis-box {
@@ -516,6 +518,27 @@
             font-weight: 500;
         }
 
+        /* Email Status */
+        .email-status {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 3px;
+        }
+        
+        .email-sent { 
+            background: rgba(40, 167, 69, 0.2); 
+            color: #28a745; 
+            border: 1px solid #28a745; 
+        }
+        
+        .email-not-sent { 
+            background: rgba(108, 117, 125, 0.2); 
+            color: #6c757d; 
+            border: 1px solid #6c757d; 
+        }
+
     </style>
 </head>
 <body>
@@ -615,6 +638,7 @@
                     const f137Path = r.form137_path || r.f137_image_path;
                     const f138Path = r.form138_path;
                     const goodmoralPath = r.goodmoral_path;
+                    const otherDocs = r.other_documents || [];
                     
                     const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
                     
@@ -681,8 +705,14 @@
                         psaPath ? 1 : 0,
                         f137Path ? 1 : 0,
                         f138Path ? 1 : 0,
-                        goodmoralPath ? 1 : 0
+                        goodmoralPath ? 1 : 0,
+                        otherDocs.length
                     ].reduce((a, b) => a + b, 0);
+
+                    // Email status
+                    const emailStatus = r.email_sent ? 
+                        '<span class="email-status email-sent"><i class="fas fa-check"></i> Email Sent</span>' : 
+                        '<span class="email-status email-not-sent"><i class="fas fa-envelope"></i> Not Sent</span>';
 
                     return `
                     <tr id="row-${r.id}">
@@ -695,15 +725,16 @@
                             <div class="sub-text" style="margin-top:4px;">
                                 ${r.birthdate || ''}
                             </div>
-                            <div class="sub-text">
-                                ${r.mother_name ? `<i class="fas fa-female"></i> ${r.mother_name}` : ''}
-                            </div>
+                            ${emailStatus}
                         </td>
 
                         <td>
                             <div class="highlight-text">${r.school_name || '-'}</div>
                             <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
                             ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">Average: ${r.final_general_average}</span></div>` : ''}
+                            <div class="sub-text" style="margin-top:5px;">
+                                ${r.program || ''}
+                            </div>
                         </td>
 
                         <td>
@@ -714,13 +745,13 @@
                                 <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="PSA Birth Certificate">
                                     <i class="fas fa-id-card"></i> PSA
                                 </a>
-                            ` : '<span class="doc-link" style="opacity:0.5;"><i class="fas fa-times"></i> No PSA</span>'}
+                            ` : ''}
                             
                             ${f137Path ? `
                                 <a href="${getImageUrl(f137Path)}" target="_blank" class="doc-link f137" title="Form 137 / SF10">
                                     <i class="fas fa-file-contract"></i> F137
                                 </a>
-                            ` : '<span class="doc-link" style="opacity:0.5;"><i class="fas fa-times"></i> No F137</span>'}
+                            ` : ''}
                             
                             ${f138Path ? `
                                 <a href="${getImageUrl(f138Path)}" target="_blank" class="doc-link f138" title="Form 138 (Report Card)">
@@ -731,6 +762,12 @@
                             ${goodmoralPath ? `
                                 <a href="${getImageUrl(goodmoralPath)}" target="_blank" class="doc-link gm" title="Good Moral Certificate">
                                     <i class="fas fa-certificate"></i> Good Moral
+                                </a>
+                            ` : ''}
+                            
+                            ${otherDocs.length > 0 ? `
+                                <a href="#" onclick="viewOtherDocuments(${r.id}); return false;" class="doc-link other" title="View ${otherDocs.length} other document(s)">
+                                    <i class="fas fa-folder-open"></i> +${otherDocs.length}
                                 </a>
                             ` : ''}
                         </td>
@@ -786,6 +823,7 @@
             const f137Path = r.form137_path || r.f137_image_path;
             const f138Path = r.form138_path;
             const goodmoralPath = r.goodmoral_path;
+            const otherDocs = r.other_documents || [];
             
             // Helper function to get image URL
             const getImageUrl = (filename) => {
@@ -885,6 +923,17 @@
                     });
                 });
             }
+            
+            // Add other documents
+            otherDocs.forEach(doc => {
+                images.push({
+                    url: `${serverBaseUrl}/uploads/${doc.filename}`,
+                    type: 'Other',
+                    title: doc.title || 'Other Document',
+                    className: 'type-other',
+                    uploadedAt: doc.uploaded_at
+                });
+            });
 
             // Build HTML content
             let html = `
@@ -964,9 +1013,11 @@
                                 </div>
                             ` : ''}
                             
-                            <div class="analysis-item">
-                                <strong>Score:</strong> ${r.goodmoral_score || 'N/A'}/100
-                            </div>
+                            ${r.goodmoral_score ? `
+                                <div class="analysis-item">
+                                    <strong>Score:</strong> ${r.goodmoral_score}/100
+                                </div>
+                            ` : ''}
                             
                             <div class="analysis-item">
                                 <strong>Record Assessment:</strong> 
@@ -995,7 +1046,7 @@
             html += `
                 <div style="margin-top: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px;">
-                        <i class="fas fa-paperclip"></i> SUBMITTED DOCUMENTS
+                        <i class="fas fa-paperclip"></i> SUBMITTED DOCUMENTS (${images.length})
                     </h4>
             `;
 
@@ -1011,7 +1062,12 @@
                                      onerror="this.src='https://via.placeholder.com/250x200/1a1a1a/888888?text=Image+Not+Found'">
                                 <div class="image-info">
                                     <span class="image-type ${img.className}">${img.type}</span>
-                                    <span style="color: #aaa; font-size: 10px;">${img.title}</span>
+                                    <span style="color: #aaa; font-size: 10px; display: block;">${img.title}</span>
+                                    ${img.uploadedAt ? `
+                                        <span style="color: #666; font-size: 9px; display: block; margin-top: 2px;">
+                                            Uploaded: ${new Date(img.uploadedAt).toLocaleDateString()}
+                                        </span>
+                                    ` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -1031,6 +1087,67 @@
             // Set content and show modal
             document.getElementById('studentModalContent').innerHTML = html;
             document.getElementById('studentModal').style.display = 'flex';
+        }
+
+        // ================= VIEW OTHER DOCUMENTS =================
+        function viewOtherDocuments(recordId) {
+            const r = allRecords.find(item => item.id === recordId);
+            if (!r || !r.other_documents || r.other_documents.length === 0) {
+                alert("No other documents found for this student.");
+                return;
+            }
+            
+            let html = `<h3 style="color: var(--gold); margin-top: 0;">Other Documents (${r.other_documents.length})</h3>`;
+            html += `<div class="images-grid">`;
+            
+            r.other_documents.forEach(doc => {
+                const imageUrl = `${serverBaseUrl}/uploads/${doc.filename}`;
+                html += `
+                    <div class="image-card">
+                        <img src="${imageUrl}" 
+                             alt="${doc.title}" 
+                             class="image-preview" 
+                             onclick="openFullscreenImage('${imageUrl}', '${doc.title}')"
+                             onerror="this.src='https://via.placeholder.com/250x200/1a1a1a/888888?text=Document'">
+                        <div class="image-info">
+                            <span class="image-type type-other">Other</span>
+                            <span style="color: #aaa; font-size: 10px; display: block;">${doc.title}</span>
+                            <span style="color: #666; font-size: 9px;">Uploaded: ${new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            
+            // Create modal for other documents
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-box" style="max-width: 800px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title"><i class="fas fa-folder-open"></i> Other Documents - ${r.name}</h3>
+                        <i class="fas fa-times modal-close" onclick="this.parentElement.parentElement.style.display='none'"></i>
+                    </div>
+                    <div class="modal-body">
+                        ${html}
+                    </div>
+                    <div class="modal-footer">
+                        <button onclick="this.parentElement.parentElement.parentElement.style.display='none'" style="
+                            background: #333;
+                            color: #fff;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
         }
 
         // ================= FULLSCREEN IMAGE VIEWER =================
