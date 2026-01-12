@@ -130,7 +130,7 @@
             backdrop-filter: blur(5px);
         }
 
-        table { width: 100%; border-collapse: collapse; min-width: 1300px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
 
         thead { background: rgba(212, 175, 55, 0.1); }
 
@@ -159,6 +159,30 @@
         /* Data Styling */
         .sub-text { display: block; font-size: 11px; color: #888; margin-top: 2px; }
         .highlight-text { color: #fff; font-weight: 600; }
+        
+        /* College & Program Styling */
+        .college-info {
+            font-size: 13px;
+            color: #f3d576;
+            font-weight: 500;
+            margin-bottom: 3px;
+        }
+        
+        .program-info {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .program-badge {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-top: 3px;
+            border-left: 3px solid var(--gold);
+        }
         
         /* Document Links */
         .doc-link {
@@ -498,7 +522,7 @@
         
         .student-details {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -539,6 +563,14 @@
             border: 1px solid #6c757d; 
         }
 
+        /* Responsive */
+        @media (max-width: 1200px) {
+            table { min-width: 1300px; }
+            .student-details {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -552,7 +584,7 @@
     </div>
 
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, or Record Status...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, College, or Program...">
         <i class="fas fa-search search-icon"></i>
     </div>
 
@@ -564,6 +596,7 @@
                 <tr>
                     <th>Student Information</th>
                     <th>Academic Details</th>
+                    <th>College & Program</th>
                     <th>Documents</th>
                     <th>Moral Record Status</th>
                     <th style="text-align: center;">Actions</th>
@@ -629,7 +662,7 @@
                 const tbody = document.getElementById('tableBody');
 
                 if(data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No records found.</td></tr>';
                     return;
                 }
 
@@ -733,8 +766,28 @@
                             <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
                             ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">Average: ${r.final_general_average}</span></div>` : ''}
                             <div class="sub-text" style="margin-top:5px;">
-                                ${r.program || ''}
+                                School Year: ${r.school_year || ''}
                             </div>
+                        </td>
+
+                        <td>
+                            ${r.college ? `
+                                <div class="college-info">
+                                    <i class="fas fa-university"></i> ${r.college}
+                                </div>
+                            ` : ''}
+                            
+                            ${r.program ? `
+                                <div class="program-info">
+                                    <i class="fas fa-graduation-cap"></i> ${r.program}
+                                </div>
+                            ` : ''}
+                            
+                            ${r.student_type ? `
+                                <div class="program-badge">
+                                    ${r.student_type}
+                                </div>
+                            ` : ''}
                         </td>
 
                         <td>
@@ -967,6 +1020,26 @@
                         <div class="detail-value">${r.specific_address || ''} ${r.province || ''}</div>
                     </div>
                     <div class="detail-item">
+                        <div class="detail-label">School Year</div>
+                        <div class="detail-value">${r.school_year || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Student Type</div>
+                        <div class="detail-value">${r.student_type || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">College/Department</div>
+                        <div class="detail-value" style="color: #f3d576;">${r.college || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Program/Course</div>
+                        <div class="detail-value" style="color: #f3d576;">${r.program || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Final Average</div>
+                        <div class="detail-value">${r.final_general_average || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
                         <div class="detail-label">Mother's Name</div>
                         <div class="detail-value">${r.mother_name || 'N/A'}</div>
                     </div>
@@ -975,12 +1048,8 @@
                         <div class="detail-value">${r.father_name || 'N/A'}</div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">School Year</div>
-                        <div class="detail-value">${r.school_year || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Final Average</div>
-                        <div class="detail-value">${r.final_general_average || 'N/A'}</div>
+                        <div class="detail-label">Mobile Number</div>
+                        <div class="detail-value">${r.mobile_no || 'N/A'}</div>
                     </div>
                 </div>
             `;
@@ -1212,9 +1281,13 @@
             rows.forEach(row => {
                 let nameText = row.querySelector('.student-name')?.textContent.toLowerCase() || "";
                 let lrnText = row.querySelector('.lrn-info')?.textContent.toLowerCase() || "";
+                let collegeText = row.querySelector('.college-info')?.textContent.toLowerCase() || "";
+                let programText = row.querySelector('.program-info')?.textContent.toLowerCase() || "";
                 let statusText = row.querySelector('.record-badge')?.textContent.toLowerCase() || "";
                 
-                if (nameText.includes(filter) || lrnText.includes(filter) || statusText.includes(filter)) {
+                if (nameText.includes(filter) || lrnText.includes(filter) || 
+                    collegeText.includes(filter) || programText.includes(filter) || 
+                    statusText.includes(filter)) {
                     row.style.display = ''; 
                     hasMatch = true;
                 } else {
