@@ -41,10 +41,10 @@ if GEMINI_API_KEY:
             if not gemini_2_5_flash_available:
                 print("⚠️ Warning: gemini-2.5-flash not found in available models")
                 print("⚠️ Will try to use it anyway, but may fail if not accessible")
-                    
+        except Exception as e:
+            print(f"⚠️ Could not list models: {e}")
     except Exception as e:
-        print(f"⚠️ Could not list models: {e}")
-            
+        print(f"⚠️ Error configuring Gemini: {e}")
 else:
     print("❌ CRITICAL: GEMINI_API_KEY is missing!")
 
@@ -410,7 +410,6 @@ University of Batangas Lipa
         else:
             print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
             return True
-            
     except Exception as e:
         print(f"⚠️ SendGrid failed: {e}")
         print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
@@ -435,7 +434,6 @@ def save_multiple_files(files, prefix):
                 print(f"   ✅ Saved: {filename}")
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
-                
     return saved_paths, pil_images
 
 def extract_with_gemini(prompt, images):
@@ -470,7 +468,6 @@ def extract_with_gemini(prompt, images):
                 return response.text
             else:
                 raise Exception("No response text")
-                
         except Exception as model_error:
             print(f"❌ {model_name} failed: {str(model_error)}")
             # Fallback to any available model if gemini-2.5-flash fails
@@ -496,10 +493,8 @@ def extract_with_gemini(prompt, images):
                             return response.text
                 
                 raise Exception(f"No working Gemini model found. Original error: {str(model_error)}")
-                
             except Exception as fallback_error:
                 raise Exception(f"All models failed. Last error: {str(fallback_error)}")
-        
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
@@ -677,11 +672,9 @@ def scan_goodmoral():
                     "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
                     "image_paths": ",".join(saved_paths)
                 })
-                
             except json.JSONDecodeError as json_error:
                 print(f"❌ JSON Parse Error: {json_error}")
                 return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
-            
         except Exception as ai_error:
             print(f"❌ AI Extraction Failed: {ai_error}")
             traceback.print_exc()
@@ -689,7 +682,6 @@ def scan_goodmoral():
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
-            
     except Exception as e:
         print(f"❌ Good Moral Scanning Error: {e}")
         traceback.print_exc()
@@ -845,14 +837,12 @@ def save_record():
             "has_disciplinary_record": has_disciplinary_record,
             "message": "Record saved successfully."
         })
-        
     except Exception as e:
         print(f"❌ SAVE ERROR: {e}")
         traceback.print_exc()
         if conn: 
             conn.rollback()
         return jsonify({"status": "error", "error": str(e)[:200]}), 500
-        
     finally:
         if conn: 
             conn.close()
@@ -986,7 +976,6 @@ def upload_other_document(record_id):
             "document": new_document,
             "download_url": f"{request.host_url}uploads/{filename}"
         })
-        
     except Exception as e:
         print(f"❌ Upload error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -1044,7 +1033,6 @@ def delete_other_document(record_id, doc_id):
             "status": "success",
             "message": "Document deleted successfully"
         })
-        
     except Exception as e:
         print(f"❌ Delete error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -1096,7 +1084,6 @@ def uploaded_file(filename):
         response.headers['Cache-Control'] = 'public, max-age=3600'
         
         return response
-        
     except Exception as e:
         print(f"❌ Error serving file {filename}: {e}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
@@ -1218,16 +1205,13 @@ def extract_data():
                     "structured_data": data, 
                     "image_paths": ",".join(saved_paths)
                 })
-                
             except json.JSONDecodeError:
                 return jsonify({"error": "Failed to parse AI response"}), 500
-            
         except Exception as ai_error:
             return jsonify({
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
-            
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
@@ -1288,16 +1272,13 @@ def extract_form137():
                     "structured_data": data, 
                     "image_paths": ",".join(saved_paths)
                 })
-                
             except json.JSONDecodeError:
                 return jsonify({"error": "Failed to parse AI response"}), 500
-            
         except Exception as ai_error:
             return jsonify({
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
-            
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
@@ -1369,13 +1350,11 @@ def send_email_only(record_id):
                 "status": "error",
                 "error": "Failed to send email."
             }), 500
-            
     except Exception as e:
         print(f"❌ EMAIL SEND ERROR: {e}")
         if conn:
             conn.rollback()
         return jsonify({"status": "error", "error": str(e)[:200]}), 500
-        
     finally:
         if conn:
             conn.close()
@@ -1443,13 +1422,11 @@ def resend_email(record_id):
                 "status": "error",
                 "error": "Failed to send email."
             }), 500
-            
     except Exception as e:
         print(f"❌ EMAIL RESEND ERROR: {e}")
         if conn:
             conn.rollback()
         return jsonify({"status": "error", "error": str(e)[:200]}), 500
-        
     finally:
         if conn:
             conn.close()
