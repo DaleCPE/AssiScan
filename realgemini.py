@@ -4,12 +4,14 @@ from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, date
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
 from PIL import Image
+import re
+import io
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -23,13 +25,12 @@ if GEMINI_API_KEY:
         genai.configure(api_key=GEMINI_API_KEY)
         print("✅ Google Generative AI Configured")
         
-        # List available models to debug
         try:
             models = list(genai.list_models())
             print(f"📋 Available Gemini Models ({len(models)} total):")
             for model in models:
                 if "gemini" in model.name.lower():
-                    print(f"   - {model.name} (supports: {', '.join(model.supported_generation_methods)})")
+                    print(f"   - {model.name}")
         except Exception as e:
             print(f"⚠️ Could not list models: {e}")
             
@@ -45,7 +46,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
 
-# Setup CORS for Render
+# Setup CORS
 CORS(app, resources={
     r"/*": {
         "origins": ["https://assiscan-app.onrender.com", "http://localhost:10000", "http://localhost:5000"],
@@ -58,7 +59,6 @@ CORS(app, resources={
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 
-# Create uploads folder if it doesn't exist
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     print(f"📁 Created uploads folder at: {UPLOAD_FOLDER}")
@@ -71,7 +71,6 @@ def get_db_connection():
     """Get database connection for Render PostgreSQL"""
     try:
         if DATABASE_URL:
-            # Fix for Render PostgreSQL URL
             if DATABASE_URL.startswith("postgres://"):
                 DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
                 conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
@@ -150,7 +149,19 @@ def init_db():
                     year_attended VARCHAR(50),
                     special_talents TEXT,
                     is_scholar VARCHAR(10),
-                    siblings TEXT
+                    siblings TEXT,
+                    -- NEW COLUMNS FOR GOOD MORAL SCANNING
+                    goodmoral_analysis JSONB,
+                    disciplinary_status VARCHAR(50),
+                    disciplinary_remarks TEXT,
+                    goodmoral_score INTEGER DEFAULT 0,
+                    goodmoral_issued_date DATE,
+                    goodmoral_valid_until DATE,
+                    goodmoral_issuing_officer VARCHAR(255),
+                    goodmoral_issuing_school TEXT,
+                    has_disciplinary_record BOOLEAN DEFAULT FALSE,
+                    disciplinary_details TEXT,
+                    recommendation_status VARCHAR(50)
                 )
             ''')
             
@@ -201,7 +212,19 @@ def check_and_add_columns(cur, conn):
         ("year_attended", "VARCHAR(50)"),
         ("special_talents", "TEXT"),
         ("is_scholar", "VARCHAR(10)"),
-        ("siblings", "TEXT")
+        ("siblings", "TEXT"),
+        # New columns for Good Moral scanning
+        ("goodmoral_analysis", "JSONB"),
+        ("disciplinary_status", "VARCHAR(50)"),
+        ("disciplinary_remarks", "TEXT"),
+        ("goodmoral_score", "INTEGER DEFAULT 0"),
+        ("goodmoral_issued_date", "DATE"),
+        ("goodmoral_valid_until", "DATE"),
+        ("goodmoral_issuing_officer", "VARCHAR(255)"),
+        ("goodmoral_issuing_school", "TEXT"),
+        ("has_disciplinary_record", "BOOLEAN DEFAULT FALSE"),
+        ("disciplinary_details", "TEXT"),
+        ("recommendation_status", "VARCHAR(50)")
     ]
     
     for column_name, column_type in columns_to_add:
@@ -233,13 +256,28 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
     
     if not SENDGRID_API_KEY or not EMAIL_SENDER:
         print("❌ SendGrid credentials not configured")
-        print(f"   SENDGRID_API_KEY: {'SET' if SENDGRID_API_KEY else 'NOT SET'}")
-        print(f"   EMAIL_SENDER: {'SET' if EMAIL_SENDER else 'NOT SET'}")
         return True
     
     try:
         ref_id = f"AssiScan-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         subject = f"✅ AssiScan - Admission Record for {student_name}"
+        
+        # Include Good Moral status in email
+        goodmoral_status = ""
+        if student_data and 'disciplinary_status' in student_data:
+            status = student_data.get('disciplinary_status', 'Unknown')
+            score = student_data.get('goodmoral_score', 0)
+            
+            if status == 'EXCELLENT':
+                goodmoral_status = f"📈 Good Moral Status: EXCELLENT (Score: {score}/100)\n• No disciplinary issues found\n• Recommended for admission"
+            elif status == 'GOOD':
+                goodmoral_status = f"✅ Good Moral Status: GOOD (Score: {score}/100)\n• Minor or no issues\n• Eligible for admission"
+            elif status == 'FAIR':
+                goodmoral_status = f"⚠️ Good Moral Status: FAIR (Score: {score}/100)\n• Some concerns noted\n• Review recommended"
+            elif status == 'POOR':
+                goodmoral_status = f"❌ Good Moral Status: POOR (Score: {score}/100)\n• Significant disciplinary issues\n• Requires evaluation"
+            else:
+                goodmoral_status = "📄 Good Moral Status: Pending analysis"
         
         # Format student data for email
         student_info = ""
@@ -286,13 +324,17 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Program Applied: {student_data.get('program', 'N/A')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📝 ADDITIONAL INFORMATION
+📝 GOOD MORAL CERTIFICATE ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━
-• School Year: {student_data.get('school_year', 'N/A')}
-• Is IP: {student_data.get('is_ip', 'No')}
-• Is PWD: {student_data.get('is_pwd', 'No')}
-• Has Medication: {student_data.get('has_medication', 'No')}
-• Special Talents: {student_data.get('special_talents', 'N/A')}
+{goodmoral_status}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 VERIFICATION DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Verification Date: {datetime.now().strftime('%B %d, %Y')}
+• Verification Time: {datetime.now().strftime('%I:%M %p')}
+• Reference ID: {ref_id}
+• Status: ✅ VERIFIED & PROCESSED
 """
         else:
             student_info = "⚠️ Student information not available in this record."
@@ -304,14 +346,6 @@ Dear {student_name},
 Your admission documents have been successfully processed through the AssiScan System. Below is a summary of your extracted information:
 
 {student_info}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-📅 VERIFICATION DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━
-• Verification Date: {datetime.now().strftime('%B %d, %Y')}
-• Verification Time: {datetime.now().strftime('%I:%M %p')}
-• Reference ID: {ref_id}
-• Status: ✅ VERIFIED & PROCESSED
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📝 NEXT STEPS
@@ -370,11 +404,7 @@ University of Batangas Lipa
             print(f"📧 Reference ID: {ref_id}")
             return True
         else:
-            print(f"❌ SendGrid API Error: {response.status_code}")
-            print(f"   Response: {response.text[:200]}")
-            print(f"📝 [FALLBACK] Would have sent email to {recipient_email}")
-            print(f"   Subject: {subject}")
-            print(f"   Reference: {ref_id}")
+            print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
             return True
             
     except Exception as e:
@@ -394,7 +424,7 @@ def save_multiple_files(files, prefix):
             filename = secure_filename(f"{prefix}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
-            saved_paths.append(filename)  # Store only filename
+            saved_paths.append(filename)
             try:
                 img = Image.open(path)
                 pil_images.append(img)
@@ -405,22 +435,16 @@ def save_multiple_files(files, prefix):
     return saved_paths, pil_images
 
 def extract_with_gemini(prompt, images):
-    """Use Gemini 2.5 Flash or fallback to available models"""
+    """Use Gemini for text extraction"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        # Try different model names in order of preference
         model_versions = [
-            "gemini-2.5-flash",        # Latest version
-            "gemini-2.5-flash-exp",     # Experimental
-            "gemini-2.0-flash",         # Version 2.0
-            "gemini-2.0-flash-exp",     # Experimental 2.0
-            "gemini-1.5-flash-8b",      # 8B parameter version
-            "gemini-1.5-flash",         # Original 1.5 flash
-            "gemini-1.5-pro",           # Pro version
-            "gemini-pro",               # Legacy pro
-            "gemini-flash"              # Basic flash
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+            "gemini-pro"
         ]
         
         last_error = None
@@ -430,12 +454,10 @@ def extract_with_gemini(prompt, images):
                 print(f"🤖 Trying model: {model_name}")
                 model = genai.GenerativeModel(model_name)
                 
-                # Prepare content
                 content_parts = [prompt]
                 for img in images:
                     content_parts.append(img)
                 
-                # Generate response with timeout
                 response = model.generate_content(
                     content_parts,
                     generation_config=genai.types.GenerationConfig(
@@ -457,12 +479,50 @@ def extract_with_gemini(prompt, images):
                 last_error = model_error
                 continue
         
-        # If all models fail
         raise Exception(f"All models failed. Last error: {str(last_error)[:200]}")
             
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
+
+def calculate_goodmoral_score(analysis_data):
+    """Calculate Good Moral score based on analysis"""
+    score = 100  # Start with perfect score
+    
+    # Deduct points for disciplinary issues
+    if analysis_data.get('has_disciplinary_record'):
+        score -= 40
+    
+    # Check for serious violations
+    serious_violations = ['suspended', 'expelled', 'disciplinary action', 'major violation']
+    remarks = analysis_data.get('remarks', '').lower()
+    
+    for violation in serious_violations:
+        if violation in remarks:
+            score -= 30
+            break
+    
+    # Deduct for conditional phrases
+    conditional_phrases = ['conditional', 'subject to', 'pending', 'under review']
+    for phrase in conditional_phrases:
+        if phrase in remarks:
+            score -= 20
+            break
+    
+    # Ensure score is between 0-100
+    score = max(0, min(100, score))
+    
+    # Determine status based on score
+    if score >= 90:
+        status = 'EXCELLENT'
+    elif score >= 70:
+        status = 'GOOD'
+    elif score >= 50:
+        status = 'FAIR'
+    else:
+        status = 'POOR'
+    
+    return score, status
 
 # ================= ROUTES =================
 
@@ -493,65 +553,280 @@ def history_page():
         return redirect('/login') 
     return render_template('history.html')
 
-# ================= FIXED UPLOADED FILE ROUTE =================
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    """Serve uploaded files - FIXED FOR RENDER"""
+# ================= GOOD MORAL SCANNING ENDPOINT =================
+@app.route('/scan-goodmoral', methods=['POST'])
+def scan_goodmoral():
+    """
+    Scan and analyze Good Moral Certificate
+    Returns: Status, Score, and Analysis
+    """
+    if 'imageFiles' not in request.files: 
+        return jsonify({"error": "No files uploaded"}), 400
+    
+    files = request.files.getlist('imageFiles')
+    if not files or files[0].filename == '': 
+        return jsonify({"error": "No selected file"}), 400
+
     try:
-        # Security check
-        if '..' in filename or filename.startswith('/'):
-            return "Invalid filename", 400
+        saved_paths, pil_images = save_multiple_files(files, "GOODMORAL")
         
-        # Extract just the filename (handle cases where full path might be stored)
-        clean_filename = filename.split('/')[-1] if '/' in filename else filename
+        if not pil_images:
+            return jsonify({"error": "No valid images found"}), 400
+
+        print(f"📄 Processing Good Moral Certificate with Gemini")
         
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
+        prompt = """You are an expert document processor for Philippine Good Moral Certificates.
         
-        # Check if file exists
-        if not os.path.exists(file_path):
-            print(f"❌ File not found: {clean_filename}")
-            # Try to find similar file
-            if os.path.exists(app.config['UPLOAD_FOLDER']):
-                all_files = os.listdir(app.config['UPLOAD_FOLDER'])
-                matching = [f for f in all_files if clean_filename in f]
-                if matching:
-                    print(f"   Found similar: {matching[0]}")
-                    return send_from_directory(app.config['UPLOAD_FOLDER'], matching[0])
-            
-            print(f"   Available files: {os.listdir(app.config['UPLOAD_FOLDER'])[:10] if os.path.exists(app.config['UPLOAD_FOLDER']) else 'No uploads folder'}")
-            return jsonify({"error": f"File '{clean_filename}' not found"}), 404
+        Analyze this Good Moral Certificate and extract ALL relevant information.
         
-        # Determine MIME type
-        mime_types = {
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.pdf': 'application/pdf',
-            '.txt': 'text/plain'
+        IMPORTANT: Focus on identifying if there are any disciplinary issues or negative remarks.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "is_valid_certificate": true,
+            "student_name": "Full Name of Student",
+            "issuing_school": "Name of Issuing School",
+            "issuing_officer": "Name of Issuing Officer/Principal",
+            "issued_date": "YYYY-MM-DD format",
+            "validity_period": "Number of months valid",
+            "certificate_type": "Good Moral Certificate / Certificate of Good Moral Character",
+            "remarks": "Any remarks or conditions mentioned",
+            "has_disciplinary_record": false,
+            "disciplinary_details": "Details of any disciplinary actions if mentioned",
+            "recommendation_statement": "The recommendation statement text",
+            "special_conditions": "Any special conditions or limitations",
+            "certificate_number": "Certificate number if present"
         }
         
-        ext = os.path.splitext(clean_filename)[1].lower()
-        mimetype = mime_types.get(ext, 'application/octet-stream')
+        CRITICAL ANALYSIS:
+        1. If the certificate mentions any suspensions, disciplinary actions, or negative behavior, set "has_disciplinary_record": true
+        2. Look for phrases like: "subject to", "conditional", "pending", "under review", "with reservations"
+        3. Extract the exact remarks about the student's behavior
         
-        # Send file with proper headers for Render
-        response = send_file(
-            file_path,
-            mimetype=mimetype,
-            as_attachment=False,
-            download_name=clean_filename
-        )
+        If the document is not a valid Good Moral Certificate, set "is_valid_certificate": false.
         
-        # Add CORS headers for Render
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Cache-Control'] = 'public, max-age=3600'
+        Return ONLY the JSON, no additional text."""
         
-        return response
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
+            
+            # Clean the response
+            cleaned_text = response_text.strip()
+            
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            # Find JSON
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                print(f"❌ Could not find JSON in response")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            
+            try:
+                analysis_data = json.loads(json_str)
+                print(f"✅ Successfully parsed Good Moral analysis")
+                
+                # Validate required fields
+                if not analysis_data.get("is_valid_certificate", False):
+                    return jsonify({
+                        "error": "Invalid Good Moral Certificate"
+                    }), 400
+                
+                # Calculate score and status
+                score, status = calculate_goodmoral_score(analysis_data)
+                
+                # Add calculated fields
+                analysis_data['goodmoral_score'] = score
+                analysis_data['disciplinary_status'] = status
+                
+                # Calculate validity date if issued_date exists
+                if analysis_data.get('issued_date'):
+                    try:
+                        issued = datetime.strptime(analysis_data['issued_date'], '%Y-%m-%d')
+                        validity_months = int(analysis_data.get('validity_period', 6))
+                        valid_until = issued.replace(month=issued.month + validity_months)
+                        analysis_data['valid_until_date'] = valid_until.strftime('%Y-%m-%d')
+                    except:
+                        analysis_data['valid_until_date'] = None
+                
+                return jsonify({
+                    "message": "Good Moral Certificate analyzed successfully",
+                    "analysis": analysis_data,
+                    "goodmoral_score": score,
+                    "disciplinary_status": status,
+                    "image_paths": ",".join(saved_paths),
+                    "has_issues": analysis_data.get('has_disciplinary_record', False)
+                })
+                
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
+            
+        except Exception as ai_error:
+            print(f"❌ AI Extraction Failed: {ai_error}")
+            traceback.print_exc()
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ Good Moral Scanning Error: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
+
+# ================= UPDATED SAVE RECORD ENDPOINT =================
+@app.route('/save-record', methods=['POST'])
+def save_record():
+    conn = None
+    try:
+        d = request.json
+        print(f"📥 Saving record with Good Moral analysis")
+        
+        # Check if Good Moral data is included
+        goodmoral_analysis = d.get('goodmoral_analysis')
+        disciplinary_status = d.get('disciplinary_status')
+        goodmoral_score = d.get('goodmoral_score')
+        
+        siblings_list = d.get('siblings', [])
+        siblings_json = json.dumps(siblings_list)
+        
+        conn = get_db_connection()
+        if not conn: 
+            return jsonify({"error": "DB Connection Failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Check for duplicates
+        if d.get('name') and d.get('birthdate'):
+            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", 
+                       (d.get('name'), d.get('birthdate')))
+            if cur.fetchone():
+                return jsonify({
+                    "status": "error", 
+                    "error": "DUPLICATE_ENTRY", 
+                    "message": "Record already exists."
+                }), 409
+
+        # Convert goodmoral_analysis to JSON string if it's a dict
+        goodmoral_analysis_json = None
+        if goodmoral_analysis:
+            if isinstance(goodmoral_analysis, dict):
+                goodmoral_analysis_json = json.dumps(goodmoral_analysis)
+            else:
+                goodmoral_analysis_json = goodmoral_analysis
+        
+        # Insert record with Good Moral data
+        cur.execute('''
+            INSERT INTO records (
+                name, sex, birthdate, birthplace, birth_order, religion, age,
+                mother_name, mother_citizenship, mother_occupation, 
+                father_name, father_citizenship, father_occupation, 
+                lrn, school_name, school_address, final_general_average,
+                image_path, form137_path, goodmoral_path,
+                email, mobile_no, civil_status, nationality,
+                mother_contact, father_contact,
+                guardian_name, guardian_relation, guardian_contact,
+                region, province, specific_address,
+                school_year, student_type, program, last_level_attended,
+                is_ip, is_pwd, has_medication, is_working,
+                residence_type, employer_name, marital_status,
+                is_gifted, needs_assistance, school_type, year_attended, 
+                special_talents, is_scholar, siblings,
+                -- Good Moral fields
+                goodmoral_analysis, disciplinary_status, goodmoral_score,
+                goodmoral_issued_date, goodmoral_valid_until, 
+                goodmoral_issuing_officer, goodmoral_issuing_school,
+                has_disciplinary_record, disciplinary_details,
+                recommendation_status
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, 
+                %s, %s, %s, 
+                %s, %s, %s, %s, 
+                %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s,
+                %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s,
+                -- Good Moral fields
+                %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s
+            ) 
+            RETURNING id
+        ''', (
+            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
+            d.get('birth_order'), d.get('religion'), d.get('age'),
+            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
+            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
+            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
+            d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
+            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
+            d.get('mother_contact'), d.get('father_contact'),
+            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
+            d.get('region'), d.get('province'), d.get('specific_address'),
+            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
+            d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
+            d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
+            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
+            d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
+            siblings_json,
+            # Good Moral fields
+            goodmoral_analysis_json,
+            disciplinary_status,
+            goodmoral_score,
+            d.get('goodmoral_issued_date'),
+            d.get('goodmoral_valid_until'),
+            d.get('goodmoral_issuing_officer'),
+            d.get('goodmoral_issuing_school'),
+            d.get('has_disciplinary_record', False),
+            d.get('disciplinary_details'),
+            d.get('recommendation_status')
+        ))
+        
+        new_id = cur.fetchone()[0]
+        conn.commit()
+
+        print(f"✅ Record saved with ID: {new_id}")
+        print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
+        
+        if disciplinary_status in ['POOR', 'FAIR']:
+            print(f"⚠️ WARNING: Student has disciplinary concerns")
+
+        return jsonify({
+            "status": "success", 
+            "db_id": new_id,
+            "goodmoral_score": goodmoral_score,
+            "disciplinary_status": disciplinary_status,
+            "message": "Record saved successfully."
+        })
         
     except Exception as e:
-        print(f"❌ Error serving file {filename}: {e}")
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        print(f"❌ SAVE ERROR: {e}")
+        traceback.print_exc()
+        if conn: 
+            conn.rollback()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
+        
+    finally:
+        if conn: 
+            conn.close()
 
+# ================= UPDATED GET RECORDS ENDPOINT =================
 @app.route('/get-records', methods=['GET'])
 def get_records():
     if not session.get('logged_in'):
@@ -574,16 +849,20 @@ def get_records():
             if r['email_sent_at']: 
                 r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
             
-            # FIX: Process image paths for frontend
+            # Parse Good Moral analysis JSON
+            if r.get('goodmoral_analysis'):
+                try:
+                    r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                except:
+                    r['goodmoral_analysis'] = {}
+            
+            # Process image paths
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
                 if r.get(field):
-                    # Handle comma-separated paths
                     paths = str(r[field]).split(',')
                     if paths and paths[0].strip():
-                        # Take first filename only
                         first_path = paths[0].strip()
-                        # Extract just the filename (remove any directory path)
                         if '/' in first_path:
                             first_path = first_path.split('/')[-1]
                         r[field] = first_path
@@ -601,6 +880,292 @@ def get_records():
         return jsonify({"records": [], "error": str(e)})
     finally:
         conn.close()
+
+# ================= NEW: GET STUDENT GOOD MORAL STATUS =================
+@app.route('/get-goodmoral-status/<int:record_id>', methods=['GET'])
+def get_goodmoral_status(record_id):
+    """Get detailed Good Moral status for a student"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT name, goodmoral_score, disciplinary_status, disciplinary_remarks,
+                   has_disciplinary_record, disciplinary_details, recommendation_status,
+                   goodmoral_analysis, goodmoral_issued_date, goodmoral_valid_until
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        # Parse analysis JSON
+        analysis = {}
+        if record.get('goodmoral_analysis'):
+            try:
+                analysis = json.loads(record['goodmoral_analysis'])
+            except:
+                analysis = {}
+        
+        # Format dates
+        issued_date = str(record['goodmoral_issued_date']) if record['goodmoral_issued_date'] else None
+        valid_until = str(record['goodmoral_valid_until']) if record['goodmoral_valid_until'] else None
+        
+        return jsonify({
+            "student_name": record['name'],
+            "goodmoral_score": record['goodmoral_score'] or 0,
+            "disciplinary_status": record['disciplinary_status'] or "UNKNOWN",
+            "has_disciplinary_record": record['has_disciplinary_record'] or False,
+            "disciplinary_details": record['disciplinary_details'],
+            "recommendation_status": record['recommendation_status'],
+            "issued_date": issued_date,
+            "valid_until": valid_until,
+            "analysis": analysis,
+            "status_description": get_status_description(record['disciplinary_status'])
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+def get_status_description(status):
+    """Get description for disciplinary status"""
+    descriptions = {
+        'EXCELLENT': 'No disciplinary issues. Highly recommended for admission.',
+        'GOOD': 'Minor or no issues. Eligible for admission.',
+        'FAIR': 'Some concerns noted. Review recommended.',
+        'POOR': 'Significant disciplinary issues. Requires evaluation.',
+        'UNKNOWN': 'Status not determined.'
+    }
+    return descriptions.get(status, 'Status not determined.')
+
+# ================= NEW: SEARCH STUDENTS BY MORAL STATUS =================
+@app.route('/search-by-moral-status', methods=['GET'])
+def search_by_moral_status():
+    """Search records by Good Moral status"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    status = request.args.get('status', '')  # EXCELLENT, GOOD, FAIR, POOR
+    
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        if status:
+            cur.execute("""
+                SELECT id, name, goodmoral_score, disciplinary_status, 
+                       has_disciplinary_record, created_at
+                FROM records 
+                WHERE disciplinary_status = %s
+                ORDER BY goodmoral_score DESC
+            """, (status,))
+        else:
+            cur.execute("""
+                SELECT id, name, goodmoral_score, disciplinary_status, 
+                       has_disciplinary_record, created_at
+                FROM records 
+                WHERE disciplinary_status IS NOT NULL
+                ORDER BY goodmoral_score DESC
+            """)
+        
+        records = cur.fetchall()
+        
+        # Format dates
+        for r in records:
+            if r['created_at']:
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify({
+            "status_filter": status,
+            "count": len(records),
+            "records": records
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= NEW: GET STUDENTS WITH DISCIPLINARY ISSUES =================
+@app.route('/students-with-issues', methods=['GET'])
+def students_with_issues():
+    """Get all students with disciplinary issues"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT id, name, goodmoral_score, disciplinary_status, 
+                   disciplinary_details, has_disciplinary_record, created_at
+            FROM records 
+            WHERE has_disciplinary_record = TRUE OR disciplinary_status IN ('FAIR', 'POOR')
+            ORDER BY goodmoral_score ASC, created_at DESC
+        """)
+        
+        records = cur.fetchall()
+        
+        for r in records:
+            if r['created_at']:
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify({
+            "count": len(records),
+            "records": records
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= NEW: UPDATE GOOD MORAL STATUS MANUALLY =================
+@app.route('/update-goodmoral-status/<int:record_id>', methods=['POST'])
+def update_goodmoral_status(record_id):
+    """Manually update Good Moral status (for admin)"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    conn = get_db_connection()
+    
+    try:
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE records SET 
+                disciplinary_status = %s,
+                goodmoral_score = %s,
+                disciplinary_remarks = %s,
+                has_disciplinary_record = %s,
+                disciplinary_details = %s,
+                recommendation_status = %s
+            WHERE id = %s
+        """, (
+            data.get('disciplinary_status'),
+            data.get('goodmoral_score'),
+            data.get('disciplinary_remarks'),
+            data.get('has_disciplinary_record', False),
+            data.get('disciplinary_details'),
+            data.get('recommendation_status'),
+            record_id
+        ))
+        
+        conn.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Good Moral status updated successfully"
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= NEW: GOOD MORAL STATISTICS =================
+@app.route('/goodmoral-statistics', methods=['GET'])
+def goodmoral_statistics():
+    """Get statistics about Good Moral certificates"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        
+        # Total records with Good Moral
+        cur.execute("SELECT COUNT(*) FROM records WHERE goodmoral_path IS NOT NULL")
+        total_with_goodmoral = cur.fetchone()[0]
+        
+        # Count by status
+        cur.execute("""
+            SELECT disciplinary_status, COUNT(*) as count
+            FROM records 
+            WHERE disciplinary_status IS NOT NULL
+            GROUP BY disciplinary_status
+        """)
+        status_counts = dict(cur.fetchall())
+        
+        # Average score
+        cur.execute("SELECT AVG(goodmoral_score) FROM records WHERE goodmoral_score > 0")
+        avg_score = cur.fetchone()[0] or 0
+        
+        # Students with issues
+        cur.execute("SELECT COUNT(*) FROM records WHERE has_disciplinary_record = TRUE")
+        with_issues = cur.fetchone()[0]
+        
+        # Recent certificates (last 30 days)
+        cur.execute("""
+            SELECT COUNT(*) FROM records 
+            WHERE goodmoral_path IS NOT NULL 
+            AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+        """)
+        recent_certificates = cur.fetchone()[0]
+        
+        return jsonify({
+            "total_with_goodmoral": total_with_goodmoral,
+            "status_distribution": status_counts,
+            "average_score": float(avg_score),
+            "students_with_issues": with_issues,
+            "recent_certificates": recent_certificates,
+            "generated_at": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= OTHER EXISTING ENDPOINTS =================
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files"""
+    try:
+        if '..' in filename or filename.startswith('/'):
+            return "Invalid filename", 400
+        
+        clean_filename = filename.split('/')[-1] if '/' in filename else filename
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
+        
+        if not os.path.exists(file_path):
+            print(f"❌ File not found: {clean_filename}")
+            if os.path.exists(app.config['UPLOAD_FOLDER']):
+                all_files = os.listdir(app.config['UPLOAD_FOLDER'])
+                matching = [f for f in all_files if clean_filename in f]
+                if matching:
+                    return send_from_directory(app.config['UPLOAD_FOLDER'], matching[0])
+            
+            return jsonify({"error": f"File '{clean_filename}' not found"}), 404
+        
+        mime_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.pdf': 'application/pdf',
+            '.txt': 'text/plain'
+        }
+        
+        ext = os.path.splitext(clean_filename)[1].lower()
+        mimetype = mime_types.get(ext, 'application/octet-stream')
+        
+        response = send_file(
+            file_path,
+            mimetype=mimetype,
+            as_attachment=False,
+            download_name=clean_filename
+        )
+        
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error serving file {filename}: {e}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/view-form/<int:record_id>')
 def view_form(record_id):
@@ -624,6 +1189,13 @@ def view_form(record_id):
                     record['siblings'] = []
             else:
                 record['siblings'] = []
+                
+            # Parse Good Moral analysis
+            if record.get('goodmoral_analysis'):
+                try:
+                    record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
+                except:
+                    record['goodmoral_analysis'] = {}
 
             return render_template('print_form.html', r=record)
         else:
@@ -633,60 +1205,7 @@ def view_form(record_id):
     finally:
         conn.close()
 
-@app.route('/update-record', methods=['POST'])
-def update_record():
-    """Update record from history page"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.json
-    record_id = data.get('id')
-    
-    if not record_id:
-        return jsonify({"error": "Record ID required"}), 400
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-    
-    try:
-        cur = conn.cursor()
-        
-        # Update the record
-        cur.execute('''
-            UPDATE records SET 
-                name = %s,
-                sex = %s,
-                birthdate = %s,
-                province = %s,
-                lrn = %s,
-                school_name = %s,
-                final_general_average = %s,
-                program = %s
-            WHERE id = %s
-        ''', (
-            data.get('name'),
-            data.get('sex'),
-            data.get('birthdate'),
-            data.get('province'),
-            data.get('lrn'),
-            data.get('school_name'),
-            data.get('final_general_average'),
-            data.get('program'),
-            record_id
-        ))
-        
-        conn.commit()
-        return jsonify({"success": True, "message": "Record updated successfully"})
-        
-    except Exception as e:
-        print(f"❌ Update error: {e}")
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-# --- EXTRACT PSA WITH GEMINI 2.5 FLASH ---
+# ================= EXISTING PSA AND FORM 137 ENDPOINTS =================
 @app.route('/extract', methods=['POST'])
 def extract_data():
     if 'imageFiles' not in request.files: 
@@ -702,16 +1221,13 @@ def extract_data():
         if not pil_images:
              return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📸 Processing {len(pil_images)} PSA pages with Gemini 2.5 Flash")
+        print(f"📸 Processing PSA with Gemini")
         
-        prompt = """You are an expert document processor specializing in Philippine PSA Birth Certificates.
-        
-        Extract ALL information from this document accurately.
+        prompt = """Extract information from this PSA Birth Certificate.
         
         Return ONLY a valid JSON object with the following structure:
         {
             "is_valid_document": true,
-            "rejection_reason": null,
             "Name": "Full Name Here",
             "Sex": "Male or Female",
             "Birthdate": "YYYY-MM-DD format",
@@ -726,42 +1242,32 @@ def extract_data():
             "Father_Occupation": "Occupation if stated"
         }
         
-        If the document is not a valid PSA Birth Certificate, set "is_valid_document": false and provide "rejection_reason".
+        Return ONLY the JSON, no additional text."""
         
-        IMPORTANT: Return ONLY the JSON, no additional text, no markdown, no code blocks."""
-        
-        # Extract using Gemini
         try:
             response_text = extract_with_gemini(prompt, pil_images)
-            print(f"✅ Gemini Response received: {len(response_text)} characters")
             
-            # Clean the response
             cleaned_text = response_text.strip()
             
-            # Remove markdown code blocks if present
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
                 if lines[0].startswith('```'):
                     cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
             
-            # Find JSON
             start = cleaned_text.find('{')
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                print(f"❌ Could not find JSON in response: {cleaned_text[:200]}")
                 return jsonify({"error": "Invalid JSON response from AI"}), 500
                 
             json_str = cleaned_text[start:end]
             
             try:
                 data = json.loads(json_str)
-                print(f"✅ Successfully parsed JSON data")
                 
-                # Validate required fields
                 if not data.get("is_valid_document", False):
                     return jsonify({
-                        "error": f"Invalid document: {data.get('rejection_reason', 'Not a valid PSA')}"
+                        "error": f"Invalid document"
                     }), 400
                 
                 return jsonify({
@@ -770,25 +1276,18 @@ def extract_data():
                     "image_paths": ",".join(saved_paths)
                 })
                 
-            except json.JSONDecodeError as json_error:
-                print(f"❌ JSON Parse Error: {json_error}")
-                print(f"❌ Problematic JSON: {json_str[:500]}")
-                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
             
         except Exception as ai_error:
-            print(f"❌ AI Extraction Failed: {ai_error}")
-            traceback.print_exc()
             return jsonify({
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
             
     except Exception as e:
-        print(f"❌ Server Error: {e}")
-        traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
-# --- EXTRACT FORM 137 WITH GEMINI 2.5 FLASH ---
 @app.route('/extract-form137', methods=['POST'])
 def extract_form137():
     if 'imageFiles' not in request.files: 
@@ -800,59 +1299,44 @@ def extract_form137():
     
     try:
         saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137: {len(pil_images)} pages with Gemini 2.5 Flash")
+        print(f"📸 Processing Form 137")
 
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
         
-        prompt = """You are an expert document processor for Philippine educational records.
-        
-        Extract information from this Form 137 / SF10 document.
+        prompt = """Extract information from this Form 137 / SF10 document.
         
         Return ONLY a valid JSON object with the following structure:
         {
             "lrn": "12-digit Learner Reference Number",
             "school_name": "Complete School Name",
-            "school_address": "Complete School Address (Barangay, City/Municipality, Province)",
-            "final_general_average": "Numerical grade (e.g., 85.5, 90.0)"
+            "school_address": "Complete School Address",
+            "final_general_average": "Numerical grade"
         }
         
-        IMPORTANT:
-        1. LRN must be exactly 12 digits if available
-        2. School name should be the complete official name
-        3. School address should include barangay, city/municipality, and province
-        4. Final general average should be the most recent average found
-        
-        Return ONLY the JSON, no additional text, no markdown, no code blocks."""
+        Return ONLY the JSON, no additional text."""
         
         try:
             response_text = extract_with_gemini(prompt, pil_images)
-            print(f"✅ Gemini Response received: {len(response_text)} characters")
             
-            # Clean the response
             cleaned_text = response_text.strip()
             
-            # Remove markdown code blocks if present
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
                 if lines[0].startswith('```'):
                     cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
             
-            # Find JSON
             start = cleaned_text.find('{')
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                print(f"❌ Could not find JSON in response: {cleaned_text[:200]}")
                 return jsonify({"error": "Invalid JSON response from AI"}), 500
                 
             json_str = cleaned_text[start:end]
             
             try:
                 data = json.loads(json_str)
-                print(f"✅ Successfully parsed Form 137 data")
                 
-                # Format LRN to ensure it's a string
                 if 'lrn' in data and data['lrn']:
                     data['lrn'] = str(data['lrn']).strip()
                 
@@ -862,135 +1346,22 @@ def extract_form137():
                     "image_paths": ",".join(saved_paths)
                 })
                 
-            except json.JSONDecodeError as json_error:
-                print(f"❌ JSON Parse Error: {json_error}")
-                print(f"❌ Problematic JSON: {json_str[:500]}")
-                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
             
         except Exception as ai_error:
-            print(f"❌ AI Extraction Failed: {ai_error}")
-            traceback.print_exc()
             return jsonify({
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
             
     except Exception as e:
-        print(f"❌ Form 137 Error: {e}")
-        traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
-# --- SAVE RECORD TO DATABASE (NO EMAIL) ---
-@app.route('/save-record', methods=['POST'])
-def save_record():
-    conn = None
-    try:
-        d = request.json
-        print(f"📥 Saving record to database only (no email)")
-        
-        siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list)
-        
-        conn = get_db_connection()
-        if not conn: 
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor()
-        
-        # Check for duplicates
-        if d.get('name') and d.get('birthdate'):
-            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", 
-                       (d.get('name'), d.get('birthdate')))
-            if cur.fetchone():
-                return jsonify({
-                    "status": "error", 
-                    "error": "DUPLICATE_ENTRY", 
-                    "message": "Record already exists."
-                }), 409
-
-        # Insert record WITHOUT sending email
-        cur.execute('''
-            INSERT INTO records (
-                name, sex, birthdate, birthplace, birth_order, religion, age,
-                mother_name, mother_citizenship, mother_occupation, 
-                father_name, father_citizenship, father_occupation, 
-                lrn, school_name, school_address, final_general_average,
-                image_path, form137_path,
-                email, mobile_no, civil_status, nationality,
-                mother_contact, father_contact,
-                guardian_name, guardian_relation, guardian_contact,
-                region, province, specific_address,
-                school_year, student_type, program, last_level_attended,
-                is_ip, is_pwd, has_medication, is_working,
-                residence_type, employer_name, marital_status,
-                is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, 
-                %s, %s, %s, 
-                %s, %s, %s, %s, 
-                %s, %s,
-                %s, %s, %s, %s,
-                %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s, %s, %s,
-                %s
-            ) 
-            RETURNING id
-        ''', (
-            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-            d.get('birth_order'), d.get('religion'), d.get('age'),
-            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
-            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
-            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            d.get('psa_image_path', ''), d.get('f137_image_path', ''), 
-            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
-            d.get('mother_contact'), d.get('father_contact'),
-            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
-            d.get('region'), d.get('province'), d.get('specific_address'),
-            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
-            d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-            d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
-            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
-            d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json
-        ))
-        
-        new_id = cur.fetchone()[0]
-        conn.commit()
-
-        print(f"✅ Record saved to database with ID: {new_id}")
-        print("ℹ️ Email will be sent separately when user clicks Send button")
-
-        return jsonify({
-            "status": "success", 
-            "db_id": new_id,
-            "message": "Record saved successfully. You can now send the email separately."
-        })
-        
-    except Exception as e:
-        print(f"❌ SAVE ERROR: {e}")
-        traceback.print_exc()
-        if conn: 
-            conn.rollback()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-        
-    finally:
-        if conn: 
-            conn.close()
-
-# --- SEND EMAIL ONLY (SEPARATE ENDPOINT) ---
+# ================= EMAIL ENDPOINTS =================
 @app.route('/send-email/<int:record_id>', methods=['POST'])
 def send_email_only(record_id):
-    """
-    Separate endpoint to send email for a saved record
-    """
+    """Send email for a saved record"""
     conn = None
     try:
         conn = get_db_connection()
@@ -999,9 +1370,10 @@ def send_email_only(record_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record details WITH ALL STUDENT DATA
+        # Get record details
         cur.execute("""
             SELECT name, email, email_sent, 
+                   goodmoral_score, disciplinary_status,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
                    mother_name, mother_citizenship, mother_contact,
@@ -1020,26 +1392,20 @@ def send_email_only(record_id):
             return jsonify({"error": "Record not found"}), 404
         
         if record.get('email_sent'):
-            return jsonify({"warning": "Email has already been sent for this record"}), 400
+            return jsonify({"warning": "Email has already been sent"}), 400
         
         email_addr = record['email']
         student_name = record['name']
         
         if not email_addr:
-            return jsonify({"error": "No email address found for this record"}), 400
+            return jsonify({"error": "No email address found"}), 400
         
-        # Send email with student data
-        print(f"\n📧 [SEND EMAIL] Sending email for record ID: {record_id}")
-        print(f"   Student: {student_name}")
-        print(f"   Email: {email_addr}")
+        print(f"\n📧 Sending email for record ID: {record_id}")
         
-        # Convert record dict to regular dict for email function
         student_data = dict(record)
-        
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
         
         if email_sent:
-            # Update database to mark email as sent
             cur.execute("""
                 UPDATE records 
                 SET email_sent = TRUE, email_sent_at = CURRENT_TIMESTAMP 
@@ -1047,7 +1413,7 @@ def send_email_only(record_id):
             """, (record_id,))
             conn.commit()
             
-            print(f"✅ Email sent and record updated for ID: {record_id}")
+            print(f"✅ Email sent for ID: {record_id}")
             return jsonify({
                 "status": "success",
                 "message": f"Email sent successfully to {email_addr}",
@@ -1056,12 +1422,11 @@ def send_email_only(record_id):
         else:
             return jsonify({
                 "status": "error",
-                "error": "Failed to send email. Please check email configuration."
+                "error": "Failed to send email."
             }), 500
             
     except Exception as e:
         print(f"❌ EMAIL SEND ERROR: {e}")
-        traceback.print_exc()
         if conn:
             conn.rollback()
         return jsonify({"status": "error", "error": str(e)[:200]}), 500
@@ -1070,12 +1435,9 @@ def send_email_only(record_id):
         if conn:
             conn.close()
 
-# --- RESEND EMAIL ENDPOINT ---
 @app.route('/resend-email/<int:record_id>', methods=['POST'])
 def resend_email(record_id):
-    """
-    Resend email even if already sent
-    """
+    """Resend email even if already sent"""
     conn = None
     try:
         conn = get_db_connection()
@@ -1084,9 +1446,9 @@ def resend_email(record_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record details WITH ALL STUDENT DATA
         cur.execute("""
             SELECT name, email, 
+                   goodmoral_score, disciplinary_status,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
                    mother_name, mother_citizenship, mother_contact,
@@ -1108,20 +1470,14 @@ def resend_email(record_id):
         student_name = record['name']
         
         if not email_addr:
-            return jsonify({"error": "No email address found for this record"}), 400
+            return jsonify({"error": "No email address found"}), 400
         
-        # Send email with student data
-        print(f"\n📧 [RESEND EMAIL] Resending email for record ID: {record_id}")
-        print(f"   Student: {student_name}")
-        print(f"   Email: {email_addr}")
+        print(f"\n📧 Resending email for ID: {record_id}")
         
-        # Convert record dict to regular dict for email function
         student_data = dict(record)
-        
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
         
         if email_sent:
-            # Update timestamp even if resending
             cur.execute("""
                 UPDATE records 
                 SET email_sent_at = CURRENT_TIMESTAMP 
@@ -1138,12 +1494,11 @@ def resend_email(record_id):
         else:
             return jsonify({
                 "status": "error",
-                "error": "Failed to send email. Please check email configuration."
+                "error": "Failed to send email."
             }), 500
             
     except Exception as e:
         print(f"❌ EMAIL RESEND ERROR: {e}")
-        traceback.print_exc()
         if conn:
             conn.rollback()
         return jsonify({"status": "error", "error": str(e)[:200]}), 500
@@ -1152,210 +1507,7 @@ def resend_email(record_id):
         if conn:
             conn.close()
 
-# --- DIAGNOSTIC ENDPOINTS ---
-@app.route('/list-models', methods=['GET'])
-def list_models():
-    """List available Gemini models"""
-    try:
-        if not GEMINI_API_KEY:
-            return jsonify({"error": "GEMINI_API_KEY not set"}), 400
-        
-        models = list(genai.list_models())
-        gemini_models = []
-        
-        for model in models:
-            if "gemini" in model.name.lower():
-                gemini_models.append({
-                    "name": model.name,
-                    "display_name": model.display_name,
-                    "supported_methods": model.supported_generation_methods,
-                    "description": model.description[:100] if model.description else ""
-                })
-        
-        return jsonify({
-            "total_models": len(models),
-            "gemini_models": gemini_models,
-            "note": "Use the 'name' field in your code"
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/test-gemini', methods=['GET'])
-def test_gemini():
-    """Test Gemini API with a simple prompt"""
-    try:
-        if not GEMINI_API_KEY:
-            return jsonify({"error": "GEMINI_API_KEY not set"}), 400
-        
-        # Try different models
-        test_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
-        results = []
-        
-        for model_name in test_models:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content("Say 'Hello from Gemini'")
-                results.append({
-                    "model": model_name,
-                    "status": "SUCCESS",
-                    "response": response.text
-                })
-            except Exception as e:
-                results.append({
-                    "model": model_name,
-                    "status": "FAILED",
-                    "error": str(e)[:200]
-                })
-        
-        return jsonify({
-            "api_key": "SET (hidden)",
-            "test_results": results,
-            "recommended_model": "gemini-2.0-flash" if any(r["status"] == "SUCCESS" for r in results) else "NONE"
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- TEST EMAIL ENDPOINT ---
-@app.route('/test-email-endpoint', methods=['GET'])
-def test_email_endpoint():
-    """Test email functionality directly"""
-    test_email = request.args.get('email', 'test@example.com')
-    test_name = "Test Student"
-    
-    print(f"\n🧪 Testing email to: {test_email}")
-    
-    # Create sample student data for testing
-    sample_data = {
-        'name': test_name,
-        'lrn': '123456789012',
-        'sex': 'Male',
-        'birthdate': '2005-06-15',
-        'birthplace': 'Batangas City, Batangas',
-        'age': 19,
-        'civil_status': 'Single',
-        'nationality': 'Filipino',
-        'mother_name': 'Maria Santos',
-        'mother_citizenship': 'Filipino',
-        'mother_contact': '09123456789',
-        'father_name': 'Juan Santos',
-        'father_citizenship': 'Filipino',
-        'father_contact': '09198765432',
-        'province': 'Batangas',
-        'specific_address': '123 Main Street, Batangas City',
-        'mobile_no': '09123456789',
-        'school_name': 'Batangas National High School',
-        'school_address': 'Batangas City, Batangas',
-        'final_general_average': '92.5',
-        'last_level_attended': 'Grade 12',
-        'student_type': 'New Student',
-        'program': 'BS Computer Science',
-        'school_year': '2024-2025',
-        'is_ip': 'No',
-        'is_pwd': 'No',
-        'has_medication': 'No',
-        'special_talents': 'Singing, Dancing'
-    }
-    
-    result = send_email_notification(test_email, test_name, [], sample_data)
-    
-    return jsonify({
-        "success": result,
-        "test_email": test_email,
-        "message": "Check console for email logs",
-        "sample_data_included": True
-    })
-
-# --- FIX DATABASE SCHEMA ENDPOINT ---
-@app.route('/fix-db-schema', methods=['GET'])
-def fix_db_schema():
-    """Manually fix the database schema"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor()
-        
-        # Check if email_sent column exists
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'records' AND column_name = 'email_sent'
-        """)
-        
-        if not cur.fetchone():
-            print("🔄 Adding missing columns...")
-            
-            # Add missing columns
-            missing_columns = [
-                ("email_sent", "BOOLEAN DEFAULT FALSE"),
-                ("email_sent_at", "TIMESTAMP"),
-                ("email", "VARCHAR(100)"),
-                ("civil_status", "VARCHAR(50)"),
-                ("nationality", "VARCHAR(100)"),
-                ("mother_contact", "VARCHAR(50)"),
-                ("father_contact", "VARCHAR(50)"),
-                ("guardian_name", "VARCHAR(255)"),
-                ("guardian_relation", "VARCHAR(100)"),
-                ("guardian_contact", "VARCHAR(50)"),
-                ("region", "VARCHAR(100)"),
-                ("province", "VARCHAR(100)"),
-                ("specific_address", "TEXT"),
-                ("mobile_no", "VARCHAR(50)"),
-                ("school_year", "VARCHAR(50)"),
-                ("student_type", "VARCHAR(50)"),
-                ("program", "VARCHAR(100)"),
-                ("last_level_attended", "VARCHAR(100)"),
-                ("is_ip", "VARCHAR(10)"),
-                ("is_pwd", "VARCHAR(10)"),
-                ("has_medication", "VARCHAR(10)"),
-                ("is_working", "VARCHAR(10)"),
-                ("residence_type", "VARCHAR(50)"),
-                ("employer_name", "VARCHAR(255)"),
-                ("marital_status", "VARCHAR(50)"),
-                ("is_gifted", "VARCHAR(10)"),
-                ("needs_assistance", "VARCHAR(10)"),
-                ("school_type", "VARCHAR(50)"),
-                ("year_attended", "VARCHAR(50)"),
-                ("special_talents", "TEXT"),
-                ("is_scholar", "VARCHAR(10)"),
-                ("siblings", "TEXT")
-            ]
-            
-            added_columns = []
-            for col_name, col_type in missing_columns:
-                try:
-                    cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
-                    added_columns.append(col_name)
-                    print(f"   ✅ Added column: {col_name}")
-                except Exception as col_error:
-                    print(f"   ❌ Failed to add {col_name}: {col_error}")
-            
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return jsonify({
-                "status": "success",
-                "message": f"Database schema fixed. Added {len(added_columns)} columns.",
-                "added_columns": added_columns
-            })
-        else:
-            cur.close()
-            conn.close()
-            return jsonify({
-                "status": "info",
-                "message": "All columns already exist. No changes needed."
-            })
-            
-    except Exception as e:
-        print(f"❌ Schema fix error: {e}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-# --- OTHER ROUTES ---
+# ================= OTHER ENDPOINTS =================
 @app.route('/upload-additional', methods=['POST'])
 def upload_additional():
     files = request.files.getlist('files')
@@ -1371,7 +1523,7 @@ def upload_additional():
             fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
             path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
             file.save(path)
-            saved_paths.append(fname)  # Store only filename
+            saved_paths.append(fname)
 
     full_path_str = ",".join(saved_paths)
     
@@ -1384,7 +1536,6 @@ def upload_additional():
     try:
         cur = conn.cursor()
         
-        # Get existing paths
         cur.execute(f"SELECT {col_map[dtype]} FROM records WHERE id = %s", (rid,))
         existing = cur.fetchone()
         
@@ -1419,7 +1570,6 @@ def delete_record(record_id):
     finally: 
         conn.close()
 
-# --- CHECK EMAIL STATUS ---
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
 def check_email_status(record_id):
     """Check if email has been sent for a record"""
@@ -1442,27 +1592,38 @@ def check_email_status(record_id):
     finally:
         conn.close()
 
-# ================= NEW ENDPOINTS FOR DEBUGGING =================
+# ================= NEW FRONTEND ROUTES =================
+@app.route('/goodmoral-dashboard.html')
+def goodmoral_dashboard():
+    """Dashboard for Good Moral analysis"""
+    if not session.get('logged_in'):
+        return redirect('/login')
+    return render_template('goodmoral_dashboard.html')
 
+@app.route('/student-issues.html')
+def student_issues_page():
+    """Page showing students with disciplinary issues"""
+    if not session.get('logged_in'):
+        return redirect('/login')
+    return render_template('student_issues.html')
+
+# ================= DIAGNOSTIC ENDPOINTS =================
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for Render"""
     return jsonify({
         "status": "healthy",
         "service": "AssiScan Backend",
+        "goodmoral_scanning": "ENABLED",
         "timestamp": datetime.now().isoformat(),
-        "database": "connected" if get_db_connection() else "disconnected",
-        "uploads_folder": os.path.exists(UPLOAD_FOLDER),
-        "upload_files_count": len(os.listdir(UPLOAD_FOLDER)) if os.path.exists(UPLOAD_FOLDER) else 0,
-        "environment": "production"
+        "database": "connected" if get_db_connection() else "disconnected"
     })
 
 @app.route('/list-uploads', methods=['GET'])
 def list_uploads():
-    """List uploaded files for debugging"""
+    """List uploaded files"""
     try:
         if not os.path.exists(UPLOAD_FOLDER):
-            return jsonify({"error": "Uploads folder not found", "path": UPLOAD_FOLDER}), 404
+            return jsonify({"error": "Uploads folder not found"}), 404
         
         files = []
         for filename in os.listdir(UPLOAD_FOLDER):
@@ -1471,94 +1632,43 @@ def list_uploads():
                 files.append({
                     "name": filename,
                     "size": os.path.getsize(filepath),
-                    "url": f"{request.host_url}uploads/{filename}",
-                    "full_path": filepath
+                    "url": f"{request.host_url}uploads/{filename}"
                 })
         
         return jsonify({
             "count": len(files),
             "files": files[:20],
-            "folder": UPLOAD_FOLDER,
-            "server_url": request.host_url
+            "folder": UPLOAD_FOLDER
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/check-file/<filename>')
-def check_file(filename):
-    """Check if a file exists in uploads"""
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    exists = os.path.exists(filepath)
-    
-    return jsonify({
-        "filename": filename,
-        "exists": exists,
-        "path": filepath,
-        "url": f"{request.host_url}uploads/{filename}" if exists else None
-    })
-
-# ================= ERROR HANDLERS =================
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
-
-@app.errorhandler(500)
-def server_error(error):
-    return jsonify({"error": "Internal server error"}), 500
 
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH & SENDGRID")
+    print("🚀 ASSISCAN WITH GOOD MORAL SCANNING")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
-    print(f"📨 Email Sender: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
-    print("📊 FEATURES:")
-    print("   • Updated email with student information")
-    print("   • Student data extracted from scanned documents")
-    print("   • Separate SAVE and SEND endpoints")
-    print("   • SendGrid API for email (works on Render)")
-    print("   • Database tracks email status")
-    print("   • Resend email capability")
-    print("   • Fixed image serving for Render")
+    print("📊 NEW FEATURES:")
+    print("   • Good Moral Certificate Scanning")
+    print("   • Automatic Disciplinary Status Detection")
+    print("   • Good Moral Scoring System (0-100)")
+    print("   • Student Issue Dashboard")
+    print("   • Email includes Good Moral status")
     print("="*60)
-    
-    if GEMINI_API_KEY:
-        print("🔍 Testing available models...")
-        try:
-            models = list(genai.list_models())
-            print(f"📋 Found {len(models)} total models")
-            
-            gemini_models = [m for m in models if "gemini" in m.name.lower()]
-            print(f"🤖 Gemini models available: {len(gemini_models)}")
-            
-            for model in gemini_models[:5]:
-                print(f"   - {model.name}")
-                
-            has_25_flash = any("2.5-flash" in m.name.lower() for m in gemini_models)
-            print(f"✅ Gemini 2.5 Flash: {'AVAILABLE' if has_25_flash else 'NOT AVAILABLE'}")
-            
-        except Exception as e:
-            print(f"⚠️ Model listing failed: {e}")
-    
-    print("="*60)
-    print("🔗 IMPORTANT ENDPOINTS:")
-    print("   GET  /health - Health check")
-    print("   GET  /list-uploads - List uploaded files")
-    print("   GET  /uploads/<filename> - Access uploaded files")
-    print("   GET  /fix-db-schema - Fix missing database columns")
-    print("="*60)
-    print("🔗 DIAGNOSTIC ENDPOINTS:")
-    print("   GET  /list-models - List available Gemini models")
-    print("   GET  /test-gemini - Test Gemini API")
-    print("   GET  /test-email-endpoint?email=test@example.com - Test email")
-    print("   GET  /check-file/<filename> - Check if file exists")
+    print("🔗 NEW ENDPOINTS:")
+    print("   POST /scan-goodmoral - Scan Good Moral Certificate")
+    print("   GET  /get-goodmoral-status/<id> - Get moral status")
+    print("   GET  /search-by-moral-status - Search by status")
+    print("   GET  /students-with-issues - Students with issues")
+    print("   GET  /goodmoral-statistics - Statistics")
+    print("   POST /update-goodmoral-status/<id> - Update status")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
