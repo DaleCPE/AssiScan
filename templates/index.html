@@ -448,7 +448,28 @@
                 </select>
             </div>
         </div>
-        <input type="text" id="programCourse" placeholder="Program / Course">
+        
+        <!-- College and Program Dropdowns -->
+        <div class="row">
+            <div class="col-half">
+                <label>College / Department</label>
+                <select id="collegeSelect" onchange="updatePrograms()">
+                    <option value="">-- Select College --</option>
+                    <option value="College of Criminal Justice Education (CCJE)">College of Criminal Justice Education (CCJE)</option>
+                    <option value="College of Education, Arts and Sciences (CEAS)">College of Education, Arts and Sciences (CEAS)</option>
+                    <option value="College of Information Technology, Entertainment and Communication (CITEC)">College of Information Technology, Entertainment and Communication (CITEC)</option>
+                    <option value="College of Engineering and Architecture (CENAR)">College of Engineering and Architecture (CENAR)</option>
+                    <option value="College of Business, Accountancy and Auditing (CBAA)">College of Business, Accountancy and Auditing (CBAA)</option>
+                </select>
+            </div>
+            <div class="col-half">
+                <label>Program / Course</label>
+                <select id="programSelect">
+                    <option value="">-- Select College First --</option>
+                </select>
+            </div>
+        </div>
+        
         <input type="text" id="lastLevel" placeholder="Last Level Attended (e.g. Grade 12)">
 
         <span class="section-label"><i class="fas fa-user"></i> Personal Information</span>
@@ -725,6 +746,34 @@
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
+        // College and Programs Data
+        const collegePrograms = {
+            "College of Criminal Justice Education (CCJE)": [
+                "Bachelor of Science in Criminology"
+            ],
+            "College of Education, Arts and Sciences (CEAS)": [
+                "Bachelor of Elementary Education",
+                "Bachelor of Secondary Education",
+                "Bachelor of Science in Psychology",
+                "Bachelor of Science in Legal Management",
+                "Bachelor of Science in Social Work"
+            ],
+            "College of Information Technology, Entertainment and Communication (CITEC)": [
+                "Bachelor of Science in Information Technology",
+                "Bachelor of Arts in Multimedia Arts"
+            ],
+            "College of Engineering and Architecture (CENAR)": [
+                "Bachelor of Science in Industrial Engineering",
+                "Bachelor of Science in Computer Engineering",
+                "Bachelor of Science in Architecture"
+            ],
+            "College of Business, Accountancy and Auditing (CBAA)": [
+                "Bachelor of Science in Business Administration",
+                "Bachelor of Science in Accountancy",
+                "Bachelor of Science in Internal Auditing"
+            ]
+        };
+
         function populateRegions() {
             const regionSelect = document.getElementById("addressRegion");
             for (const region in philippineLocations) {
@@ -746,6 +795,24 @@
                     option.value = province;
                     option.textContent = province;
                     provinceSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Function to update programs based on selected college
+        function updatePrograms() {
+            const collegeSelect = document.getElementById("collegeSelect");
+            const programSelect = document.getElementById("programSelect");
+            const selectedCollege = collegeSelect.value;
+            
+            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
+            
+            if (selectedCollege && collegePrograms[selectedCollege]) {
+                collegePrograms[selectedCollege].forEach(program => {
+                    const option = document.createElement("option");
+                    option.value = program;
+                    option.textContent = program;
+                    programSelect.appendChild(option);
                 });
             }
         }
@@ -1063,6 +1130,20 @@
                 return;
             }
 
+            // Validate College and Program selection
+            const college = document.getElementById('collegeSelect').value;
+            const program = document.getElementById('programSelect').value;
+            
+            if (!college) {
+                alert("Please select a College/Department!");
+                return;
+            }
+            
+            if (!program) {
+                alert("Please select a Program/Course!");
+                return;
+            }
+
             // EMAIL VALIDATION
             const emailInput = document.getElementById('contactEmail');
             const emailValue = emailInput ? emailInput.value.trim() : '';
@@ -1106,7 +1187,8 @@
             const recordData = {
                 school_year: document.getElementById('schoolYear').value,
                 student_type: document.getElementById('studentType').value,
-                program: document.getElementById('programCourse').value,
+                college: college,  // Add college field
+                program: program,  // Changed from programCourse to program (from dropdown)
                 last_level_attended: document.getElementById('lastLevel').value,
                 name: name,
                 sex: document.getElementById('childSex').value,
@@ -1426,6 +1508,8 @@
                 hasDisciplinaryRecord: goodmoralData.hasIssues ? "Yes" : "No",
                 disciplinaryDetails: goodmoralData.disciplinaryDetails || "None",
                 studentName: document.getElementById('childName').value || "Not entered",
+                college: document.getElementById('collegeSelect').value || "Not selected",
+                program: document.getElementById('programSelect').value || "Not selected",
                 email: document.getElementById('contactEmail').value || "Not entered",
                 otherDocumentsCount: otherDocuments.length
             };
@@ -1440,6 +1524,8 @@
 ⚠️ Disciplinary Record: ${info.hasDisciplinaryRecord}
 📝 Details: ${info.disciplinaryDetails}
 👤 Student: ${info.studentName}
+🎓 College: ${info.college}
+📚 Program: ${info.program}
 📧 Email: ${info.email}
 📎 Other Documents: ${info.otherDocumentsCount}
 \nSave the record first to enable email sending.`);
