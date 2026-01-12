@@ -118,6 +118,55 @@
         
         .scan-laser { position: absolute; width: 100%; height: 2px; background: var(--bright-gold); box-shadow: 0 0 15px var(--primary-gold); z-index: 10; display: none; animation: scanLaser 2s infinite linear; }
         
+        /* Good Moral Status Display */
+        .goodmoral-result {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            font-size: 12px;
+            border-left: 4px solid transparent;
+        }
+        
+        .goodmoral-result.clear {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: var(--success-green);
+            color: #4CAF50;
+        }
+        
+        .goodmoral-result.offense {
+            background: rgba(244, 67, 54, 0.1);
+            border-left-color: #F44336;
+            color: #ff6b6b;
+        }
+        
+        .goodmoral-result.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: var(--warning-yellow);
+            color: var(--warning-yellow);
+        }
+        
+        .goodmoral-result.info {
+            background: rgba(33, 150, 243, 0.1);
+            border-left-color: var(--info-blue);
+            color: var(--info-blue);
+        }
+        
+        .goodmoral-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .goodmoral-details {
+            font-size: 10px;
+            margin-top: 5px;
+            padding-left: 15px;
+        }
+        
         /* --- FORM PANEL (Right - Editable) --- */
         .form-panel { 
             width: 420px; 
@@ -282,6 +331,36 @@
                 </div>
                 <img id="f137Preview" class="img-preview">
                 <input type="file" id="f137Input" hidden accept="image/*" multiple onchange="processForm137(this)">
+            </div>
+        </div>
+
+        <!-- GOOD MORAL CERTIFICATE SCANNER -->
+        <div class="scanner-wrapper">
+            <div class="scan-label">
+                <span><i class="fas fa-certificate"></i> GOOD MORAL CERTIFICATE</span>
+                <span id="goodmoralStatus" class="status-text">Waiting for input...</span>
+            </div>
+            <div class="scan-frame" onclick="document.getElementById('goodmoralInput').click()">
+                <div class="scan-laser" id="goodmoralLaser"></div>
+                <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+                
+                <div class="upload-placeholder" id="goodmoralPlaceholder">
+                    <i class="fas fa-camera"></i>
+                    <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN GOOD MORAL</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                </div>
+                <img id="goodmoralPreview" class="img-preview">
+                <input type="file" id="goodmoralInput" hidden accept="image/*" multiple onchange="processGoodMoral(this)">
+            </div>
+            
+            <!-- Good Moral Result Display -->
+            <div id="goodmoralResult" class="goodmoral-result">
+                <div class="goodmoral-title">
+                    <span id="goodmoralIcon"></span>
+                    <span id="goodmoralStatusText"></span>
+                </div>
+                <div id="goodmoralDetails" class="goodmoral-details"></div>
+                <div id="goodmoralOffenses" class="goodmoral-details"></div>
             </div>
         </div>
     </main>
@@ -501,7 +580,7 @@
             <input type="file" id="fileForm138" accept="image/*">
         </div>
         <div class="file-upload-group">
-            <span class="file-label">Good Moral Certificate</span>
+            <span class="file-label">Good Moral Certificate (Manual Upload)</span>
             <input type="file" id="fileGoodMoral" accept="image/*">
         </div>
 
@@ -540,6 +619,8 @@
     <script>
         let psaImagePath = "";
         let f137ImagePath = "";
+        let goodmoralImagePath = "";
+        let goodmoralData = null; // Store Good Moral extraction data
         let currentRecordId = null; // Store the record ID after saving
 
         const philippineLocations = {
@@ -709,6 +790,109 @@
             }
         }
 
+        // --- PROCESS GOOD MORAL CERTIFICATE ---
+        async function processGoodMoral(input) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'goodmoralPreview', 'goodmoralPlaceholder');
+            document.getElementById('goodmoralLaser').style.display = 'block';
+            document.getElementById('goodmoralStatus').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imageFiles', files[i]);
+            }
+
+            try {
+                const res = await fetch('/extract-goodmoral', { method: 'POST', body: formData });
+                const data = await res.json();
+                document.getElementById('goodmoralLaser').style.display = 'none';
+
+                if (data.structured_data) {
+                    const d = data.structured_data;
+                    document.getElementById('goodmoralStatus').innerText = "✅ Data Extracted";
+                    goodmoralImagePath = data.image_paths;
+                    goodmoralData = d;
+                    
+                    // Display Good Moral result
+                    displayGoodMoralResult(d);
+                } else {
+                    document.getElementById('goodmoralStatus').innerText = "❌ Scan Failed";
+                }
+            } catch (e) {
+                document.getElementById('goodmoralLaser').style.display = 'none';
+                document.getElementById('goodmoralStatus').innerText = "❌ Error";
+                console.error("Good Moral Error:", e);
+            }
+        }
+
+        // --- DISPLAY GOOD MORAL RESULT ---
+        function displayGoodMoralResult(data) {
+            const resultDiv = document.getElementById('goodmoralResult');
+            const statusText = document.getElementById('goodmoralStatusText');
+            const iconSpan = document.getElementById('goodmoralIcon');
+            const detailsDiv = document.getElementById('goodmoralDetails');
+            const offensesDiv = document.getElementById('goodmoralOffenses');
+            
+            // Reset display
+            resultDiv.style.display = 'block';
+            detailsDiv.innerHTML = '';
+            offensesDiv.innerHTML = '';
+            
+            if (data.certificate_status === "CLEAR") {
+                // Clear status - no offenses
+                resultDiv.className = 'goodmoral-result clear';
+                iconSpan.innerHTML = '<i class="fas fa-check-circle"></i>';
+                statusText.textContent = '✅ CLEAR - WALANG ATRASO';
+                detailsDiv.innerHTML = `<div><strong>Issuing School:</strong> ${data.school_name || 'N/A'}</div>
+                                      <div><strong>Date Issued:</strong> ${data.date_issued || 'N/A'}</div>
+                                      <div><strong>Remarks:</strong> ${data.overall_remarks || 'Student has no derogatory record.'}</div>`;
+            } else if (data.certificate_status === "WITH OFFENSE") {
+                // With offenses
+                resultDiv.className = 'goodmoral-result offense';
+                iconSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                statusText.textContent = '⚠️ WITH OFFENSE - MAY ATRASO';
+                
+                detailsDiv.innerHTML = `<div><strong>Issuing School:</strong> ${data.school_name || 'N/A'}</div>
+                                      <div><strong>Date Issued:</strong> ${data.date_issued || 'N/A'}</div>
+                                      <div><strong>Remarks:</strong> ${data.overall_remarks || 'Student has disciplinary record.'}</div>`;
+                
+                // Display offenses if any
+                if (data.offenses_detected && data.offenses_detected.length > 0) {
+                    offensesDiv.innerHTML = '<strong>Mga Atraso:</strong><br>';
+                    data.offenses_detected.forEach((offense, index) => {
+                        offensesDiv.innerHTML += `${index + 1}. <strong>${offense.type || 'Offense'}</strong>: ${offense.description || 'No description'}<br>`;
+                        if (offense.severity) {
+                            offensesDiv.innerHTML += `&nbsp;&nbsp;&nbsp;<em>Severity: ${offense.severity}</em><br>`;
+                        }
+                        if (offense.disciplinary_action) {
+                            offensesDiv.innerHTML += `&nbsp;&nbsp;&nbsp;<em>Action Taken: ${offense.disciplinary_action}</em><br>`;
+                        }
+                        offensesDiv.innerHTML += '<br>';
+                    });
+                }
+                
+                // Display eligibility
+                if (data.is_eligible_for_admission !== undefined) {
+                    const eligibility = data.is_eligible_for_admission ? 
+                        '<span style="color: #4CAF50;">✓ Eligible for admission</span>' : 
+                        '<span style="color: #F44336;">✗ Not eligible for admission</span>';
+                    offensesDiv.innerHTML += `<div style="margin-top: 5px;"><strong>Admission Status:</strong> ${eligibility}</div>`;
+                }
+            } else {
+                // Unknown status
+                resultDiv.className = 'goodmoral-result warning';
+                iconSpan.innerHTML = '<i class="fas fa-question-circle"></i>';
+                statusText.textContent = '❓ UNKNOWN STATUS';
+                detailsDiv.textContent = 'Could not determine certificate status.';
+            }
+            
+            // Also update the status with more info
+            document.getElementById('goodmoralStatus').innerHTML = 
+                `✅ Extracted | Status: <strong>${data.status_display || data.certificate_status || 'Unknown'}</strong>`;
+        }
+
         // --- EMAIL VALIDATION FUNCTION ---
         function validateEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -823,8 +1007,13 @@
                 // EMAIL FIELD
                 email: emailValue,
                 
+                // IMAGE PATHS
                 psa_image_path: psaImagePath,
-                f137_image_path: f137ImagePath
+                f137_image_path: f137ImagePath,
+                goodmoral_image_path: goodmoralImagePath,
+                
+                // GOOD MORAL DATA
+                goodmoral_data: goodmoralData || {}
             };
 
             console.log("📤 Saving record data:", recordData);
@@ -1001,17 +1190,26 @@
                 currentRecordId: currentRecordId,
                 psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
                 f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
+                goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
                 studentName: document.getElementById('childName').value || "Not entered",
-                email: document.getElementById('contactEmail').value || "Not entered"
+                email: document.getElementById('contactEmail').value || "Not entered",
+                goodmoralStatus: goodmoralData ? goodmoralData.certificate_status || "Unknown" : "Not scanned"
             };
             
-            alert(`Record Information:\n
+            let message = `Record Information:\n
 📋 Record ID: ${info.currentRecordId || "Not saved yet"}
 📸 PSA Images: ${info.psaImagePath}
 📄 Form 137: ${info.f137ImagePath}
+📜 Good Moral: ${info.goodmoralImagePath}
 👤 Student: ${info.studentName}
 📧 Email: ${info.email}
-\nSave the record first to enable email sending.`);
+🎯 Good Moral Status: ${info.goodmoralStatus}`;
+            
+            if (goodmoralData && goodmoralData.offenses_detected && goodmoralData.offenses_detected.length > 0) {
+                message += `\n⚠️ Offenses: ${goodmoralData.offenses_detected.length} found`;
+            }
+            
+            alert(message);
         }
 
         // --- UPLOAD ADDITIONAL FILES (if needed) ---
