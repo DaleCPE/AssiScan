@@ -6,7 +6,6 @@
     <title>AssiScan | UB LIPA</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     
     <style>
         :root {
@@ -22,10 +21,6 @@
             --warning-yellow: #FFC107;
             --info-blue: #2196F3;
             --danger-red: #f44336;
-            --excellent: #4CAF50;
-            --good: #8BC34A;
-            --fair: #FF9800;
-            --poor: #F44336;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -146,7 +141,6 @@
         
         .row { display: flex; gap: 10px; }
         .col-half { flex: 1; }
-        .col-third { flex: 1; }
 
         input, select, textarea { 
             width: 100%; background: var(--input-bg); border: 1px solid #331010; color: #e0e0e0; 
@@ -156,8 +150,15 @@
         input:focus, select:focus, textarea:focus { border-color: var(--primary-gold); background: rgba(212, 175, 55, 0.05); }
         label { font-size: 9px; color: #888; margin-left: 2px; }
 
-        /* Custom File Upload Styling for Panel */
-        .file-upload-group { border: 1px dashed #331010; padding: 10px; border-radius: 4px; transition: 0.2s; margin-top: 5px; background: rgba(0,0,0,0.2); }
+        /* Custom File Upload Styling */
+        .file-upload-group { 
+            border: 1px dashed #331010; 
+            padding: 10px; 
+            border-radius: 4px; 
+            transition: 0.2s; 
+            margin-top: 5px; 
+            background: rgba(0,0,0,0.2); 
+        }
         .file-upload-group:hover { border-color: var(--border-dim); background: rgba(255,255,255,0.02); }
         .file-label { font-size: 10px; color: #aaa; display: block; margin-bottom: 4px; }
         
@@ -203,45 +204,6 @@
             box-shadow: none !important;
         }
         
-        /* New Scan Good Moral Button */
-        .btn-scan-goodmoral { 
-            background: linear-gradient(90deg, #673AB7, #9C27B0); color: #fff; border: none; padding: 12px; 
-            font-weight: 600; letter-spacing: 1px; border-radius: 4px; cursor: pointer; margin-top: 5px;
-            transition: 0.3s; text-transform: uppercase; font-size: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            width: 100%;
-        }
-        .btn-scan-goodmoral:hover { background: #7B1FA2; box-shadow: 0 5px 15px rgba(156, 39, 176, 0.2); transform: translateY(-2px); }
-        
-        .save-status {
-            font-size: 10px;
-            text-align: center;
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        .save-status.success {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: #4CAF50;
-        }
-        
-        .save-status.error {
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            color: #F44336;
-        }
-        
-        .save-status.info {
-            background: rgba(33, 150, 243, 0.1);
-            border: 1px solid rgba(33, 150, 243, 0.3);
-            color: #2196F3;
-        }
-
-        .status-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: right; }
-
         /* Good Moral Status Display */
         .goodmoral-status-container {
             margin: 10px 0;
@@ -274,19 +236,15 @@
             text-align: center;
         }
         
-        .score-excellent { background: var(--excellent); color: white; }
-        .score-good { background: var(--good); color: white; }
-        .score-fair { background: var(--fair); color: black; }
-        .score-poor { background: var(--poor); color: white; }
+        .score-excellent { background: #4CAF50; color: white; }
+        .score-good { background: #8BC34A; color: white; }
+        .score-fair { background: #FF9800; color: black; }
+        .score-poor { background: #F44336; color: white; }
         
         .goodmoral-details {
             font-size: 11px;
             line-height: 1.4;
             color: #ccc;
-        }
-        
-        .goodmoral-details strong {
-            color: var(--primary-gold);
         }
         
         .goodmoral-warning {
@@ -315,86 +273,60 @@
             gap: 8px;
         }
         
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal-content {
-            background: var(--panel-bg);
-            width: 90%;
-            max-width: 500px;
-            border-radius: 8px;
-            border: 1px solid var(--border-dim);
-            overflow: hidden;
-        }
-        
-        .modal-header {
-            background: rgba(212, 175, 55, 0.1);
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-dim);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-title {
-            font-family: 'Cinzel', serif;
-            color: var(--primary-gold);
-            font-size: 16px;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 20px;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
+        /* Other Documents */
+        .other-doc-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-body {
-            padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-        
-        .modal-footer {
-            padding: 15px 20px;
-            border-top: 1px solid var(--border-dim);
-            display: flex;
-            justify-content: flex-end;
             gap: 10px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
         }
         
-        /* Status Badge */
-        .status-badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .other-doc-title {
+            flex: 1;
+            font-size: 11px;
         }
         
-        .status-excellent { background: var(--excellent); color: white; }
-        .status-good { background: var(--good); color: white; }
-        .status-fair { background: var(--fair); color: black; }
-        .status-poor { background: var(--poor); color: white; }
+        .remove-doc-btn {
+            background: #331010;
+            color: #ff6b6b;
+            border: 1px solid #441515;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        
+        .save-status {
+            font-size: 10px;
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .save-status.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+        
+        .save-status.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #F44336;
+        }
+        
+        .save-status.info {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            color: #2196F3;
+        }
+
+        .status-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: right; }
 
         @media (max-width: 1024px) {
             body { flex-direction: column; overflow-y: auto; height: auto; }
@@ -407,7 +339,6 @@
             .main-scan { height: auto; padding: 20px 15px; }
             .scan-frame { height: 200px; }
             .form-panel { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border-dim); padding-bottom: 50px; }
-            .modal-content { width: 95%; margin: 10px; }
         }
     </style>
 </head>
@@ -490,17 +421,15 @@
             </div>
             <div class="goodmoral-details">
                 <strong>Status:</strong> <span id="goodmoralStatusText">Not Analyzed</span><br>
-                <strong>Issuing School:</strong> <span id="goodmoralSchool">N/A</span><br>
-                <strong>Issued Date:</strong> <span id="goodmoralDate">N/A</span><br>
-                <strong>Disciplinary Record:</strong> <span id="goodmoralRecord">No Issues</span>
+                <strong>Record:</strong> <span id="goodmoralRecord">Checking...</span>
             </div>
             <div id="goodmoralWarning" class="goodmoral-warning" style="display: none;">
                 <i class="fas fa-exclamation-triangle"></i>
-                <span>This student has disciplinary concerns that require review.</span>
+                <span id="goodmoralWarningText">This student has disciplinary concerns.</span>
             </div>
             <div id="goodmoralSuccess" class="goodmoral-success" style="display: none;">
                 <i class="fas fa-check-circle"></i>
-                <span>No disciplinary issues found. Student is eligible for admission.</span>
+                <span>Good record - No past incidents in previous school.</span>
             </div>
         </div>
         
@@ -710,89 +639,44 @@
             </div>
         </div>
 
-        <!-- Manual Good Moral Fields (Hidden until needed) -->
-        <div id="manualGoodmoralFields" style="display: none;">
-            <span class="section-label"><i class="fas fa-clipboard-check"></i> Manual Good Moral Details</span>
-            <input type="date" id="goodmoralIssuedDate" placeholder="Issued Date">
-            <input type="date" id="goodmoralValidUntil" placeholder="Valid Until">
-            <input type="text" id="goodmoralIssuingOfficer" placeholder="Issuing Officer">
-            <input type="text" id="goodmoralIssuingSchool" placeholder="Issuing School">
-            <textarea id="disciplinaryDetails" placeholder="Disciplinary Details (if any)" rows="3"></textarea>
+        <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
+        <div class="file-upload-group">
+            <span class="file-label">Form 138 (Report Card)</span>
+            <input type="file" id="fileForm138" accept="image/*">
         </div>
-
-        <!-- Button to Show/Hide Manual Fields -->
-        <button type="button" onclick="toggleManualGoodmoralFields()" style="
+        
+        <!-- Other Documents Section -->
+        <div id="otherDocumentsContainer">
+            <!-- Other documents will be added here -->
+        </div>
+        
+        <button type="button" onclick="addOtherDocumentField()" style="
             width: 100%; 
             background: rgba(212, 175, 55, 0.05); 
-            border: 1px solid var(--border-dim); 
+            border: 1px dashed var(--border-dim); 
             color: var(--primary-gold); 
             padding: 10px; 
             font-size: 11px; 
             cursor: pointer; 
-            margin-top: 10px;
+            margin-top: 5px;
             transition: 0.3s;">
-            <i class="fas fa-edit"></i> MANUALLY ENTER GOOD MORAL DETAILS
+            <i class="fas fa-plus"></i> ADD OTHER DOCUMENT
         </button>
 
-        <!-- SAVE BUTTON (Save to Database Only) -->
+        <!-- SAVE BUTTON -->
         <button class="btn-save" onclick="saveRecord()" id="saveBtn">
             <i class="fas fa-database"></i> Save to Database
         </button>
         
         <div id="saveStatus" class="save-status"></div>
         
-        <!-- SEND EMAIL BUTTON (Disabled until saved) -->
+        <!-- SEND EMAIL BUTTON -->
         <button class="btn-send" onclick="sendEmail()" id="sendBtn" disabled>
             <i class="fas fa-paper-plane"></i> Send Email to Student
         </button>
         
         <div id="sendStatus" class="save-status"></div>
-        
-        <!-- View Good Moral Details Button -->
-        <button type="button" onclick="showGoodmoralDetails()" style="
-            width: 100%; 
-            background: rgba(156, 39, 176, 0.1); 
-            border: 1px solid rgba(156, 39, 176, 0.3); 
-            color: #9C27B0; 
-            padding: 12px; 
-            font-size: 11px; 
-            cursor: pointer; 
-            margin-top: 10px;
-            transition: 0.3s;
-            display: none;" 
-            id="viewGoodmoralBtn">
-            <i class="fas fa-search"></i> VIEW GOOD MORAL ANALYSIS DETAILS
-        </button>
     </aside>
-
-    <!-- Good Moral Details Modal -->
-    <div id="goodmoralModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <i class="fas fa-shield-alt"></i> GOOD MORAL CERTIFICATE ANALYSIS
-                </div>
-                <button class="modal-close" onclick="closeGoodmoralModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="modalGoodmoralContent">
-                    <p>Loading analysis details...</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button onclick="closeGoodmoralModal()" style="
-                    background: #331010;
-                    color: var(--text-muted);
-                    border: 1px solid var(--border-dim);
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 11px;">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- DEBUG BUTTON -->
     <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
@@ -811,40 +695,20 @@
         </button>
     </div>
 
-    <!-- Include Toastr for notifications -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script>
-        // Toastr configuration
-        toastr.options = {
-            "closeButton": true,
-            "debug": false,
-            "newestOnTop": true,
-            "progressBar": true,
-            "positionClass": "toast-top-right",
-            "preventDuplicates": true,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-        };
-
         let psaImagePath = "";
         let f137ImagePath = "";
         let goodmoralImagePath = "";
         let goodmoralAnalysis = null;
         let currentRecordId = null;
+        let otherDocuments = [];
         
         // Store Good Moral data
         let goodmoralData = {
             score: 0,
             status: "UNKNOWN",
             hasIssues: false,
-            analysis: null
+            disciplinaryDetails: ""
         };
 
         const philippineLocations = {
@@ -1044,23 +908,23 @@
                     goodmoralData = {
                         score: data.goodmoral_score || 0,
                         status: data.disciplinary_status || "UNKNOWN",
-                        hasIssues: data.has_issues || false,
-                        analysis: data.analysis
+                        hasIssues: data.has_disciplinary_record || false,
+                        disciplinaryDetails: data.disciplinary_details || ""
                     };
                     
                     // Display the Good Moral status
                     displayGoodmoralStatus();
                     
-                    toastr.success('Good Moral Certificate analyzed successfully!');
+                    alert('Good Moral Certificate analyzed successfully!');
                     
                 } else {
                     document.getElementById('goodmoralStatus').innerText = "❌ Scan Failed";
-                    toastr.error('Failed to analyze Good Moral Certificate.');
+                    alert('Failed to analyze Good Moral Certificate.');
                 }
             } catch (e) {
                 document.getElementById('goodmoralLaser').style.display = 'none';
                 document.getElementById('goodmoralStatus').innerText = "❌ Error";
-                toastr.error('Error scanning Good Moral Certificate.');
+                alert('Error scanning Good Moral Certificate.');
             }
         }
 
@@ -1069,16 +933,13 @@
             const container = document.getElementById('goodmoralStatusDisplay');
             const scoreElement = document.getElementById('goodmoralScoreDisplay');
             const statusElement = document.getElementById('goodmoralStatusText');
-            const schoolElement = document.getElementById('goodmoralSchool');
-            const dateElement = document.getElementById('goodmoralDate');
             const recordElement = document.getElementById('goodmoralRecord');
             const warningElement = document.getElementById('goodmoralWarning');
             const successElement = document.getElementById('goodmoralSuccess');
-            const viewButton = document.getElementById('viewGoodmoralBtn');
+            const warningText = document.getElementById('goodmoralWarningText');
             
             // Show the container
             container.style.display = 'block';
-            viewButton.style.display = 'block';
             
             // Set score with appropriate color
             scoreElement.textContent = goodmoralData.score;
@@ -1086,171 +947,89 @@
             // Remove all score classes
             scoreElement.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
             
-            // Add appropriate class based on score
+            // Determine status and display text
+            let statusText = "";
+            let recordText = "";
+            
             if (goodmoralData.score >= 90) {
                 scoreElement.classList.add('score-excellent');
-                statusElement.textContent = "EXCELLENT";
-                statusElement.className = "status-excellent";
-            } else if (goodmoralData.score >= 70) {
-                scoreElement.classList.add('score-good');
-                statusElement.textContent = "GOOD";
-                statusElement.className = "status-good";
-            } else if (goodmoralData.score >= 50) {
-                scoreElement.classList.add('score-fair');
-                statusElement.textContent = "FAIR";
-                statusElement.className = "status-fair";
-            } else {
-                scoreElement.classList.add('score-poor');
-                statusElement.textContent = "POOR";
-                statusElement.className = "status-poor";
-            }
-            
-            // Set other details
-            if (goodmoralData.analysis) {
-                schoolElement.textContent = goodmoralData.analysis.issuing_school || "N/A";
-                dateElement.textContent = goodmoralData.analysis.issued_date || "N/A";
-                recordElement.textContent = goodmoralData.analysis.has_disciplinary_record ? 
-                    "Yes" : "No";
-            }
-            
-            // Show warning or success message
-            if (goodmoralData.hasIssues || goodmoralData.score < 70) {
-                warningElement.style.display = 'flex';
-                successElement.style.display = 'none';
-                
-                if (goodmoralData.analysis && goodmoralData.analysis.disciplinary_details) {
-                    warningElement.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>${goodmoralData.analysis.disciplinary_details}</span>
-                    `;
-                }
-            } else {
+                statusText = "EXCELLENT";
+                statusElement.textContent = statusText;
+                recordText = "Good record - No past incidents in previous school";
+                recordElement.textContent = recordText;
                 warningElement.style.display = 'none';
                 successElement.style.display = 'flex';
-            }
-        }
-
-        // --- SHOW GOOD MORAL DETAILS MODAL ---
-        function showGoodmoralDetails() {
-            const modal = document.getElementById('goodmoralModal');
-            const content = document.getElementById('modalGoodmoralContent');
-            
-            if (goodmoralData.analysis) {
-                let html = `
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="color: var(--primary-gold); margin-bottom: 10px;">
-                            <i class="fas fa-file-certificate"></i> Certificate Details
-                        </h4>
-                        <table style="width: 100%; font-size: 12px;">
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Issuing School:</td>
-                                <td style="padding: 5px 0; color: white;">${goodmoralData.analysis.issuing_school || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Issuing Officer:</td>
-                                <td style="padding: 5px 0; color: white;">${goodmoralData.analysis.issuing_officer || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Issued Date:</td>
-                                <td style="padding: 5px 0; color: white;">${goodmoralData.analysis.issued_date || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Certificate Type:</td>
-                                <td style="padding: 5px 0; color: white;">${goodmoralData.analysis.certificate_type || 'N/A'}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="color: var(--primary-gold); margin-bottom: 10px;">
-                            <i class="fas fa-chart-line"></i> Analysis Results
-                        </h4>
-                        <table style="width: 100%; font-size: 12px;">
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Good Moral Score:</td>
-                                <td style="padding: 5px 0; color: white; font-weight: bold;">${goodmoralData.score}/100</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Disciplinary Status:</td>
-                                <td style="padding: 5px 0;">
-                                    <span class="status-badge ${getStatusClass(goodmoralData.status)}">
-                                        ${goodmoralData.status}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 5px 0; color: #aaa;">Has Disciplinary Record:</td>
-                                <td style="padding: 5px 0; color: white;">${goodmoralData.analysis.has_disciplinary_record ? 'Yes' : 'No'}</td>
-                            </tr>
-                        </table>
-                    </div>
-                `;
-                
-                if (goodmoralData.analysis.remarks) {
-                    html += `
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: var(--primary-gold); margin-bottom: 10px;">
-                                <i class="fas fa-comment-alt"></i> Remarks
-                            </h4>
-                            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; font-size: 11px;">
-                                ${goodmoralData.analysis.remarks}
-                            </div>
-                        </div>
-                    `;
+            } else if (goodmoralData.score >= 70) {
+                scoreElement.classList.add('score-good');
+                statusText = "GOOD";
+                statusElement.textContent = statusText;
+                recordText = "Good record - No past incidents in previous school";
+                recordElement.textContent = recordText;
+                warningElement.style.display = 'none';
+                successElement.style.display = 'flex';
+            } else if (goodmoralData.score >= 50) {
+                scoreElement.classList.add('score-fair');
+                statusText = "FAIR";
+                statusElement.textContent = statusText;
+                if (goodmoralData.disciplinaryDetails && goodmoralData.disciplinaryDetails.trim() !== '') {
+                    recordText = `Bad record - ${goodmoralData.disciplinaryDetails}`;
+                } else {
+                    recordText = "Bad record - Reason not specified";
                 }
-                
-                if (goodmoralData.analysis.disciplinary_details) {
-                    html += `
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #ff6b6b; margin-bottom: 10px;">
-                                <i class="fas fa-exclamation-circle"></i> Disciplinary Details
-                            </h4>
-                            <div style="background: rgba(244, 67, 54, 0.1); padding: 10px; border-radius: 4px; font-size: 11px; color: #ff6b6b;">
-                                ${goodmoralData.analysis.disciplinary_details}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (goodmoralData.analysis.recommendation_statement) {
-                    html += `
-                        <div>
-                            <h4 style="color: var(--primary-gold); margin-bottom: 10px;">
-                                <i class="fas fa-star"></i> Recommendation
-                            </h4>
-                            <div style="background: rgba(76, 175, 80, 0.1); padding: 10px; border-radius: 4px; font-size: 11px; color: #4CAF50;">
-                                ${goodmoralData.analysis.recommendation_statement}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                content.innerHTML = html;
+                recordElement.textContent = recordText;
+                warningText.textContent = recordText;
+                warningElement.style.display = 'flex';
+                successElement.style.display = 'none';
             } else {
-                content.innerHTML = '<p style="text-align: center; color: #aaa;">No Good Moral analysis data available.</p>';
+                scoreElement.classList.add('score-poor');
+                statusText = "POOR";
+                statusElement.textContent = statusText;
+                if (goodmoralData.disciplinaryDetails && goodmoralData.disciplinaryDetails.trim() !== '') {
+                    recordText = `Bad record - ${goodmoralData.disciplinaryDetails}`;
+                } else {
+                    recordText = "Bad record - Reason not specified";
+                }
+                recordElement.textContent = recordText;
+                warningText.textContent = recordText;
+                warningElement.style.display = 'flex';
+                successElement.style.display = 'none';
             }
+        }
+
+        // --- OTHER DOCUMENTS FUNCTIONALITY ---
+        function addOtherDocumentField() {
+            const container = document.getElementById('otherDocumentsContainer');
+            const docId = otherDocuments.length + 1;
             
-            modal.style.display = 'flex';
+            const docDiv = document.createElement('div');
+            docDiv.className = 'file-upload-group';
+            docDiv.id = `otherDoc-${docId}`;
+            docDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span class="file-label">Document Title</span>
+                    <button type="button" onclick="removeOtherDocument(${docId})" class="remove-doc-btn">
+                        Remove
+                    </button>
+                </div>
+                <input type="text" id="otherDocTitle-${docId}" placeholder="e.g. Medical Certificate, NSO, etc." 
+                       style="margin-bottom: 8px;">
+                <input type="file" id="otherDocFile-${docId}" accept="image/*,application/pdf">
+            `;
+            
+            container.appendChild(docDiv);
+            otherDocuments.push({
+                id: docId,
+                title: '',
+                file: null
+            });
         }
 
-        function closeGoodmoralModal() {
-            document.getElementById('goodmoralModal').style.display = 'none';
-        }
-
-        function getStatusClass(status) {
-            switch(status.toUpperCase()) {
-                case 'EXCELLENT': return 'status-excellent';
-                case 'GOOD': return 'status-good';
-                case 'FAIR': return 'status-fair';
-                case 'POOR': return 'status-poor';
-                default: return '';
+        function removeOtherDocument(docId) {
+            const docDiv = document.getElementById(`otherDoc-${docId}`);
+            if (docDiv) {
+                docDiv.remove();
+                otherDocuments = otherDocuments.filter(doc => doc.id !== docId);
             }
-        }
-
-        // --- TOGGLE MANUAL GOOD MORAL FIELDS ---
-        function toggleManualGoodmoralFields() {
-            const fields = document.getElementById('manualGoodmoralFields');
-            fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
         }
 
         // --- EMAIL VALIDATION FUNCTION ---
@@ -1280,28 +1059,27 @@
             const name = document.getElementById('childName').value;
             
             if(!name) {
-                toastr.warning("Student Name is required!");
+                alert("Student Name is required!");
                 return;
             }
 
-            // 🔥 EMAIL VALIDATION (optional for save, required for send)
+            // EMAIL VALIDATION
             const emailInput = document.getElementById('contactEmail');
             const emailValue = emailInput ? emailInput.value.trim() : '';
             
-            // If email is provided, validate it
             if (emailValue && !validateEmail(emailValue)) {
-                toastr.error("Please enter a valid email address!");
+                alert("Please enter a valid email address!");
                 emailInput.focus();
                 emailInput.style.borderColor = 'red';
                 return;
             } else if (emailInput) {
-                emailInput.style.borderColor = ''; // Reset border color
+                emailInput.style.borderColor = '';
             }
 
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
 
-            // 1. COLLECT SIBLINGS DATA
+            // COLLECT SIBLINGS DATA
             let siblingsList = [];
             document.querySelectorAll('#siblingsTable tbody tr').forEach(row => {
                 let sName = row.querySelector('.sib-name').value;
@@ -1315,18 +1093,13 @@
 
             // Prepare Good Moral data
             let goodmoralPayload = {};
-            if (goodmoralData.analysis) {
+            if (goodmoralAnalysis) {
                 goodmoralPayload = {
-                    goodmoral_analysis: goodmoralData.analysis,
+                    goodmoral_analysis: goodmoralAnalysis,
                     disciplinary_status: goodmoralData.status,
                     goodmoral_score: goodmoralData.score,
-                    goodmoral_issued_date: goodmoralData.analysis.issued_date,
-                    goodmoral_valid_until: goodmoralData.analysis.valid_until_date,
-                    goodmoral_issuing_officer: goodmoralData.analysis.issuing_officer,
-                    goodmoral_issuing_school: goodmoralData.analysis.issuing_school,
-                    has_disciplinary_record: goodmoralData.analysis.has_disciplinary_record || false,
-                    disciplinary_details: goodmoralData.analysis.disciplinary_details,
-                    recommendation_status: getRecommendationStatus(goodmoralData.score)
+                    has_disciplinary_record: goodmoralData.hasIssues,
+                    disciplinary_details: goodmoralData.disciplinaryDetails
                 };
             }
 
@@ -1369,7 +1142,7 @@
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
                 
-                // ADDED SIBLINGS HERE
+                // SIBLINGS
                 siblings: siblingsList,
 
                 lrn: document.getElementById('lrn').value,
@@ -1409,7 +1182,30 @@
                 if(result.status === "success") {
                     currentRecordId = result.db_id;
                     
-                    toastr.success(`Record Saved Successfully! ID: ${currentRecordId}`);
+                    // Upload Form 138 if exists
+                    const form138File = document.getElementById('fileForm138').files[0];
+                    if (form138File && currentRecordId) {
+                        await uploadAdditionalFile(currentRecordId, 'form138', form138File);
+                    }
+                    
+                    // Upload other documents
+                    for (const doc of otherDocuments) {
+                        const titleInput = document.getElementById(`otherDocTitle-${doc.id}`);
+                        const fileInput = document.getElementById(`otherDocFile-${doc.id}`);
+                        
+                        if (titleInput && fileInput && fileInput.files[0]) {
+                            const title = titleInput.value.trim();
+                            const file = fileInput.files[0];
+                            
+                            if (title && file) {
+                                await uploadOtherDocument(currentRecordId, title, file);
+                            }
+                        }
+                    }
+                    
+                    updateStatus('saveStatus', 
+                        `✅ Record Saved Successfully! ID: ${currentRecordId}`, 
+                        'success');
                     
                     // Enable the Send button
                     document.getElementById('sendBtn').disabled = false;
@@ -1424,49 +1220,98 @@
                     
                     // Show Good Moral status if available
                     if (goodmoralData.score > 0) {
-                        toastr.info(`Good Moral Score: ${goodmoralData.score}/100 - Status: ${goodmoralData.status}`);
+                        let statusMsg = `Good Moral Score: ${goodmoralData.score}/100 - `;
+                        if (goodmoralData.score >= 70) {
+                            statusMsg += "Good record - No past incidents in previous school";
+                        } else {
+                            statusMsg += "Bad record";
+                            if (goodmoralData.disciplinaryDetails) {
+                                statusMsg += ` - ${goodmoralData.disciplinaryDetails}`;
+                            } else {
+                                statusMsg += " - Reason not specified";
+                            }
+                        }
+                        alert(statusMsg);
                     }
                     
                 } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
-                    toastr.error('Record already exists in the system!');
+                    updateStatus('saveStatus', '⚠️ Record already exists in the system!', 'error');
                     btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
                     btn.disabled = false;
                     
                 } else {
-                    toastr.error('Error saving record: ' + (result.error || result.message || "Unknown error"));
+                    updateStatus('saveStatus', 
+                        '❌ Error saving record: ' + (result.error || result.message || "Unknown error"), 
+                        'error');
                     btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
                     btn.disabled = false;
                 }
             } catch(e) {
                 console.error('Connection Error:', e);
-                toastr.error('Connection Error! Check console for details.');
+                updateStatus('saveStatus', '❌ Connection Error! Check console for details.', 'error');
                 btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
                 btn.disabled = false;
             }
         }
 
-        function getRecommendationStatus(score) {
-            if (score >= 90) return 'HIGHLY RECOMMENDED';
-            if (score >= 70) return 'RECOMMENDED';
-            if (score >= 50) return 'CONDITIONAL';
-            return 'REVIEW REQUIRED';
+        // --- UPLOAD ADDITIONAL FILE ---
+        async function uploadAdditionalFile(recordId, fileType, file) {
+            const formData = new FormData();
+            formData.append('id', recordId);
+            formData.append('type', fileType);
+            formData.append('files', file);
+            
+            try {
+                const response = await fetch('/upload-additional', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.status === "success") {
+                    console.log(`${fileType} uploaded successfully`);
+                }
+            } catch (error) {
+                console.error("Upload error:", error);
+            }
+        }
+
+        // --- UPLOAD OTHER DOCUMENT ---
+        async function uploadOtherDocument(recordId, title, file) {
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`/upload-other-document/${recordId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.status === "success") {
+                    console.log(`Other document "${title}" uploaded successfully`);
+                }
+            } catch (error) {
+                console.error("Other document upload error:", error);
+            }
         }
 
         // --- SEND EMAIL ONLY ---
         async function sendEmail() {
             if (!currentRecordId) {
-                toastr.warning("Please save the record first before sending email!");
+                alert("Please save the record first before sending email!");
                 return;
             }
             
             const emailValue = document.getElementById('contactEmail').value.trim();
             if (!emailValue) {
-                toastr.warning("Email address is required to send notification!");
+                alert("Email address is required to send notification!");
                 return;
             }
             
             if (!validateEmail(emailValue)) {
-                toastr.error("Please enter a valid email address!");
+                alert("Please enter a valid email address!");
                 document.getElementById('contactEmail').focus();
                 document.getElementById('contactEmail').style.borderColor = 'red';
                 return;
@@ -1489,14 +1334,18 @@
                 
                 if (response.ok) {
                     if (result.status === "success") {
-                        toastr.success(`Email sent successfully to ${emailValue}`);
+                        updateStatus('sendStatus', 
+                            `✅ Email sent successfully to ${emailValue}`, 
+                            'success');
                         
                         btn.innerHTML = '<i class="fas fa-check"></i> Email Sent';
                         btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
                         btn.disabled = true;
                         
                     } else if (result.warning === "Email has already been sent for this record") {
-                        toastr.info('Email was already sent for this record. You can resend if needed.');
+                        updateStatus('sendStatus', 
+                            '⚠️ Email was already sent for this record. You can resend if needed.', 
+                            'info');
                         
                         btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
                         btn.disabled = false;
@@ -1505,14 +1354,18 @@
                         btn.onclick = function() { resendEmail(); };
                     }
                 } else {
-                    toastr.error(`Failed to send email: ${result.error || 'Unknown error'}`);
+                    updateStatus('sendStatus', 
+                        `❌ Failed to send email: ${result.error || 'Unknown error'}`, 
+                        'error');
                     
                     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
                     btn.disabled = false;
                 }
             } catch (error) {
                 console.error("Email send error:", error);
-                toastr.error('Connection error while sending email');
+                updateStatus('sendStatus', 
+                    '❌ Connection error while sending email', 
+                    'error');
                 
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
                 btn.disabled = false;
@@ -1538,20 +1391,24 @@
                 const result = await response.json();
                 
                 if (response.ok && result.status === "success") {
-                    toastr.success('Email resent successfully!');
+                    updateStatus('sendStatus', 
+                        `✅ Email resent successfully!`, 
+                        'success');
                     
                     btn.innerHTML = '<i class="fas fa-check"></i> Email Resent';
                     btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
                     btn.disabled = true;
                 } else {
-                    toastr.error(`Failed to resend email: ${result.error || 'Unknown error'}`);
+                    updateStatus('sendStatus', 
+                        `❌ Failed to resend email: ${result.error || 'Unknown error'}`, 
+                        'error');
                     
                     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
                     btn.disabled = false;
                 }
             } catch (error) {
                 console.error("Resend error:", error);
-                toastr.error('Connection error');
+                updateStatus('sendStatus', '❌ Connection error', 'error');
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
                 btn.disabled = false;
             }
@@ -1566,8 +1423,11 @@
                 goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
                 goodmoralScore: goodmoralData.score || "Not scanned",
                 goodmoralStatus: goodmoralData.status || "Not analyzed",
+                hasDisciplinaryRecord: goodmoralData.hasIssues ? "Yes" : "No",
+                disciplinaryDetails: goodmoralData.disciplinaryDetails || "None",
                 studentName: document.getElementById('childName').value || "Not entered",
-                email: document.getElementById('contactEmail').value || "Not entered"
+                email: document.getElementById('contactEmail').value || "Not entered",
+                otherDocumentsCount: otherDocuments.length
             };
             
             alert(`Record Information:\n
@@ -1577,61 +1437,20 @@
 🛡️ Good Moral: ${info.goodmoralImagePath}
 ⭐ Good Moral Score: ${info.goodmoralScore}/100
 📊 Good Moral Status: ${info.goodmoralStatus}
+⚠️ Disciplinary Record: ${info.hasDisciplinaryRecord}
+📝 Details: ${info.disciplinaryDetails}
 👤 Student: ${info.studentName}
 📧 Email: ${info.email}
+📎 Other Documents: ${info.otherDocumentsCount}
 \nSave the record first to enable email sending.`);
         }
 
-        // --- UPLOAD ADDITIONAL FILES (if needed) ---
-        async function uploadAdditionalFiles(recordId, fileType, files) {
-            if (!recordId) {
-                toastr.warning("Please save the record first!");
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('id', recordId);
-            formData.append('type', fileType);
-            
-            for (let i = 0; i < files.length; i++) {
-                formData.append('files', files[i]);
-            }
-            
-            try {
-                const response = await fetch('/upload-additional', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (result.status === "success") {
-                    toastr.success(`${fileType} uploaded successfully`);
-                    console.log(`${fileType} uploaded successfully`);
-                }
-            } catch (error) {
-                console.error("Upload error:", error);
-                toastr.error(`Error uploading ${fileType}`);
-            }
-        }
-
-        // Handle Form 138 and Good Moral uploads when record is saved
+        // Handle Form 138 when record is saved
         document.getElementById('fileForm138').addEventListener('change', function(e) {
             if (currentRecordId && e.target.files.length > 0) {
-                uploadAdditionalFiles(currentRecordId, 'form138', e.target.files);
+                // File will be uploaded when record is saved
+                console.log("Form 138 selected, will be uploaded on save");
             }
-        });
-        
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('goodmoralModal');
-            if (event.target === modal) {
-                closeGoodmoralModal();
-            }
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            toastr.info('Welcome to AssiScan! Scan documents to begin.');
         });
     </script>
 </body>
