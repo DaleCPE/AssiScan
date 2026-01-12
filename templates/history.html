@@ -7,6 +7,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     
     <style>
         :root {
@@ -16,6 +17,9 @@
             --text-light: #f0f0f0;
             --glass: rgba(20, 5, 5, 0.7);
             --info-blue: #17a2b8;
+            --success-green: #28a745;
+            --danger-red: #dc3545;
+            --warning-yellow: #ffc107;
         }
 
         body {
@@ -128,7 +132,7 @@
             backdrop-filter: blur(5px);
         }
 
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1300px; }
 
         thead { background: rgba(212, 175, 55, 0.1); }
 
@@ -177,8 +181,24 @@
         .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
         .doc-link.f137 { border-color: var(--gold); color: #f3d576; }
         .doc-link.gm { border-color: #55a630; color: #80b918; }
+        .doc-link.f138 { border-color: #9C27B0; color: #e1bee7; }
         
         .doc-link:hover { transform: translateY(-2px); filter: brightness(1.2); }
+        
+        /* Good Moral Score Badge */
+        .moral-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .moral-excellent { background: #28a745; color: white; }
+        .moral-good { background: #20c997; color: white; }
+        .moral-fair { background: #fd7e14; color: black; }
+        .moral-poor { background: #dc3545; color: white; }
+        .moral-unknown { background: #6c757d; color: white; }
         
         /* ACTION BUTTONS (View, Upload, Delete) */
         .action-btn {
@@ -194,6 +214,7 @@
             align-items: center;
             justify-content: center;
             text-decoration: none; /* For anchor tags */
+            font-size: 11px;
         }
         .action-btn:hover { transform: scale(1.1); }
 
@@ -208,6 +229,9 @@
 
         .btn-upload { border-color: #55a630; color: #55a630; }
         .btn-upload:hover { background: #55a630; color: white; }
+
+        .btn-images { border-color: #9C27B0; color: #9C27B0; }
+        .btn-images:hover { background: #9C27B0; color: white; }
 
         .btn-delete { border-color: #ff4444; color: #ff4444; }
         .btn-delete:hover { background: #ff4444; color: white; }
@@ -245,7 +269,7 @@
             background: #121212;
             border: 1px solid var(--gold);
             width: 90%;
-            max-width: 700px;
+            max-width: 800px;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
             position: relative;
@@ -267,7 +291,7 @@
         .modal-close { color: #888; cursor: pointer; font-size: 20px; transition: 0.2s; }
         .modal-close:hover { color: #fff; }
 
-        .modal-body { padding: 20px; color: #ddd; max-height: 70vh; overflow-y: auto; }
+        .modal-body { padding: 20px; color: #ddd; max-height: 80vh; overflow-y: auto; }
 
         /* View Info Grid */
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -316,6 +340,161 @@
         .btn-cancel { background: #333; color: #fff; }
         .btn-cancel:hover { background: #555; }
 
+        /* Images Modal Styling */
+        .images-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .image-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background: #000;
+            cursor: pointer;
+        }
+        
+        .image-info {
+            padding: 10px;
+            font-size: 11px;
+        }
+        
+        .image-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .type-psa { background: #4a6fa5; color: white; }
+        .type-f137 { background: var(--gold); color: black; }
+        .type-f138 { background: #9C27B0; color: white; }
+        .type-goodmoral { background: #28a745; color: white; }
+        
+        .no-images {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* Good Moral Status Display */
+        .goodmoral-status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .status-score {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 20px;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .score-excellent { background: #28a745; color: white; }
+        .score-good { background: #20c997; color: white; }
+        .score-fair { background: #fd7e14; color: black; }
+        .score-poor { background: #dc3545; color: white; }
+        
+        .status-details {
+            font-size: 11px;
+            color: #ccc;
+        }
+        
+        /* Fullscreen Image Viewer */
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .image-viewer img {
+            max-width: 90%;
+            max-height: 80vh;
+            object-fit: contain;
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+        
+        .image-viewer-info {
+            margin-top: 15px;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .close-viewer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+        
+        .close-viewer:hover {
+            background: rgba(212, 175, 55, 0.5);
+        }
+
+        /* Email Status */
+        .email-status {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        .email-sent { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid #28a745; }
+        .email-not-sent { background: rgba(108, 117, 125, 0.2); color: #6c757d; border: 1px solid #6c757d; }
+
     </style>
 </head>
 <body>
@@ -324,12 +503,15 @@
         <h2><i class="fas fa-database"></i> STUDENT RECORDS</h2>
         <div class="btn-group">
             <a href="/" class="btn-action btn-back"><i class="fas fa-qrcode"></i> Scan New</a>
+            <a href="goodmoral-dashboard.html" class="btn-action" style="background: rgba(156, 39, 176, 0.1); border: 1px solid #9C27B0; color: #9C27B0;">
+                <i class="fas fa-shield-alt"></i> Good Moral Dashboard
+            </a>
             <a href="/logout" class="btn-action btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, or School...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, School, or Good Moral Status...">
         <i class="fas fa-search search-icon"></i>
     </div>
 
@@ -342,8 +524,8 @@
                     <th>Student Profile</th>
                     <th>Birth Details</th>
                     <th>Academic Record</th>
-                    <th>Parents</th>
                     <th>Files</th>
+                    <th>Good Moral Status</th>
                     <th style="text-align: center;">Actions</th>
                 </tr>
             </thead>
@@ -352,6 +534,30 @@
         <div id="no-match-msg">No records found matching your search.</div>
     </div>
 
+    <!-- View Student Images Modal -->
+    <div id="imagesModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-images"></i> Student Uploaded Images</h3>
+                <i class="fas fa-times modal-close" onclick="closeModal('imagesModal')"></i>
+            </div>
+            <div class="modal-body">
+                <h4 id="imagesStudentName" style="color: var(--gold); margin-top: 0;"></h4>
+                <div id="imagesContainer" class="images-container">
+                    <!-- Images will be loaded here -->
+                </div>
+                <div id="noImagesMessage" class="no-images" style="display: none;">
+                    <i class="fas fa-image fa-3x" style="color: #444; margin-bottom: 10px;"></i>
+                    <p>No images uploaded for this student.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-action btn-cancel" onclick="closeModal('imagesModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Student Info Modal -->
     <div id="viewModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -361,13 +567,18 @@
             <div class="modal-body">
                 <div class="info-grid">
                     <div class="info-section">
-                        <h4>PSA Details</h4>
+                        <h4>Personal Details</h4>
                         <div id="view-psa-content"></div>
                     </div>
                     <div class="info-section school">
-                        <h4>School Records</h4>
+                        <h4>Academic & Contact</h4>
                         <div id="view-school-content"></div>
                     </div>
+                </div>
+                <!-- Good Moral Status Section -->
+                <div id="view-goodmoral-section" style="display: none; margin-top: 20px;">
+                    <h4 style="color: #28a745; border-bottom: 1px solid #333; padding-bottom: 5px;">Good Moral Certificate Analysis</h4>
+                    <div id="view-goodmoral-content"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -376,6 +587,7 @@
         </div>
     </div>
 
+    <!-- Edit Record Modal -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -439,6 +651,7 @@
         </div>
     </div>
 
+    <!-- Upload File Modal -->
     <div id="uploadModal" class="modal-overlay">
         <div class="modal-box" style="max-width: 400px;">
             <div class="modal-header">
@@ -475,9 +688,39 @@
         </div>
     </div>
 
+    <!-- Fullscreen Image Viewer -->
+    <div id="imageViewer" class="image-viewer">
+        <div class="close-viewer" onclick="closeImageViewer()">
+            <i class="fas fa-times"></i>
+        </div>
+        <img id="fullscreenImage" src="" alt="Fullscreen Image">
+        <div class="image-viewer-info" id="imageInfo"></div>
+    </div>
+
+    <!-- Include Toastr for notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script>
+        // Toastr configuration
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": true,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
         let allRecords = [];
-        let serverBaseUrl = window.location.origin; // Gets https://assiscan-app.onrender.com
+        let serverBaseUrl = window.location.origin;
 
         async function loadData() {
             try {
@@ -502,7 +745,32 @@
                 tbody.innerHTML = data.records.map(r => {
                     const psaPath = r.image_path || r.psa_image_path;
                     const f137Path = r.form137_path || r.f137_image_path;
+                    const f138Path = r.form138_path;
+                    const goodmoralPath = r.goodmoral_path;
+                    
                     const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
+                    
+                    // Get Good Moral Score and Status
+                    const goodmoralScore = r.goodmoral_score || 0;
+                    const goodmoralStatus = r.disciplinary_status || 'UNKNOWN';
+                    
+                    // Get Moral Badge Class
+                    const getMoralBadgeClass = (status) => {
+                        switch(status.toUpperCase()) {
+                            case 'EXCELLENT': return 'moral-excellent';
+                            case 'GOOD': return 'moral-good';
+                            case 'FAIR': return 'moral-fair';
+                            case 'POOR': return 'moral-poor';
+                            default: return 'moral-unknown';
+                        }
+                    };
+                    
+                    const getMoralScoreClass = (score) => {
+                        if (score >= 90) return 'score-excellent';
+                        if (score >= 70) return 'score-good';
+                        if (score >= 50) return 'score-fair';
+                        return 'score-poor';
+                    };
 
                     // FIXED: Helper function to get correct image URL for Render
                     const getImageUrl = (filename) => {
@@ -517,6 +785,19 @@
                         // Return full URL for Render
                         return `${serverBaseUrl}/uploads/${cleanFilename}`;
                     };
+                    
+                    // Count total images
+                    const imageCount = [
+                        psaPath ? 1 : 0,
+                        f137Path ? 1 : 0,
+                        f138Path ? 1 : 0,
+                        goodmoralPath ? 1 : 0
+                    ].reduce((a, b) => a + b, 0);
+
+                    // Email status
+                    const emailStatus = r.email_sent ? 
+                        '<span class="email-status email-sent"><i class="fas fa-check"></i> Email Sent</span>' : 
+                        '<span class="email-status email-not-sent"><i class="fas fa-envelope"></i> Not Sent</span>';
 
                     return `
                     <tr id="row-${r.id}">
@@ -529,6 +810,7 @@
                             <div class="sub-text" style="margin-top:4px;">
                                 ${r.religion ? `<i class="fas fa-praying-hands" style="font-size:10px;"></i> ${r.religion}` : ''}
                             </div>
+                            ${emailStatus}
                         </td>
 
                         <td>
@@ -543,11 +825,9 @@
                         </td>
 
                         <td>
-                            <div class="sub-text"><span style="color:#aaa;">M:</span> ${r.mother_name || '-'}</div>
-                            <div class="sub-text"><span style="color:#aaa;">F:</span> ${r.father_name || '-'}</div>
-                        </td>
-
-                        <td>
+                            <div style="margin-bottom: 5px;">
+                                <span style="font-size: 11px; color: #888;">Total Images: ${imageCount}</span>
+                            </div>
                             ${psaPath ? `
                                 <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="View PSA Document">
                                     <i class="fas fa-id-card"></i> PSA
@@ -560,16 +840,39 @@
                                 </a>
                             ` : ''}
                             
-                            ${r.form138_path ? `
-                                <a href="${getImageUrl(r.form138_path)}" target="_blank" class="doc-link" title="View Form 138">
+                            ${f138Path ? `
+                                <a href="${getImageUrl(f138Path)}" target="_blank" class="doc-link f138" title="View Form 138">
                                     <i class="fas fa-file-invoice"></i> F138
                                 </a>
                             ` : ''}
                             
-                            ${r.goodmoral_path ? `
-                                <a href="${getImageUrl(r.goodmoral_path)}" target="_blank" class="doc-link gm" title="View Good Moral Certificate">
+                            ${goodmoralPath ? `
+                                <a href="${getImageUrl(goodmoralPath)}" target="_blank" class="doc-link gm" title="View Good Moral Certificate">
                                     <i class="fas fa-certificate"></i> GM
                                 </a>
+                            ` : ''}
+                        </td>
+
+                        <td>
+                            ${goodmoralScore > 0 ? `
+                                <div class="moral-badge ${getMoralBadgeClass(goodmoralStatus)}">
+                                    ${goodmoralStatus}
+                                </div>
+                                <div style="margin-top: 5px;">
+                                    <span class="status-score ${getMoralScoreClass(goodmoralScore)}">
+                                        ${goodmoralScore}
+                                    </span>
+                                    <span style="font-size: 10px; color: #888;">/100</span>
+                                </div>
+                            ` : `
+                                <div class="moral-badge moral-unknown">
+                                    NOT SCANNED
+                                </div>
+                            `}
+                            ${r.has_disciplinary_record ? `
+                                <div style="margin-top: 5px; font-size: 10px; color: #ff6b6b;">
+                                    <i class="fas fa-exclamation-triangle"></i> Has Issues
+                                </div>
                             ` : ''}
                         </td>
 
@@ -577,6 +880,10 @@
                             <a href="/view-form/${r.id}" target="_blank" class="action-btn btn-print" title="Print UB Form">
                                 <i class="fas fa-print"></i>
                             </a>
+                            
+                            <button onclick="openImagesModal(${r.id}, '${r.name || ''}')" class="action-btn btn-images" title="View All Images">
+                                <i class="fas fa-images"></i>
+                            </button>
                             
                             <button onclick="openViewModal(${r.id})" class="action-btn btn-view" title="View Extracted Info">
                                 <i class="fas fa-eye"></i>
@@ -601,14 +908,150 @@
                 console.error('Error loading data:', err);
                 document.getElementById('loading').innerText = "ERROR LOADING DATABASE. Please check console.";
                 document.getElementById('loading').style.color = "#ff6b6b";
+                toastr.error('Failed to load data. Please check connection.');
             }
         }
 
-        // ================= VIEW LOGIC =================
+        // ================= IMAGES MODAL =================
+        function openImagesModal(id, studentName) {
+            const r = allRecords.find(item => item.id === id);
+            if(!r) {
+                toastr.warning("Record not found!");
+                return;
+            }
+
+            // Set student name in modal
+            document.getElementById('imagesStudentName').textContent = studentName;
+            
+            // Get image paths
+            const psaPath = r.image_path || r.psa_image_path;
+            const f137Path = r.form137_path || r.f137_image_path;
+            const f138Path = r.form138_path;
+            const goodmoralPath = r.goodmoral_path;
+            
+            const imagesContainer = document.getElementById('imagesContainer');
+            const noImagesMessage = document.getElementById('noImagesMessage');
+            
+            // Clear previous images
+            imagesContainer.innerHTML = '';
+            
+            // Create array of images to display
+            const images = [];
+            
+            if (psaPath) {
+                const psaUrls = psaPath.split(',').map(p => p.trim()).filter(p => p);
+                psaUrls.forEach((url, index) => {
+                    images.push({
+                        url: getImageUrl(url),
+                        type: 'PSA',
+                        title: `PSA Birth Certificate ${psaUrls.length > 1 ? `(${index + 1}/${psaUrls.length})` : ''}`,
+                        className: 'type-psa'
+                    });
+                });
+            }
+            
+            if (f137Path) {
+                const f137Urls = f137Path.split(',').map(p => p.trim()).filter(p => p);
+                f137Urls.forEach((url, index) => {
+                    images.push({
+                        url: getImageUrl(url),
+                        type: 'Form 137',
+                        title: `Form 137 ${f137Urls.length > 1 ? `(${index + 1}/${f137Urls.length})` : ''}`,
+                        className: 'type-f137'
+                    });
+                });
+            }
+            
+            if (f138Path) {
+                const f138Urls = f138Path.split(',').map(p => p.trim()).filter(p => p);
+                f138Urls.forEach((url, index) => {
+                    images.push({
+                        url: getImageUrl(url),
+                        type: 'Form 138',
+                        title: `Form 138 (Report Card) ${f138Urls.length > 1 ? `(${index + 1}/${f138Urls.length})` : ''}`,
+                        className: 'type-f138'
+                    });
+                });
+            }
+            
+            if (goodmoralPath) {
+                const gmUrls = goodmoralPath.split(',').map(p => p.trim()).filter(p => p);
+                gmUrls.forEach((url, index) => {
+                    images.push({
+                        url: getImageUrl(url),
+                        type: 'Good Moral',
+                        title: `Good Moral Certificate ${gmUrls.length > 1 ? `(${index + 1}/${gmUrls.length})` : ''}`,
+                        className: 'type-goodmoral'
+                    });
+                });
+            }
+            
+            // Display images or show "no images" message
+            if (images.length > 0) {
+                images.forEach(img => {
+                    const imageCard = document.createElement('div');
+                    imageCard.className = 'image-card';
+                    imageCard.innerHTML = `
+                        <img src="${img.url}" 
+                             alt="${img.title}" 
+                             class="image-preview" 
+                             onclick="openFullscreenImage('${img.url}', '${img.title}')"
+                             onerror="this.src='https://via.placeholder.com/200x150/1a1a1a/888888?text=Image+Not+Found'">
+                        <div class="image-info">
+                            <span class="image-type ${img.className}">${img.type}</span>
+                            <span style="color: #aaa; font-size: 10px;">${img.title}</span>
+                        </div>
+                    `;
+                    imagesContainer.appendChild(imageCard);
+                });
+                
+                noImagesMessage.style.display = 'none';
+                imagesContainer.style.display = 'grid';
+            } else {
+                noImagesMessage.style.display = 'block';
+                imagesContainer.style.display = 'none';
+            }
+            
+            // Show modal
+            document.getElementById('imagesModal').style.display = 'flex';
+        }
+
+        // Helper function to get image URL
+        function getImageUrl(filename) {
+            if (!filename) return null;
+            
+            // Handle comma-separated filenames (take first one)
+            const firstFilename = filename.split(',')[0].trim();
+            
+            // Extract just the filename (remove any path)
+            const cleanFilename = firstFilename.split('/').pop();
+            
+            // Return full URL for Render
+            return `${serverBaseUrl}/uploads/${cleanFilename}`;
+        }
+
+        // ================= FULLSCREEN IMAGE VIEWER =================
+        function openFullscreenImage(imageUrl, imageTitle) {
+            const viewer = document.getElementById('imageViewer');
+            const imageElement = document.getElementById('fullscreenImage');
+            const infoElement = document.getElementById('imageInfo');
+            
+            imageElement.src = imageUrl;
+            infoElement.textContent = imageTitle;
+            
+            viewer.style.display = 'flex';
+        }
+
+        function closeImageViewer() {
+            document.getElementById('imageViewer').style.display = 'none';
+            document.getElementById('fullscreenImage').src = '';
+        }
+
+        // ================= VIEW MODAL =================
         function openViewModal(id) {
             const r = allRecords.find(item => item.id === id);
             if(!r) {
-                alert("Record not found!");
+                toastr.warning("Record not found!");
                 return;
             }
 
@@ -618,35 +1061,80 @@
                     <span class="info-val">${val || '-'}</span>
                 </div>`;
 
+            // Personal Details
             document.getElementById('view-psa-content').innerHTML = `
                 ${row('Full Name', r.name)}
                 ${row('Sex', r.sex)}
                 ${row('Date of Birth', r.birthdate)}
                 ${row('Place of Birth', r.birthplace)}
-                ${row('Mother', r.mother_name)}
-                ${row('Father', r.father_name)}
+                ${row('Age', r.age)}
+                ${row('Civil Status', r.civil_status)}
+                ${row('Nationality', r.nationality)}
                 ${row('Religion', r.religion)}
+                ${row('Mother', r.mother_name)}
+                ${row('Mother Contact', r.mother_contact)}
+                ${row('Father', r.father_name)}
+                ${row('Father Contact', r.father_contact)}
                 ${row('Address', (r.specific_address || '') + ' ' + (r.province || ''))}
             `;
 
+            // Academic & Contact Details
             document.getElementById('view-school-content').innerHTML = `
                 ${row('LRN', r.lrn)}
                 ${row('School Name', r.school_name)}
+                ${row('School Address', r.school_address)}
                 ${row('Gen. Average', r.final_general_average)}
                 ${row('School Year', r.school_year)}
                 ${row('Student Type', r.student_type)}
                 ${row('Program', r.program)}
+                ${row('Mobile No.', r.mobile_no)}
+                ${row('Email', r.email)}
                 <div style="margin-top:10px; font-size:11px; color:#555">Created: ${r.created_at || 'N/A'}</div>
             `;
+
+            // Good Moral Section (if available)
+            const goodmoralSection = document.getElementById('view-goodmoral-section');
+            const goodmoralContent = document.getElementById('view-goodmoral-content');
+            
+            if (r.goodmoral_score && r.goodmoral_score > 0) {
+                const getStatusClass = (score) => {
+                    if (score >= 90) return 'score-excellent';
+                    if (score >= 70) return 'score-good';
+                    if (score >= 50) return 'score-fair';
+                    return 'score-poor';
+                };
+                
+                goodmoralContent.innerHTML = `
+                    <div class="goodmoral-status">
+                        <div class="status-header">
+                            <span style="font-weight: bold; color: #fff;">Status: ${r.disciplinary_status || 'UNKNOWN'}</span>
+                            <span class="status-score ${getStatusClass(r.goodmoral_score)}">
+                                ${r.goodmoral_score}/100
+                            </span>
+                        </div>
+                        <div class="status-details">
+                            ${r.has_disciplinary_record ? 
+                                `<p><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Has disciplinary record</p>` : 
+                                `<p><i class="fas fa-check-circle" style="color: #28a745;"></i> No disciplinary issues</p>`}
+                            ${r.disciplinary_details ? `<p><strong>Details:</strong> ${r.disciplinary_details}</p>` : ''}
+                            ${r.goodmoral_issued_date ? `<p><strong>Issued:</strong> ${r.goodmoral_issued_date}</p>` : ''}
+                            ${r.goodmoral_issuing_school ? `<p><strong>Issuing School:</strong> ${r.goodmoral_issuing_school}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                goodmoralSection.style.display = 'block';
+            } else {
+                goodmoralSection.style.display = 'none';
+            }
 
             document.getElementById('viewModal').style.display = 'flex';
         }
 
-        // ================= EDIT LOGIC =================
+        // ================= EDIT MODAL =================
         function openEditModal(id) {
             const r = allRecords.find(item => item.id === id);
             if(!r) {
-                alert("Record not found!");
+                toastr.warning("Record not found!");
                 return;
             }
 
@@ -690,19 +1178,19 @@
                 const result = await res.json();
 
                 if (result.success) {
-                    alert("Record updated successfully!");
+                    toastr.success("Record updated successfully!");
                     closeModal('editModal');
                     loadData(); // Refresh table
                 } else {
-                    alert("Error updating: " + (result.error || "Unknown error"));
+                    toastr.error("Error updating: " + (result.error || "Unknown error"));
                 }
             } catch (err) {
                 console.error('Save error:', err);
-                alert("Failed to connect to server.");
+                toastr.error("Failed to connect to server.");
             }
         }
 
-        // ================= UPLOAD LOGIC =================
+        // ================= UPLOAD MODAL =================
         function openUploadModal(id, name) {
             document.getElementById('upload_id').value = id;
             document.getElementById('upload_name').value = name || 'Unknown Student';
@@ -716,7 +1204,7 @@
             const fileInput = document.getElementById('fileInput');
 
             if (!fileInput.files[0]) {
-                alert("Please select a file first.");
+                toastr.warning("Please select a file first.");
                 return;
             }
 
@@ -736,26 +1224,25 @@
                     body: formData
                 });
                 
-                // Get JSON response
                 const result = await res.json();
 
                 if (res.ok && result.status === "success") {
-                    alert("Document uploaded successfully!");
+                    toastr.success("Document uploaded successfully!");
                     closeModal('uploadModal');
                     loadData(); 
                 } else {
-                    alert("Error: " + (result.error || "Upload failed"));
+                    toastr.error("Error: " + (result.error || "Upload failed"));
                 }
             } catch (err) {
                 console.error('Upload error:', err);
-                alert("Server connection failed.");
+                toastr.error("Server connection failed.");
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
         }
 
-        // ================= UTILS =================
+        // ================= UTILITIES =================
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
@@ -782,12 +1269,13 @@
                             allRecords = allRecords.filter(r => r.id !== id);
                         }, 300);
                     }
+                    toastr.success('Record deleted successfully!');
                 } else {
-                    alert("Error: " + (data.error || "Failed to delete record"));
+                    toastr.error("Error: " + (data.error || "Failed to delete record"));
                 }
             } catch (e) {
                 console.error('Delete error:', e);
-                alert("Server connection failed.");
+                toastr.error("Server connection failed.");
             }
         }
 
@@ -800,8 +1288,9 @@
             rows.forEach(row => {
                 let nameText = row.querySelector('.student-name')?.textContent.toLowerCase() || "";
                 let lrnText = row.querySelector('.searchable-lrn')?.textContent.toLowerCase() || "";
+                let moralText = row.querySelector('.moral-badge')?.textContent.toLowerCase() || "";
                 
-                if (nameText.includes(filter) || lrnText.includes(filter)) {
+                if (nameText.includes(filter) || lrnText.includes(filter) || moralText.includes(filter)) {
                     row.style.display = ''; 
                     hasMatch = true;
                 } else {
@@ -817,7 +1306,17 @@
             if (event.target.classList.contains('modal-overlay')) {
                 event.target.style.display = "none";
             }
+            if (event.target.id === 'imageViewer') {
+                closeImageViewer();
+            }
         }
+
+        // Close fullscreen image viewer with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeImageViewer();
+            }
+        });
 
         // Load data when page loads
         loadData();
@@ -825,6 +1324,9 @@
         // Debug info
         console.log('AssiScan History Page Loaded');
         console.log('Server URL:', serverBaseUrl);
+        
+        // Initialize Toastr
+        toastr.info('Database records loaded successfully!');
     </script>
 </body>
 </html>
