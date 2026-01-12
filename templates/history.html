@@ -3,828 +3,1151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Records | AssiScan</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>AssiScan | Database</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     
     <style>
         :root {
-            --gold: #d4af37;
-            --dark-red: #331010;
-            --bg-dark: #050101;
-            --text-light: #f0f0f0;
-            --glass: rgba(20, 5, 5, 0.7);
-            --info-blue: #17a2b8;
+            --bg-dark: #0f0404;
+            --panel-bg: rgba(10, 2, 2, 0.95); 
+            --primary-gold: #d4af37;
+            --bright-gold: #ffdf80;
+            --text-main: #f0f0f0;
+            --text-muted: #8a7a7a;
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --border-dim: rgba(212, 175, 55, 0.2);
+            --success-green: #4CAF50;
+            --warning-yellow: #FFC107;
+            --info-blue: #2196F3;
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            margin: 0;
-            padding: 20px;
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            background-image: radial-gradient(circle at 50% 50%, #1a0505 0%, #000 100%);
-            color: var(--text-light);
+            background: radial-gradient(circle at 20% 50%, #1a0505 0%, #000000 100%);
+            color: var(--text-main);
+            margin: 0;
             min-height: 100vh;
+            padding: 20px;
         }
 
-        /* HEADER */
+        /* Header Styles */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-            padding-bottom: 15px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-dim);
+            margin-bottom: 30px;
         }
 
-        h2 {
-            margin: 0;
+        .brand-title {
             font-family: 'Cinzel', serif;
-            color: var(--gold);
-            font-size: 24px;
+            color: var(--primary-gold);
+            font-size: 32px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
             letter-spacing: 2px;
-            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+            text-transform: uppercase;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Table Styling */
+        .table-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text-main);
+        }
+
+        .custom-table th {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--primary-gold);
+            font-family: 'Cinzel', serif;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-dim);
+        }
+
+        .custom-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+            vertical-align: middle;
+        }
+
+        .custom-table tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid var(--border-dim);
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--primary-gold);
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .btn-group { display: flex; gap: 10px; }
+        .btn-icon:hover {
+            background: var(--primary-gold);
+            color: #000;
+            transform: translateY(-2px);
+        }
 
-        .btn-action {
-            text-decoration: none;
+        .btn-icon.view:hover {
+            background: #2196F3;
+            border-color: #2196F3;
+            color: white;
+        }
+
+        .btn-icon.edit:hover {
+            background: #FFC107;
+            border-color: #FFC107;
+            color: #000;
+        }
+
+        .btn-icon.delete:hover {
+            background: #F44336;
+            border-color: #F44336;
+            color: white;
+        }
+
+        .btn-icon.email:hover {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-icon.resend:hover {
+            background: #9C27B0;
+            border-color: #9C27B0;
+            color: white;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 11px;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: 0.3s;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-sent {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #FFC107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* Modal Styling */
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            color: var(--text-main);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-dim);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .modal-title {
+            color: var(--primary-gold);
+            font-family: 'Cinzel', serif;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-dim);
+        }
+
+        /* Image Gallery */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .image-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border-color: var(--primary-gold);
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background: #000;
+        }
+
+        .image-info {
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        .image-title {
+            color: var(--primary-gold);
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .image-type {
+            color: var(--text-muted);
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
         }
 
-        .btn-back {
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid var(--gold);
-            color: var(--gold);
-        }
-        .btn-back:hover { background: var(--gold); color: #000; }
-
-        .btn-logout {
-            background: rgba(50, 0, 0, 0.5);
-            border: 1px solid #ff6b6b;
-            color: #ff6b6b;
-        }
-        .btn-logout:hover { background: #ff6b6b; color: #000; }
-
-        /* SEARCH BAR STYLE */
-        .search-container {
-            margin-bottom: 20px;
-            position: relative;
-            max-width: 400px;
+        .no-images {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px;
+            font-style: italic;
         }
 
-        .search-input {
-            width: 100%;
-            padding: 12px 15px;
-            padding-right: 40px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(212, 175, 55, 0.5);
-            color: #fff;
-            border-radius: 6px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            transition: 0.3s;
-            outline: none;
-        }
-
-        .search-input:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--gold);
-            pointer-events: none;
-        }
-
-        /* TABLE WRAPPER */
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            background: var(--glass);
-            backdrop-filter: blur(5px);
-        }
-
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-
-        thead { background: rgba(212, 175, 55, 0.1); }
-
-        th {
-            padding: 18px;
-            text-align: left;
-            color: var(--gold);
-            font-family: 'Cinzel', serif;
-            font-size: 11px;
-            border-bottom: 2px solid var(--dark-red);
-            white-space: nowrap;
-            text-transform: uppercase;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 13px;
-            color: #ccc;
-            vertical-align: top;
-        }
-
-        tr:last-child td { border-bottom: none; }
-        tr:hover { background-color: rgba(212, 175, 55, 0.05); }
-
-        /* Data Styling Helper Classes */
-        .sub-text { display: block; font-size: 11px; color: #888; margin-top: 2px; }
-        .highlight-text { color: #fff; font-weight: 600; }
-        .gold-text { color: var(--gold); }
-        
-        /* Document Links */
-        .doc-link {
-            color: #aaa;
-            text-decoration: none;
-            font-size: 10px;
-            margin-right: 5px;
-            padding: 4px 8px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            transition: 0.3s;
+        /* Good Moral Status Display */
+        .goodmoral-status {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            margin-bottom: 4px;
-        }
-        .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
-        .doc-link.f137 { border-color: var(--gold); color: #f3d576; }
-        .doc-link.gm { border-color: #55a630; color: #80b918; }
-        
-        .doc-link:hover { transform: translateY(-2px); filter: brightness(1.2); }
-        
-        /* ACTION BUTTONS (View, Upload, Delete) */
-        .action-btn {
-            background: transparent;
-            border: 1px solid #555;
-            color: #aaa;
-            padding: 6px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: 0.2s;
-            margin: 0 2px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none; /* For anchor tags */
-        }
-        .action-btn:hover { transform: scale(1.1); }
-
-        .btn-print { border-color: var(--gold); color: var(--gold); }
-        .btn-print:hover { background: var(--gold); color: #000; }
-
-        .btn-view { border-color: #4a6fa5; color: #4a6fa5; }
-        .btn-view:hover { background: #4a6fa5; color: white; }
-
-        .btn-edit { border-color: var(--info-blue); color: var(--info-blue); }
-        .btn-edit:hover { background: var(--info-blue); color: white; }
-
-        .btn-upload { border-color: #55a630; color: #55a630; }
-        .btn-upload:hover { background: #55a630; color: white; }
-
-        .btn-delete { border-color: #ff4444; color: #ff4444; }
-        .btn-delete:hover { background: #ff4444; color: white; }
-
-        /* School Info Column */
-        .lrn-info { font-size: 11px; color: var(--gold); font-family: monospace; letter-spacing: 0.5px; }
-        .grade-badge { 
-            background: rgba(212, 175, 55, 0.15); 
-            color: var(--gold); 
-            padding: 2px 6px; 
-            border-radius: 3px; 
-            font-size: 11px; 
-            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
         }
 
-        #loading { text-align: center; color: var(--gold); margin-top: 50px; font-family: 'Cinzel', serif; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        
-        #no-match-msg { display: none; text-align: center; padding: 20px; color: #888; font-style: italic; }
-
-        /* ================= MODAL STYLES ================= */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 1000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(5px);
+        .goodmoral-clear {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
         }
 
-        .modal-box {
-            background: #121212;
-            border: 1px solid var(--gold);
-            width: 90%;
-            max-width: 700px;
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
-            position: relative;
-            animation: slideDown 0.3s ease;
+        .goodmoral-offense {
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336;
         }
 
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        .modal-header {
-            background: rgba(212, 175, 55, 0.1);
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Loading Spinner */
+        .spinner-container {
+            text-align: center;
+            padding: 40px;
         }
 
-        .modal-title { font-family: 'Cinzel', serif; color: var(--gold); margin: 0; font-size: 18px; }
-        .modal-close { color: #888; cursor: pointer; font-size: 20px; transition: 0.2s; }
-        .modal-close:hover { color: #fff; }
-
-        .modal-body { padding: 20px; color: #ddd; max-height: 70vh; overflow-y: auto; }
-
-        /* View Info Grid */
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .info-section h4 { color: #4a6fa5; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 0; font-size: 14px; text-transform: uppercase; }
-        .info-section.school h4 { color: var(--gold); }
-        
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; border-bottom: 1px solid #222; padding-bottom: 4px; }
-        .info-label { color: #777; }
-        .info-val { color: #fff; font-weight: 500; text-align: right; }
-
-        /* Form Elements */
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 5px; color: var(--gold); font-size: 12px; font-weight: bold; }
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            color: #fff;
-            border-radius: 4px;
-            box-sizing: border-box; 
-        }
-        .form-control:focus { border-color: var(--gold); outline: none; }
-        .form-control:disabled { background: #1a1a1a; color: #555; }
-
-        /* Edit Form Grid */
-        .edit-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+        .spinner {
+            border: 3px solid rgba(212, 175, 55, 0.3);
+            border-top: 3px solid var(--primary-gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
         }
 
-        .modal-footer { padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
-        
-        .btn-modal-action {
-            background: var(--gold);
-            color: #000;
-            border: none;
-            padding: 8px 20px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 4px;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .btn-modal-action:hover { background: #fff; }
-        
-        .btn-cancel { background: #333; color: #fff; }
-        .btn-cancel:hover { background: #555; }
 
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .custom-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h2><i class="fas fa-database"></i> STUDENT RECORDS</h2>
-        <div class="btn-group">
-            <a href="/" class="btn-action btn-back"><i class="fas fa-qrcode"></i> Scan New</a>
-            <a href="/logout" class="btn-action btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
-        </div>
-    </div>
-
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, or School...">
-        <i class="fas fa-search search-icon"></i>
-    </div>
-
-    <div id="loading">RETRIEVING SECURE ARCHIVES...</div>
-
-    <div class="table-wrapper">
-        <table id="recordsTable" style="display:none;">
-            <thead>
-                <tr>
-                    <th>Student Profile</th>
-                    <th>Birth Details</th>
-                    <th>Academic Record</th>
-                    <th>Parents</th>
-                    <th>Files</th>
-                    <th style="text-align: center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-        <div id="no-match-msg">No records found matching your search.</div>
-    </div>
-
-    <div id="viewModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-id-card"></i> Student Full Info</h3>
-                <i class="fas fa-times modal-close" onclick="closeModal('viewModal')"></i>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <div class="brand-title">ASSISCAN DATABASE</div>
+                <div class="brand-subtitle">University of Batangas Lipa - Records Management</div>
             </div>
-            <div class="modal-body">
-                <div class="info-grid">
-                    <div class="info-section">
-                        <h4>PSA Details</h4>
-                        <div id="view-psa-content"></div>
-                    </div>
-                    <div class="info-section school">
-                        <h4>School Records</h4>
-                        <div id="view-school-content"></div>
-                    </div>
+            <div>
+                <a href="index.html" class="btn btn-outline-warning">
+                    <i class="fas fa-arrow-left"></i> Back to Scanner
+                </a>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 style="color: var(--primary-gold); margin: 0;">
+                        <i class="fas fa-database"></i> Student Records
+                    </h5>
+                    <small style="color: var(--text-muted);">Total Records: <span id="totalRecords">0</span></small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshRecords()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-modal-action btn-cancel" onclick="closeModal('viewModal')">Close</button>
+        </div>
+
+        <!-- Records Table -->
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Student Name</th>
+                            <th>LRN</th>
+                            <th>School</th>
+                            <th>Program</th>
+                            <th>Email Status</th>
+                            <th>Good Moral</th>
+                            <th>Date Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center">
+                                <div class="spinner-container">
+                                    <div class="spinner"></div>
+                                    <p style="margin-top: 10px; color: var(--text-muted);">Loading records...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div style="color: var(--text-muted); font-size: 12px;">
+                Showing <span id="startRecord">0</span> to <span id="endRecord">0</span> of <span id="totalCount">0</span> records
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm" id="pagination">
+                    <!-- Pagination will be generated here -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- View Images Modal -->
+    <div class="modal fade" id="viewImagesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-images"></i> Uploaded Images - <span id="modalStudentName"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- PSA Images -->
+                    <div id="psaImagesSection" style="display: none;">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-baby"></i> PSA Birth Certificate
+                        </h6>
+                        <div id="psaImages" class="image-gallery">
+                            <!-- PSA images will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Form 137 Images -->
+                    <div id="form137ImagesSection" style="display: none;">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-file-contract"></i> Form 137 / SF10
+                        </h6>
+                        <div id="form137Images" class="image-gallery">
+                            <!-- Form 137 images will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Form 138 Images -->
+                    <div id="form138ImagesSection" style="display: none;">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-file-alt"></i> Form 138 (Report Card)
+                        </h6>
+                        <div id="form138Images" class="image-gallery">
+                            <!-- Form 138 images will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Good Moral Certificate Images -->
+                    <div id="goodmoralImagesSection" style="display: none;">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-certificate"></i> Good Moral Certificate
+                        </h6>
+                        <div id="goodmoralImages" class="image-gallery">
+                            <!-- Good Moral images will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- No Images Message -->
+                    <div id="noImagesMessage" class="no-images">
+                        <i class="fas fa-image fa-3x mb-3" style="color: var(--border-dim);"></i>
+                        <p>No images uploaded for this record.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="printForm(currentViewingRecord)">
+                        <i class="fas fa-print"></i> Print Form
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="editModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-edit"></i> Edit Record</h3>
-                <i class="fas fa-times modal-close" onclick="closeModal('editModal')"></i>
-            </div>
-            <div class="modal-body">
-                <form id="editForm">
-                    <input type="hidden" id="edit_id">
-                    
-                    <div class="edit-grid">
-                        <div>
-                            <h4 style="color:var(--gold); border-bottom:1px solid #333; font-size:12px; margin-top:0;">Personal Info</h4>
-                            <div class="form-group">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" id="edit_name" class="form-control">
+    <!-- Edit Record Modal -->
+    <div class="modal fade" id="editRecordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit"></i> Edit Record - <span id="editStudentName"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRecordForm">
+                        <input type="hidden" id="editRecordId">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Student Name</label>
+                                <input type="text" id="editName" class="form-control" required>
                             </div>
-                            <div class="form-group">
+                            <div class="col-md-6">
+                                <label class="form-label">LRN</label>
+                                <input type="text" id="editLrn" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Sex</label>
-                                <select id="edit_sex" class="form-control">
+                                <select id="editSex" class="form-control">
+                                    <option value="">Select</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <div class="col-md-6">
                                 <label class="form-label">Birthdate</label>
-                                <input type="date" id="edit_birthdate" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Address / Province</label>
-                                <input type="text" id="edit_province" class="form-control">
+                                <input type="date" id="editBirthdate" class="form-control">
                             </div>
                         </div>
-
-                        <div>
-                            <h4 style="color:#17a2b8; border-bottom:1px solid #333; font-size:12px; margin-top:0;">Academic Info</h4>
-                            <div class="form-group">
-                                <label class="form-label">Learner Reference No. (LRN)</label>
-                                <input type="text" id="edit_lrn" class="form-control">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Province</label>
+                                <input type="text" id="editProvince" class="form-control">
                             </div>
-                            <div class="form-group">
+                            <div class="col-md-6">
+                                <label class="form-label">Program</label>
+                                <input type="text" id="editProgram" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">School Name</label>
-                                <input type="text" id="edit_school" class="form-control">
+                                <input type="text" id="editSchoolName" class="form-control">
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">General Average</label>
-                                <input type="text" id="edit_average" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Track / Program</label>
-                                <input type="text" id="edit_program" class="form-control">
+                            <div class="col-md-6">
+                                <label class="form-label">Final Average</label>
+                                <input type="text" id="editFinalAverage" class="form-control">
                             </div>
                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal-action btn-cancel" onclick="closeModal('editModal')">Cancel</button>
-                <button class="btn-modal-action" onclick="saveRecord()">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="uploadModal" class="modal-overlay">
-        <div class="modal-box" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-cloud-upload-alt"></i> Upload Missing File</h3>
-                <i class="fas fa-times modal-close" onclick="closeModal('uploadModal')"></i>
-            </div>
-            <div class="modal-body">
-                <form id="uploadForm">
-                    <input type="hidden" id="upload_id">
-                    
-                    <div class="form-group">
-                        <label class="form-label">Student Name</label>
-                        <input type="text" id="upload_name" class="form-control" disabled>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Document Type</label>
-                        <select id="doc_type" class="form-control">
-                            <option value="form137">Form 137 / SF10</option>
-                            <option value="form138">Form 138 (Report Card)</option>
-                            <option value="goodmoral">Certificate of Good Moral</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Select Image</label>
-                        <input type="file" id="fileInput" class="form-control" accept="image/*" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal-action" onclick="submitUpload()">Start Upload</button>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditedRecord()">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this record?</p>
+                    <p class="text-warning"><strong>This action cannot be undone.</strong></p>
+                    <input type="hidden" id="deleteRecordId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="fas fa-trash"></i> Delete Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let allRecords = [];
-        let serverBaseUrl = window.location.origin; // Gets https://assiscan-app.onrender.com
+        let currentRecords = [];
+        let currentPage = 1;
+        let recordsPerPage = 10;
+        let currentViewingRecord = null;
+        let serverUrl = '';
 
-        async function loadData() {
-            try {
-                const res = await fetch('/get-records');
-                if (res.status === 401) { 
-                    window.location.href = '/login'; 
-                    return; 
-                }
+        // Initialize modal instances
+        let viewImagesModal = null;
+        let editRecordModal = null;
+        let confirmDeleteModal = null;
 
-                const data = await res.json();
-                allRecords = data.records; 
-
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('recordsTable').style.display = 'table';
-                const tbody = document.getElementById('tableBody');
-
-                if(data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No records found.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.records.map(r => {
-                    const psaPath = r.image_path || r.psa_image_path;
-                    const f137Path = r.form137_path || r.f137_image_path;
-                    const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
-
-                    // FIXED: Helper function to get correct image URL for Render
-                    const getImageUrl = (filename) => {
-                        if (!filename) return null;
-                        
-                        // Handle comma-separated filenames (take first one)
-                        const firstFilename = filename.split(',')[0].trim();
-                        
-                        // Extract just the filename (remove any path)
-                        const cleanFilename = firstFilename.split('/').pop();
-                        
-                        // Return full URL for Render
-                        return `${serverBaseUrl}/uploads/${cleanFilename}`;
-                    };
-
-                    return `
-                    <tr id="row-${r.id}">
-                        <td>
-                            <div class="highlight-text student-name" style="font-size:14px;">${r.name || 'Unknown'}</div>
-                            <div class="sub-text">
-                                <span style="color:${sexColor}">${r.sex || '-'}</span> 
-                                ${r.age ? `• ${r.age} yrs` : ''}
-                            </div>
-                            <div class="sub-text" style="margin-top:4px;">
-                                ${r.religion ? `<i class="fas fa-praying-hands" style="font-size:10px;"></i> ${r.religion}` : ''}
-                            </div>
-                        </td>
-
-                        <td>
-                            <div style="color:#ddd;">${r.birthdate || '-'}</div>
-                            <div class="sub-text">${r.birthplace || ''}</div>
-                        </td>
-
-                        <td class="searchable-lrn">
-                            <div class="highlight-text">${r.school_name || '-'}</div>
-                            <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
-                            ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">AVG: ${r.final_general_average}</span></div>` : ''}
-                        </td>
-
-                        <td>
-                            <div class="sub-text"><span style="color:#aaa;">M:</span> ${r.mother_name || '-'}</div>
-                            <div class="sub-text"><span style="color:#aaa;">F:</span> ${r.father_name || '-'}</div>
-                        </td>
-
-                        <td>
-                            ${psaPath ? `
-                                <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="View PSA Document">
-                                    <i class="fas fa-id-card"></i> PSA
-                                </a>
-                            ` : ''}
-                            
-                            ${f137Path ? `
-                                <a href="${getImageUrl(f137Path)}" target="_blank" class="doc-link f137" title="View Form 137">
-                                    <i class="fas fa-file-contract"></i> F137
-                                </a>
-                            ` : ''}
-                            
-                            ${r.form138_path ? `
-                                <a href="${getImageUrl(r.form138_path)}" target="_blank" class="doc-link" title="View Form 138">
-                                    <i class="fas fa-file-invoice"></i> F138
-                                </a>
-                            ` : ''}
-                            
-                            ${r.goodmoral_path ? `
-                                <a href="${getImageUrl(r.goodmoral_path)}" target="_blank" class="doc-link gm" title="View Good Moral Certificate">
-                                    <i class="fas fa-certificate"></i> GM
-                                </a>
-                            ` : ''}
-                        </td>
-
-                        <td style="text-align: center; white-space: nowrap;">
-                            <a href="/view-form/${r.id}" target="_blank" class="action-btn btn-print" title="Print UB Form">
-                                <i class="fas fa-print"></i>
-                            </a>
-                            
-                            <button onclick="openViewModal(${r.id})" class="action-btn btn-view" title="View Extracted Info">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            
-                            <button onclick="openEditModal(${r.id})" class="action-btn btn-edit" title="Edit Record">
-                                <i class="fas fa-edit"></i>
-                            </button>
-
-                            <button onclick="openUploadModal(${r.id}, '${r.name || ''}')" class="action-btn btn-upload" title="Upload Missing File">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                            </button>
-                            
-                            <button onclick="deleteRecord(${r.id})" class="action-btn btn-delete" title="Delete Record">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `}).join('');
-
-            } catch (err) { 
-                console.error('Error loading data:', err);
-                document.getElementById('loading').innerText = "ERROR LOADING DATABASE. Please check console.";
-                document.getElementById('loading').style.color = "#ff6b6b";
-            }
-        }
-
-        // ================= VIEW LOGIC =================
-        function openViewModal(id) {
-            const r = allRecords.find(item => item.id === id);
-            if(!r) {
-                alert("Record not found!");
-                return;
-            }
-
-            const row = (lbl, val) => `
-                <div class="info-row">
-                    <span class="info-label">${lbl}</span>
-                    <span class="info-val">${val || '-'}</span>
-                </div>`;
-
-            document.getElementById('view-psa-content').innerHTML = `
-                ${row('Full Name', r.name)}
-                ${row('Sex', r.sex)}
-                ${row('Date of Birth', r.birthdate)}
-                ${row('Place of Birth', r.birthplace)}
-                ${row('Mother', r.mother_name)}
-                ${row('Father', r.father_name)}
-                ${row('Religion', r.religion)}
-                ${row('Address', (r.specific_address || '') + ' ' + (r.province || ''))}
-            `;
-
-            document.getElementById('view-school-content').innerHTML = `
-                ${row('LRN', r.lrn)}
-                ${row('School Name', r.school_name)}
-                ${row('Gen. Average', r.final_general_average)}
-                ${row('School Year', r.school_year)}
-                ${row('Student Type', r.student_type)}
-                ${row('Program', r.program)}
-                <div style="margin-top:10px; font-size:11px; color:#555">Created: ${r.created_at || 'N/A'}</div>
-            `;
-
-            document.getElementById('viewModal').style.display = 'flex';
-        }
-
-        // ================= EDIT LOGIC =================
-        function openEditModal(id) {
-            const r = allRecords.find(item => item.id === id);
-            if(!r) {
-                alert("Record not found!");
-                return;
-            }
-
-            // Populate form
-            document.getElementById('edit_id').value = r.id;
-            document.getElementById('edit_name').value = r.name || '';
-            document.getElementById('edit_sex').value = r.sex || 'Male';
-            document.getElementById('edit_birthdate').value = r.birthdate || '';
-            document.getElementById('edit_province').value = r.province || '';
-            document.getElementById('edit_lrn').value = r.lrn || '';
-            document.getElementById('edit_school').value = r.school_name || '';
-            document.getElementById('edit_average').value = r.final_general_average || '';
-            document.getElementById('edit_program').value = r.program || '';
-
-            document.getElementById('editModal').style.display = 'flex';
-        }
-
-        async function saveRecord() {
-            const id = document.getElementById('edit_id').value;
-            const data = {
-                id: id,
-                name: document.getElementById('edit_name').value,
-                sex: document.getElementById('edit_sex').value,
-                birthdate: document.getElementById('edit_birthdate').value,
-                province: document.getElementById('edit_province').value,
-                lrn: document.getElementById('edit_lrn').value,
-                school_name: document.getElementById('edit_school').value,
-                final_general_average: document.getElementById('edit_average').value,
-                program: document.getElementById('edit_program').value
-            };
-
-            if(!confirm("Are you sure you want to save these changes?")) return;
-
-            try {
-                const res = await fetch('/update-record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await res.json();
-
-                if (result.success) {
-                    alert("Record updated successfully!");
-                    closeModal('editModal');
-                    loadData(); // Refresh table
-                } else {
-                    alert("Error updating: " + (result.error || "Unknown error"));
-                }
-            } catch (err) {
-                console.error('Save error:', err);
-                alert("Failed to connect to server.");
-            }
-        }
-
-        // ================= UPLOAD LOGIC =================
-        function openUploadModal(id, name) {
-            document.getElementById('upload_id').value = id;
-            document.getElementById('upload_name').value = name || 'Unknown Student';
-            document.getElementById('fileInput').value = ""; 
-            document.getElementById('uploadModal').style.display = 'flex';
-        }
-
-        async function submitUpload() {
-            const id = document.getElementById('upload_id').value;
-            const type = document.getElementById('doc_type').value;
-            const fileInput = document.getElementById('fileInput');
-
-            if (!fileInput.files[0]) {
-                alert("Please select a file first.");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('id', id);
-            formData.append('type', type);
-            formData.append('files', fileInput.files[0]);
-
-            const btn = document.querySelector('#uploadModal .btn-modal-action');
-            const originalText = btn.innerText;
-            btn.innerText = "Uploading...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch('/upload-additional', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                // Get JSON response
-                const result = await res.json();
-
-                if (res.ok && result.status === "success") {
-                    alert("Document uploaded successfully!");
-                    closeModal('uploadModal');
-                    loadData(); 
-                } else {
-                    alert("Error: " + (result.error || "Upload failed"));
-                }
-            } catch (err) {
-                console.error('Upload error:', err);
-                alert("Server connection failed.");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        // ================= UTILS =================
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        async function deleteRecord(id) {
-            if(!confirm("⚠️ WARNING: This will PERMANENTLY delete this record.\n\nContinue?")) return;
+        document.addEventListener('DOMContentLoaded', function() {
+            viewImagesModal = new bootstrap.Modal(document.getElementById('viewImagesModal'));
+            editRecordModal = new bootstrap.Modal(document.getElementById('editRecordModal'));
+            confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             
-            try {
-                const res = await fetch(`/delete-record/${id}`, { 
-                    method: 'DELETE' 
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    // Remove from table
-                    const row = document.getElementById(`row-${id}`);
-                    if (row) {
-                        row.style.opacity = '0';
-                        row.style.transition = 'opacity 0.3s';
-                        setTimeout(() => {
-                            row.remove();
-                            // Update allRecords array
-                            allRecords = allRecords.filter(r => r.id !== id);
-                        }, 300);
-                    }
-                } else {
-                    alert("Error: " + (data.error || "Failed to delete record"));
-                }
-            } catch (e) {
-                console.error('Delete error:', e);
-                alert("Server connection failed.");
-            }
-        }
-
-        // ================= SEARCH FUNCTIONALITY =================
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#tableBody tr');
-            let hasMatch = false;
-
-            rows.forEach(row => {
-                let nameText = row.querySelector('.student-name')?.textContent.toLowerCase() || "";
-                let lrnText = row.querySelector('.searchable-lrn')?.textContent.toLowerCase() || "";
-                
-                if (nameText.includes(filter) || lrnText.includes(filter)) {
-                    row.style.display = ''; 
-                    hasMatch = true;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            document.getElementById('no-match-msg').style.display = hasMatch ? 'none' : 'block';
+            loadRecords();
         });
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal-overlay')) {
-                event.target.style.display = "none";
+        // Load records from backend
+        async function loadRecords() {
+            try {
+                const response = await fetch('/get-records');
+                const data = await response.json();
+                
+                if (data.error && data.error === "Unauthorized") {
+                    // Redirect to login if unauthorized
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                if (data.records) {
+                    serverUrl = data.server_url || '';
+                    currentRecords = data.records;
+                    updateTable();
+                    updatePagination();
+                }
+            } catch (error) {
+                console.error('Error loading records:', error);
+                document.getElementById('recordsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger">
+                            <i class="fas fa-exclamation-circle"></i> Error loading records. Please try again.
+                        </td>
+                    </tr>
+                `;
             }
         }
 
-        // Load data when page loads
-        loadData();
-        
-        // Debug info
-        console.log('AssiScan History Page Loaded');
-        console.log('Server URL:', serverBaseUrl);
+        // Update table with records
+        function updateTable() {
+            const tbody = document.getElementById('recordsTableBody');
+            
+            if (currentRecords.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center" style="color: var(--text-muted); padding: 40px;">
+                            <i class="fas fa-database fa-2x mb-3"></i>
+                            <p>No records found.</p>
+                            <small>Scan and save records in the main scanner page.</small>
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('totalRecords').textContent = '0';
+                return;
+            }
+            
+            document.getElementById('totalRecords').textContent = currentRecords.length;
+            
+            // Calculate pagination
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = Math.min(startIndex + recordsPerPage, currentRecords.length);
+            const pageRecords = currentRecords.slice(startIndex, endIndex);
+            
+            let html = '';
+            
+            pageRecords.forEach(record => {
+                // Format date
+                const createdDate = record.created_at ? new Date(record.created_at).toLocaleDateString() : 'N/A';
+                
+                // Email status
+                const emailStatus = record.email_sent ? 
+                    '<span class="status-badge status-sent"><i class="fas fa-check-circle"></i> Sent</span>' : 
+                    '<span class="status-badge status-pending"><i class="fas fa-clock"></i> Pending</span>';
+                
+                // Good Moral status
+                let goodmoralStatus = 'N/A';
+                if (record.goodmoral_status) {
+                    if (record.goodmoral_status === 'CLEAR') {
+                        goodmoralStatus = `<span class="goodmoral-status goodmoral-clear">
+                            <i class="fas fa-check-circle"></i> Clear
+                        </span>`;
+                    } else if (record.goodmoral_status === 'WITH OFFENSE') {
+                        goodmoralStatus = `<span class="goodmoral-status goodmoral-offense">
+                            <i class="fas fa-exclamation-triangle"></i> With Offense
+                        </span>`;
+                    }
+                }
+                
+                html += `
+                    <tr>
+                        <td>${record.id}</td>
+                        <td><strong>${record.name || 'N/A'}</strong></td>
+                        <td>${record.lrn || 'N/A'}</td>
+                        <td>${record.school_name ? record.school_name.substring(0, 30) + (record.school_name.length > 30 ? '...' : '') : 'N/A'}</td>
+                        <td>${record.program || 'N/A'}</td>
+                        <td>${emailStatus}</td>
+                        <td>${goodmoralStatus}</td>
+                        <td>${createdDate}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon view" title="View Images" onclick="viewImages(${record.id})">
+                                    <i class="fas fa-images"></i>
+                                </button>
+                                <button class="btn-icon edit" title="Edit Record" onclick="editRecord(${record.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                ${record.email_sent ? `
+                                    <button class="btn-icon resend" title="Resend Email" onclick="resendEmail(${record.id})">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                ` : `
+                                    <button class="btn-icon email" title="Send Email" onclick="sendEmail(${record.id})">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                `}
+                                <button class="btn-icon delete" title="Delete Record" onclick="deleteRecord(${record.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination info
+            document.getElementById('startRecord').textContent = startIndex + 1;
+            document.getElementById('endRecord').textContent = endIndex;
+            document.getElementById('totalCount').textContent = currentRecords.length;
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const totalPages = Math.ceil(currentRecords.length / recordsPerPage);
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // Previous button
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                        </li>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            // Next button
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+            
+            pagination.innerHTML = html;
+        }
+
+        // Change page
+        function changePage(page) {
+            if (page < 1 || page > Math.ceil(currentRecords.length / recordsPerPage)) {
+                return;
+            }
+            currentPage = page;
+            updateTable();
+        }
+
+        // View all uploaded images for a record
+        async function viewImages(recordId) {
+            const record = currentRecords.find(r => r.id == recordId);
+            if (!record) return;
+            
+            currentViewingRecord = recordId;
+            document.getElementById('modalStudentName').textContent = record.name || 'Unknown';
+            
+            // Show loading
+            document.getElementById('psaImages').innerHTML = '<div class="spinner"></div>';
+            document.getElementById('form137Images').innerHTML = '<div class="spinner"></div>';
+            document.getElementById('form138Images').innerHTML = '<div class="spinner"></div>';
+            document.getElementById('goodmoralImages').innerHTML = '<div class="spinner"></div>';
+            
+            // Hide all sections initially
+            document.getElementById('psaImagesSection').style.display = 'none';
+            document.getElementById('form137ImagesSection').style.display = 'none';
+            document.getElementById('form138ImagesSection').style.display = 'none';
+            document.getElementById('goodmoralImagesSection').style.display = 'none';
+            document.getElementById('noImagesMessage').style.display = 'none';
+            
+            let hasImages = false;
+            
+            // Load PSA Images
+            if (record.image_path) {
+                hasImages = true;
+                document.getElementById('psaImagesSection').style.display = 'block';
+                await loadImages('psaImages', record.image_path, 'PSA Birth Certificate');
+            }
+            
+            // Load Form 137 Images
+            if (record.form137_path) {
+                hasImages = true;
+                document.getElementById('form137ImagesSection').style.display = 'block';
+                await loadImages('form137Images', record.form137_path, 'Form 137');
+            }
+            
+            // Load Form 138 Images
+            if (record.form138_path) {
+                hasImages = true;
+                document.getElementById('form138ImagesSection').style.display = 'block';
+                await loadImages('form138Images', record.form138_path, 'Form 138');
+            }
+            
+            // Load Good Moral Images
+            if (record.goodmoral_path) {
+                hasImages = true;
+                document.getElementById('goodmoralImagesSection').style.display = 'block';
+                await loadImages('goodmoralImages', record.goodmoral_path, 'Good Moral Certificate');
+            }
+            
+            // Show no images message if none
+            if (!hasImages) {
+                document.getElementById('noImagesMessage').style.display = 'block';
+            }
+            
+            viewImagesModal.show();
+        }
+
+        // Load images into a gallery
+        async function loadImages(containerId, imagePaths, imageType) {
+            const container = document.getElementById(containerId);
+            
+            if (!imagePaths) {
+                container.innerHTML = '<div class="no-images"><p>No images available</p></div>';
+                return;
+            }
+            
+            // Split comma-separated paths
+            const paths = imagePaths.split(',').filter(path => path.trim());
+            
+            if (paths.length === 0) {
+                container.innerHTML = '<div class="no-images"><p>No images available</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            for (let i = 0; i < paths.length; i++) {
+                const path = paths[i].trim();
+                const imageUrl = `${serverUrl}/uploads/${encodeURIComponent(path)}`;
+                const fileName = path.split('/').pop() || path;
+                
+                html += `
+                    <div class="image-card">
+                        <img src="${imageUrl}" 
+                             class="image-preview" 
+                             alt="${imageType} ${i+1}"
+                             loading="lazy"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/333/666?text=Image+Not+Found';"
+                             onclick="openImageModal('${imageUrl}', '${fileName}')">
+                        <div class="image-info">
+                            <div class="image-title">${imageType} ${i+1}</div>
+                            <div class="image-type">${fileName}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Open image in modal for full view
+        function openImageModal(imageUrl, fileName) {
+            const modalHtml = `
+                <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content" style="background: #000;">
+                            <div class="modal-header border-secondary">
+                                <h6 class="modal-title text-white">${fileName}</h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0">
+                                <img src="${imageUrl}" 
+                                     style="width: 100%; height: auto; max-height: 70vh; object-fit: contain;"
+                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/800x600/333/666?text=Image+Not+Found';">
+                            </div>
+                            <div class="modal-footer border-secondary">
+                                <a href="${imageUrl}" 
+                                   class="btn btn-sm btn-outline-light" 
+                                   target="_blank" 
+                                   download="${fileName}">
+                                    <i class="fas fa-download"></i> Download
+                                </a>
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('imageModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+            imageModal.show();
+            
+            // Remove modal from DOM when hidden
+            document.getElementById('imageModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        // Edit record
+        function editRecord(recordId) {
+            const record = currentRecords.find(r => r.id == recordId);
+            if (!record) return;
+            
+            document.getElementById('editRecordId').value = record.id;
+            document.getElementById('editStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('editName').value = record.name || '';
+            document.getElementById('editLrn').value = record.lrn || '';
+            document.getElementById('editSex').value = record.sex || '';
+            document.getElementById('editBirthdate').value = record.birthdate || '';
+            document.getElementById('editProvince').value = record.province || '';
+            document.getElementById('editProgram').value = record.program || '';
+            document.getElementById('editSchoolName').value = record.school_name || '';
+            document.getElementById('editFinalAverage').value = record.final_general_average || '';
+            
+            editRecordModal.show();
+        }
+
+        // Save edited record
+        async function saveEditedRecord() {
+            const recordId = document.getElementById('editRecordId').value;
+            const record = {
+                id: recordId,
+                name: document.getElementById('editName').value,
+                lrn: document.getElementById('editLrn').value,
+                sex: document.getElementById('editSex').value,
+                birthdate: document.getElementById('editBirthdate').value,
+                province: document.getElementById('editProvince').value,
+                program: document.getElementById('editProgram').value,
+                school_name: document.getElementById('editSchoolName').value,
+                final_general_average: document.getElementById('editFinalAverage').value
+            };
+            
+            try {
+                const response = await fetch('/update-record', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(record)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Record updated successfully!');
+                    editRecordModal.hide();
+                    loadRecords(); // Reload records
+                } else {
+                    alert('Error updating record: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error updating record:', error);
+                alert('Error updating record. Please try again.');
+            }
+        }
+
+        // Delete record confirmation
+        function deleteRecord(recordId) {
+            document.getElementById('deleteRecordId').value = recordId;
+            confirmDeleteModal.show();
+        }
+
+        // Confirm delete
+        async function confirmDelete() {
+            const recordId = document.getElementById('deleteRecordId').value;
+            
+            try {
+                const response = await fetch(`/delete-record/${recordId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Record deleted successfully!');
+                    confirmDeleteModal.hide();
+                    loadRecords(); // Reload records
+                } else {
+                    alert('Error deleting record: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting record:', error);
+                alert('Error deleting record. Please try again.');
+            }
+        }
+
+        // Send email for a record
+        async function sendEmail(recordId) {
+            if (!confirm('Send email notification to student?')) return;
+            
+            try {
+                const response = await fetch(`/send-email/${recordId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.status === "success") {
+                    alert(`Email sent successfully!`);
+                    loadRecords(); // Reload to update status
+                } else if (result.warning === "Email has already been sent for this record") {
+                    if (confirm('Email was already sent. Do you want to resend?')) {
+                        resendEmail(recordId);
+                    }
+                } else {
+                    alert('Error sending email: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                alert('Error sending email. Please try again.');
+            }
+        }
+
+        // Resend email
+        async function resendEmail(recordId) {
+            try {
+                const response = await fetch(`/resend-email/${recordId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.status === "success") {
+                    alert('Email resent successfully!');
+                    loadRecords(); // Reload to update status
+                } else {
+                    alert('Error resending email: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error resending email:', error);
+                alert('Error resending email. Please try again.');
+            }
+        }
+
+        // Print form
+        function printForm(recordId) {
+            window.open(`/view-form/${recordId}`, '_blank');
+        }
+
+        // Refresh records
+        function refreshRecords() {
+            currentPage = 1;
+            loadRecords();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (currentRecords.length === 0) {
+                alert('No records to export.');
+                return;
+            }
+            
+            // Define CSV headers
+            const headers = [
+                'ID', 'Name', 'LRN', 'Sex', 'Birthdate', 'Age', 'Email',
+                'Mobile No', 'School', 'Program', 'Final Average',
+                'Email Sent', 'Date Created', 'Good Moral Status'
+            ];
+            
+            // Create CSV content
+            let csvContent = headers.join(',') + '\n';
+            
+            currentRecords.forEach(record => {
+                const row = [
+                    record.id,
+                    `"${record.name || ''}"`,
+                    record.lrn || '',
+                    record.sex || '',
+                    record.birthdate || '',
+                    record.age || '',
+                    record.email || '',
+                    record.mobile_no || '',
+                    `"${record.school_name || ''}"`,
+                    record.program || '',
+                    record.final_general_average || '',
+                    record.email_sent ? 'Yes' : 'No',
+                    record.created_at || '',
+                    record.goodmoral_status || 'N/A'
+                ];
+                
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // Create blob and download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `assiscan-records-${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Check email status
+        async function checkEmailStatus(recordId) {
+            try {
+                const response = await fetch(`/check-email-status/${recordId}`);
+                const result = await response.json();
+                
+                if (result.email_sent) {
+                    return {
+                        sent: true,
+                        sentAt: result.email_sent_at
+                    };
+                } else {
+                    return {
+                        sent: false,
+                        sentAt: null
+                    };
+                }
+            } catch (error) {
+                console.error('Error checking email status:', error);
+                return null;
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (!document.hidden) {
+                loadRecords();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
