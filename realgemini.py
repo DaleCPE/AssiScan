@@ -150,7 +150,11 @@ def init_db():
                     year_attended VARCHAR(50),
                     special_talents TEXT,
                     is_scholar VARCHAR(10),
-                    siblings TEXT
+                    siblings TEXT,
+                    goodmoral_status VARCHAR(50),
+                    goodmoral_offenses TEXT,
+                    goodmoral_remarks TEXT,
+                    goodmoral_date_issued DATE
                 )
             ''')
             
@@ -201,7 +205,11 @@ def check_and_add_columns(cur, conn):
         ("year_attended", "VARCHAR(50)"),
         ("special_talents", "TEXT"),
         ("is_scholar", "VARCHAR(10)"),
-        ("siblings", "TEXT")
+        ("siblings", "TEXT"),
+        ("goodmoral_status", "VARCHAR(50)"),
+        ("goodmoral_offenses", "TEXT"),
+        ("goodmoral_remarks", "TEXT"),
+        ("goodmoral_date_issued", "DATE")
     ]
     
     for column_name, column_type in columns_to_add:
@@ -244,6 +252,20 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
         # Format student data for email
         student_info = ""
         if student_data:
+            # Check Good Moral status
+            goodmoral_info = ""
+            if student_data.get('goodmoral_status'):
+                goodmoral_info = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+📜 GOOD MORAL CERTIFICATE
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Status: {student_data.get('goodmoral_status', 'N/A')}
+• Date Issued: {student_data.get('goodmoral_date_issued', 'N/A')}
+• Remarks: {student_data.get('goodmoral_remarks', 'N/A')}
+"""
+                if student_data.get('goodmoral_offenses'):
+                    goodmoral_info += f"• Offenses: {student_data.get('goodmoral_offenses')}\n"
+            
             student_info = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📋 STUDENT INFORMATION
@@ -293,7 +315,7 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Is PWD: {student_data.get('is_pwd', 'No')}
 • Has Medication: {student_data.get('has_medication', 'No')}
 • Special Talents: {student_data.get('special_talents', 'N/A')}
-"""
+""" + goodmoral_info
         else:
             student_info = "⚠️ Student information not available in this record."
         
@@ -573,6 +595,8 @@ def get_records():
                 r['birthdate'] = str(r['birthdate'])
             if r['email_sent_at']: 
                 r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['goodmoral_date_issued']:
+                r['goodmoral_date_issued'] = str(r['goodmoral_date_issued'])
             
             # FIX: Process image paths for frontend
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
@@ -880,6 +904,134 @@ def extract_form137():
         traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
+# --- EXTRACT GOOD MORAL CERTIFICATE WITH GEMINI 2.5 FLASH ---
+@app.route('/extract-goodmoral', methods=['POST'])
+def extract_goodmoral():
+    if 'imageFiles' not in request.files: 
+        return jsonify({"error": "No files uploaded"}), 400
+    
+    files = request.files.getlist('imageFiles')
+    if not files or files[0].filename == '': 
+        return jsonify({"error": "No selected file"}), 400
+    
+    try:
+        saved_paths, pil_images = save_multiple_files(files, "GM")
+        print(f"📸 Processing Good Moral Certificate: {len(pil_images)} pages with Gemini 2.5 Flash")
+
+        if not pil_images:
+            return jsonify({"error": "No valid images found"}), 400
+        
+        prompt = """You are an expert document processor for Philippine school certificates.
+        
+        Extract information from this Good Moral Certificate document.
+        
+        IMPORTANT: Analyze if there are any offenses or disciplinary actions mentioned.
+        Check for words like: offense, violation, disciplinary, sanction, warning, suspension, expulsion, etc.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "is_valid_document": true,
+            "rejection_reason": null,
+            "student_name": "Full Name of Student",
+            "school_name": "Name of Issuing School",
+            "date_issued": "YYYY-MM-DD format",
+            "certificate_status": "CLEAR" or "WITH OFFENSE",
+            "offenses_detected": [
+                {
+                    "type": "Type of offense (e.g., minor, major, severe)",
+                    "description": "Description of offense",
+                    "severity": "low/medium/high",
+                    "disciplinary_action": "Action taken"
+                }
+            ],
+            "overall_remarks": "Overall remarks about student behavior",
+            "has_offenses": true/false,
+            "is_eligible_for_admission": true/false
+        }
+        
+        Notes:
+        1. If certificate says "no derogatory record" or similar, set certificate_status to "CLEAR" and offenses_detected to empty array
+        2. If offenses are found, describe them in detail
+        3. Determine eligibility based on severity of offenses (minor offenses may still be eligible)
+        4. If the document is not a Good Moral Certificate, set "is_valid_document": false
+        
+        Return ONLY the JSON, no additional text, no markdown, no code blocks."""
+        
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
+            
+            # Clean the response
+            cleaned_text = response_text.strip()
+            
+            # Remove markdown code blocks if present
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            # Find JSON
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                print(f"❌ Could not find JSON in response: {cleaned_text[:200]}")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            
+            try:
+                data = json.loads(json_str)
+                print(f"✅ Successfully parsed Good Moral Certificate data")
+                
+                # Validate required fields
+                if not data.get("is_valid_document", False):
+                    return jsonify({
+                        "error": f"Invalid document: {data.get('rejection_reason', 'Not a valid Good Moral Certificate')}"
+                    }), 400
+                
+                # Format the offenses for display
+                if data.get("offenses_detected") and len(data["offenses_detected"]) > 0:
+                    offenses_text = []
+                    for offense in data["offenses_detected"]:
+                        offense_desc = f"{offense.get('type', 'Offense')}: {offense.get('description', 'No description')}"
+                        if offense.get('disciplinary_action'):
+                            offense_desc += f" (Action: {offense['disciplinary_action']})"
+                        offenses_text.append(offense_desc)
+                    data["offenses_text"] = " | ".join(offenses_text)
+                else:
+                    data["offenses_text"] = "Walang nakitang atraso o offense"
+                
+                # Determine status for frontend display
+                if data.get("certificate_status") == "CLEAR":
+                    data["status_display"] = "✅ CLEAR - Walang Atraso"
+                else:
+                    data["status_display"] = "⚠️ WITH OFFENSE - May Atraso"
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+                
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Problematic JSON: {json_str[:500]}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
+            
+        except Exception as ai_error:
+            print(f"❌ AI Extraction Failed: {ai_error}")
+            traceback.print_exc()
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ Good Moral Certificate Error: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
+
 # --- SAVE RECORD TO DATABASE (NO EMAIL) ---
 @app.route('/save-record', methods=['POST'])
 def save_record():
@@ -890,6 +1042,13 @@ def save_record():
         
         siblings_list = d.get('siblings', [])
         siblings_json = json.dumps(siblings_list)
+        
+        # Process Good Moral data if exists
+        goodmoral_data = d.get('goodmoral_data', {})
+        goodmoral_status = goodmoral_data.get('certificate_status', '')
+        goodmoral_offenses = goodmoral_data.get('offenses_text', '')
+        goodmoral_remarks = goodmoral_data.get('overall_remarks', '')
+        goodmoral_date_issued = goodmoral_data.get('date_issued')
         
         conn = get_db_connection()
         if not conn: 
@@ -915,7 +1074,7 @@ def save_record():
                 mother_name, mother_citizenship, mother_occupation, 
                 father_name, father_citizenship, father_occupation, 
                 lrn, school_name, school_address, final_general_average,
-                image_path, form137_path,
+                image_path, form137_path, goodmoral_path,
                 email, mobile_no, civil_status, nationality,
                 mother_contact, father_contact,
                 guardian_name, guardian_relation, guardian_contact,
@@ -924,14 +1083,15 @@ def save_record():
                 is_ip, is_pwd, has_medication, is_working,
                 residence_type, employer_name, marital_status,
                 is_gifted, needs_assistance, school_type, year_attended, special_talents, is_scholar,
-                siblings
+                siblings,
+                goodmoral_status, goodmoral_offenses, goodmoral_remarks, goodmoral_date_issued
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, 
                 %s, %s, %s, 
                 %s, %s, %s, %s, 
-                %s, %s,
+                %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s,
                 %s, %s, %s,
@@ -940,7 +1100,8 @@ def save_record():
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s
+                %s,
+                %s, %s, %s, %s
             ) 
             RETURNING id
         ''', (
@@ -949,7 +1110,7 @@ def save_record():
             d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
             d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
             d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            d.get('psa_image_path', ''), d.get('f137_image_path', ''), 
+            d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''),
             d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
             d.get('mother_contact'), d.get('father_contact'),
             d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
@@ -959,13 +1120,15 @@ def save_record():
             d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
             d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
             d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json
+            siblings_json,
+            goodmoral_status, goodmoral_offenses, goodmoral_remarks, goodmoral_date_issued
         ))
         
         new_id = cur.fetchone()[0]
         conn.commit()
 
         print(f"✅ Record saved to database with ID: {new_id}")
+        print(f"📋 Good Moral Status: {goodmoral_status}")
         print("ℹ️ Email will be sent separately when user clicks Send button")
 
         return jsonify({
@@ -1010,7 +1173,8 @@ def send_email_only(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents
+                   special_talents,
+                   goodmoral_status, goodmoral_offenses, goodmoral_remarks, goodmoral_date_issued
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -1095,7 +1259,8 @@ def resend_email(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents
+                   special_talents,
+                   goodmoral_status, goodmoral_offenses, goodmoral_remarks, goodmoral_date_issued
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -1255,7 +1420,11 @@ def test_email_endpoint():
         'is_ip': 'No',
         'is_pwd': 'No',
         'has_medication': 'No',
-        'special_talents': 'Singing, Dancing'
+        'special_talents': 'Singing, Dancing',
+        'goodmoral_status': 'CLEAR',
+        'goodmoral_offenses': 'Walang nakitang atraso o offense',
+        'goodmoral_remarks': 'Student has shown good moral character during their stay in school.',
+        'goodmoral_date_issued': '2024-03-15'
     }
     
     result = send_email_notification(test_email, test_name, [], sample_data)
@@ -1264,7 +1433,8 @@ def test_email_endpoint():
         "success": result,
         "test_email": test_email,
         "message": "Check console for email logs",
-        "sample_data_included": True
+        "sample_data_included": True,
+        "goodmoral_data_included": True
     })
 
 # --- FIX DATABASE SCHEMA ENDPOINT ---
@@ -1321,7 +1491,11 @@ def fix_db_schema():
                 ("year_attended", "VARCHAR(50)"),
                 ("special_talents", "TEXT"),
                 ("is_scholar", "VARCHAR(10)"),
-                ("siblings", "TEXT")
+                ("siblings", "TEXT"),
+                ("goodmoral_status", "VARCHAR(50)"),
+                ("goodmoral_offenses", "TEXT"),
+                ("goodmoral_remarks", "TEXT"),
+                ("goodmoral_date_issued", "DATE")
             ]
             
             added_columns = []
@@ -1430,7 +1604,7 @@ def check_email_status(record_id):
         record = cur.fetchone()
         
         if record:
-            email_sent_at = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S') if record['email_sent_at'] else None
+            email_sent_at = record['email_sent_at'].strftime('%Y-%m-d %H:%M:%S') if record['email_sent_at'] else None
             return jsonify({
                 "email_sent": record['email_sent'],
                 "email_sent_at": email_sent_at
@@ -1520,7 +1694,9 @@ if __name__ == '__main__':
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
     print("📊 FEATURES:")
-    print("   • Updated email with student information")
+    print("   • GOOD MORAL CERTIFICATE EXTRACTION")
+    print("   • Offense detection (Minor/Major/Severe)")
+    print("   • Updated email with Good Moral status")
     print("   • Student data extracted from scanned documents")
     print("   • Separate SAVE and SEND endpoints")
     print("   • SendGrid API for email (works on Render)")
@@ -1553,6 +1729,9 @@ if __name__ == '__main__':
     print("   GET  /list-uploads - List uploaded files")
     print("   GET  /uploads/<filename> - Access uploaded files")
     print("   GET  /fix-db-schema - Fix missing database columns")
+    print("="*60)
+    print("🔗 NEW GOOD MORAL ENDPOINT:")
+    print("   POST /extract-goodmoral - Extract Good Moral Certificate")
     print("="*60)
     print("🔗 DIAGNOSTIC ENDPOINTS:")
     print("   GET  /list-models - List available Gemini models")
