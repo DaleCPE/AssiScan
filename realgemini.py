@@ -26,16 +26,25 @@ if GEMINI_API_KEY:
         print("✅ Google Generative AI Configured")
         
         try:
+            # Check specifically for gemini-2.5-flash
             models = list(genai.list_models())
             print(f"📋 Available Gemini Models ({len(models)} total):")
-            for model in models:
-                if "gemini" in model.name.lower():
-                    print(f"   - {model.name}")
-        except Exception as e:
-            print(f"⚠️ Could not list models: {e}")
+            gemini_2_5_flash_available = False
             
+            for model in models:
+                model_name = model.name
+                print(f"   - {model_name}")
+                if "gemini-2.5-flash" in model_name:
+                    gemini_2_5_flash_available = True
+                    print(f"✨ Found Gemini 2.5 Flash: {model_name}")
+            
+            if not gemini_2_5_flash_available:
+                print("⚠️ Warning: gemini-2.5-flash not found in available models")
+                print("⚠️ Will try to use it anyway, but may fail if not accessible")
+                    
     except Exception as e:
-        print(f"⚠️ Error configuring Gemini: {e}")
+        print(f"⚠️ Could not list models: {e}")
+            
 else:
     print("❌ CRITICAL: GEMINI_API_KEY is missing!")
 
@@ -430,52 +439,67 @@ def save_multiple_files(files, prefix):
     return saved_paths, pil_images
 
 def extract_with_gemini(prompt, images):
-    """Use Gemini for text extraction"""
+    """Use Gemini 2.5 Flash for text extraction"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        model_versions = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-pro"
-        ]
+        # Use only gemini-2.5-flash model
+        model_name = "gemini-2.5-flash"
         
-        last_error = None
-        
-        for model_name in model_versions:
-            try:
-                print(f"🤖 Trying model: {model_name}")
-                model = genai.GenerativeModel(model_name)
-                
-                content_parts = [prompt]
-                for img in images:
-                    content_parts.append(img)
-                
-                response = model.generate_content(
-                    content_parts,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.1,
-                        top_p=0.8,
-                        top_k=40,
-                        max_output_tokens=2048,
-                    )
-                )
-                
-                if response.text:
-                    print(f"✅ Success with model: {model_name}")
-                    return response.text
-                else:
-                    raise Exception("No response text")
-                    
-            except Exception as model_error:
-                print(f"   ⚠️ {model_name} failed: {str(model_error)[:100]}")
-                last_error = model_error
-                continue
-        
-        raise Exception(f"All models failed. Last error: {str(last_error)[:200]}")
+        try:
+            print(f"🤖 Using model: {model_name}")
+            model = genai.GenerativeModel(model_name)
             
+            content_parts = [prompt]
+            for img in images:
+                content_parts.append(img)
+            
+            response = model.generate_content(
+                content_parts,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.1,
+                    top_p=0.8,
+                    top_k=40,
+                    max_output_tokens=2048,
+                )
+            )
+            
+            if response.text:
+                print(f"✅ Success with model: {model_name}")
+                return response.text
+            else:
+                raise Exception("No response text")
+                
+        except Exception as model_error:
+            print(f"❌ {model_name} failed: {str(model_error)}")
+            # Fallback to any available model if gemini-2.5-flash fails
+            print(f"⚠️ Trying to find alternative model...")
+            
+            try:
+                # List available models and try the first one with "gemini" in name
+                models = list(genai.list_models())
+                for available_model in models:
+                    if "gemini" in available_model.name.lower():
+                        fallback_model_name = available_model.name
+                        print(f"🔄 Trying fallback model: {fallback_model_name}")
+                        model = genai.GenerativeModel(fallback_model_name)
+                        
+                        content_parts = [prompt]
+                        for img in images:
+                            content_parts.append(img)
+                        
+                        response = model.generate_content(content_parts)
+                        
+                        if response.text:
+                            print(f"✅ Success with fallback model: {fallback_model_name}")
+                            return response.text
+                
+                raise Exception(f"No working Gemini model found. Original error: {str(model_error)}")
+                
+            except Exception as fallback_error:
+                raise Exception(f"All models failed. Last error: {str(fallback_error)}")
+        
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
@@ -568,7 +592,7 @@ def scan_goodmoral():
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📄 Processing Good Moral Certificate with Gemini")
+        print(f"📄 Processing Good Moral Certificate with Gemini 2.5 Flash")
         
         prompt = """You are an expert document processor for Philippine Good Moral Certificates.
         
@@ -1140,7 +1164,7 @@ def extract_data():
         if not pil_images:
              return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📸 Processing PSA with Gemini")
+        print(f"📸 Processing PSA with Gemini 2.5 Flash")
         
         prompt = """Extract information from this PSA Birth Certificate.
         
@@ -1218,7 +1242,7 @@ def extract_form137():
     
     try:
         saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137")
+        print(f"📸 Processing Form 137 with Gemini 2.5 Flash")
 
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
@@ -1522,6 +1546,7 @@ def health_check():
         "status": "healthy",
         "service": "AssiScan Backend",
         "goodmoral_scanning": "ENABLED",
+        "model": "Gemini 2.5 Flash",
         "dropdown_support": "ENABLED (College & Program dropdowns)",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected"
@@ -1557,16 +1582,17 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GOOD MORAL SCANNING & DROPDOWN SUPPORT")
+    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
+    print(f"🤖 Model: gemini-2.5-flash")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
     print("📊 FEATURES:")
     print("   • PSA, Form 137, Good Moral scanning")
-    print("   • College & Program dropdown support")  # NEW
+    print("   • College & Program dropdown support")
     print("   • Disciplinary record detection")
     print("   • Other documents upload with title")
     print("   • Email notifications")
@@ -1578,11 +1604,6 @@ if __name__ == '__main__':
     print("   • College of IT, Entertainment & Communication (CITEC)")
     print("   • College of Engineering and Architecture (CENAR)")
     print("   • College of Business, Accountancy & Auditing (CBAA)")
-    print("="*60)
-    print("🔗 NEW ENDPOINTS:")
-    print("   POST /save-record - Now supports college and program fields")
-    print("   POST /upload-other-document/<id> - Upload other docs")
-    print("   DELETE /delete-other-document/<id>/<doc_id> - Delete doc")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
