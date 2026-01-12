@@ -150,18 +150,14 @@ def init_db():
                     special_talents TEXT,
                     is_scholar VARCHAR(10),
                     siblings TEXT,
-                    -- NEW COLUMNS FOR GOOD MORAL SCANNING
+                    -- GOOD MORAL ANALYSIS FIELDS
                     goodmoral_analysis JSONB,
                     disciplinary_status VARCHAR(50),
-                    disciplinary_remarks TEXT,
                     goodmoral_score INTEGER DEFAULT 0,
-                    goodmoral_issued_date DATE,
-                    goodmoral_valid_until DATE,
-                    goodmoral_issuing_officer VARCHAR(255),
-                    goodmoral_issuing_school TEXT,
                     has_disciplinary_record BOOLEAN DEFAULT FALSE,
                     disciplinary_details TEXT,
-                    recommendation_status VARCHAR(50)
+                    -- OTHER DOCUMENTS FIELD
+                    other_documents JSONB
                 )
             ''')
             
@@ -213,18 +209,14 @@ def check_and_add_columns(cur, conn):
         ("special_talents", "TEXT"),
         ("is_scholar", "VARCHAR(10)"),
         ("siblings", "TEXT"),
-        # New columns for Good Moral scanning
+        # Good Moral columns
         ("goodmoral_analysis", "JSONB"),
         ("disciplinary_status", "VARCHAR(50)"),
-        ("disciplinary_remarks", "TEXT"),
         ("goodmoral_score", "INTEGER DEFAULT 0"),
-        ("goodmoral_issued_date", "DATE"),
-        ("goodmoral_valid_until", "DATE"),
-        ("goodmoral_issuing_officer", "VARCHAR(255)"),
-        ("goodmoral_issuing_school", "TEXT"),
         ("has_disciplinary_record", "BOOLEAN DEFAULT FALSE"),
         ("disciplinary_details", "TEXT"),
-        ("recommendation_status", "VARCHAR(50)")
+        # Other documents
+        ("other_documents", "JSONB")
     ]
     
     for column_name, column_type in columns_to_add:
@@ -588,14 +580,12 @@ def scan_goodmoral():
             "issuing_school": "Name of Issuing School",
             "issuing_officer": "Name of Issuing Officer/Principal",
             "issued_date": "YYYY-MM-DD format",
-            "validity_period": "Number of months valid",
             "certificate_type": "Good Moral Certificate / Certificate of Good Moral Character",
             "remarks": "Any remarks or conditions mentioned",
             "has_disciplinary_record": false,
             "disciplinary_details": "Details of any disciplinary actions if mentioned",
             "recommendation_statement": "The recommendation statement text",
-            "special_conditions": "Any special conditions or limitations",
-            "certificate_number": "Certificate number if present"
+            "special_conditions": "Any special conditions or limitations"
         }
         
         CRITICAL ANALYSIS:
@@ -646,23 +636,19 @@ def scan_goodmoral():
                 analysis_data['goodmoral_score'] = score
                 analysis_data['disciplinary_status'] = status
                 
-                # Calculate validity date if issued_date exists
-                if analysis_data.get('issued_date'):
-                    try:
-                        issued = datetime.strptime(analysis_data['issued_date'], '%Y-%m-%d')
-                        validity_months = int(analysis_data.get('validity_period', 6))
-                        valid_until = issued.replace(month=issued.month + validity_months)
-                        analysis_data['valid_until_date'] = valid_until.strftime('%Y-%m-%d')
-                    except:
-                        analysis_data['valid_until_date'] = None
+                # Get disciplinary details for display
+                disciplinary_details = ""
+                if analysis_data.get('has_disciplinary_record'):
+                    disciplinary_details = analysis_data.get('disciplinary_details', '') or analysis_data.get('remarks', '') or 'Disciplinary issues detected'
                 
                 return jsonify({
                     "message": "Good Moral Certificate analyzed successfully",
                     "analysis": analysis_data,
                     "goodmoral_score": score,
                     "disciplinary_status": status,
-                    "image_paths": ",".join(saved_paths),
-                    "has_issues": analysis_data.get('has_disciplinary_record', False)
+                    "disciplinary_details": disciplinary_details,
+                    "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
+                    "image_paths": ",".join(saved_paths)
                 })
                 
             except json.JSONDecodeError as json_error:
@@ -694,6 +680,15 @@ def save_record():
         goodmoral_analysis = d.get('goodmoral_analysis')
         disciplinary_status = d.get('disciplinary_status')
         goodmoral_score = d.get('goodmoral_score')
+        disciplinary_details = d.get('disciplinary_details')
+        has_disciplinary_record = d.get('has_disciplinary_record', False)
+        
+        # Parse other_documents if provided
+        other_documents = d.get('other_documents')
+        if other_documents and isinstance(other_documents, list):
+            other_documents_json = json.dumps(other_documents)
+        else:
+            other_documents_json = None
         
         siblings_list = d.get('siblings', [])
         siblings_json = json.dumps(siblings_list)
@@ -742,10 +737,9 @@ def save_record():
                 special_talents, is_scholar, siblings,
                 -- Good Moral fields
                 goodmoral_analysis, disciplinary_status, goodmoral_score,
-                goodmoral_issued_date, goodmoral_valid_until, 
-                goodmoral_issuing_officer, goodmoral_issuing_school,
                 has_disciplinary_record, disciplinary_details,
-                recommendation_status
+                -- Other documents
+                other_documents
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -764,8 +758,9 @@ def save_record():
                 %s,
                 -- Good Moral fields
                 %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s
+                %s, %s,
+                -- Other documents
+                %s
             ) 
             RETURNING id
         ''', (
@@ -789,13 +784,10 @@ def save_record():
             goodmoral_analysis_json,
             disciplinary_status,
             goodmoral_score,
-            d.get('goodmoral_issued_date'),
-            d.get('goodmoral_valid_until'),
-            d.get('goodmoral_issuing_officer'),
-            d.get('goodmoral_issuing_school'),
-            d.get('has_disciplinary_record', False),
-            d.get('disciplinary_details'),
-            d.get('recommendation_status')
+            has_disciplinary_record,
+            disciplinary_details,
+            # Other documents
+            other_documents_json
         ))
         
         new_id = cur.fetchone()[0]
@@ -804,14 +796,15 @@ def save_record():
         print(f"✅ Record saved with ID: {new_id}")
         print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
         
-        if disciplinary_status in ['POOR', 'FAIR']:
-            print(f"⚠️ WARNING: Student has disciplinary concerns")
+        if has_disciplinary_record:
+            print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
 
         return jsonify({
             "status": "success", 
             "db_id": new_id,
             "goodmoral_score": goodmoral_score,
             "disciplinary_status": disciplinary_status,
+            "has_disciplinary_record": has_disciplinary_record,
             "message": "Record saved successfully."
         })
         
@@ -856,6 +849,15 @@ def get_records():
                 except:
                     r['goodmoral_analysis'] = {}
             
+            # Parse other_documents JSON
+            if r.get('other_documents'):
+                try:
+                    r['other_documents'] = json.loads(r['other_documents'])
+                except:
+                    r['other_documents'] = []
+            else:
+                r['other_documents'] = []
+            
             # Process image paths
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
@@ -881,194 +883,83 @@ def get_records():
     finally:
         conn.close()
 
-# ================= NEW: GET STUDENT GOOD MORAL STATUS =================
-@app.route('/get-goodmoral-status/<int:record_id>', methods=['GET'])
-def get_goodmoral_status(record_id):
-    """Get detailed Good Moral status for a student"""
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT name, goodmoral_score, disciplinary_status, disciplinary_remarks,
-                   has_disciplinary_record, disciplinary_details, recommendation_status,
-                   goodmoral_analysis, goodmoral_issued_date, goodmoral_valid_until
-            FROM records WHERE id = %s
-        """, (record_id,))
-        
-        record = cur.fetchone()
-        
-        if not record:
-            return jsonify({"error": "Record not found"}), 404
-        
-        # Parse analysis JSON
-        analysis = {}
-        if record.get('goodmoral_analysis'):
-            try:
-                analysis = json.loads(record['goodmoral_analysis'])
-            except:
-                analysis = {}
-        
-        # Format dates
-        issued_date = str(record['goodmoral_issued_date']) if record['goodmoral_issued_date'] else None
-        valid_until = str(record['goodmoral_valid_until']) if record['goodmoral_valid_until'] else None
-        
-        return jsonify({
-            "student_name": record['name'],
-            "goodmoral_score": record['goodmoral_score'] or 0,
-            "disciplinary_status": record['disciplinary_status'] or "UNKNOWN",
-            "has_disciplinary_record": record['has_disciplinary_record'] or False,
-            "disciplinary_details": record['disciplinary_details'],
-            "recommendation_status": record['recommendation_status'],
-            "issued_date": issued_date,
-            "valid_until": valid_until,
-            "analysis": analysis,
-            "status_description": get_status_description(record['disciplinary_status'])
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-def get_status_description(status):
-    """Get description for disciplinary status"""
-    descriptions = {
-        'EXCELLENT': 'No disciplinary issues. Highly recommended for admission.',
-        'GOOD': 'Minor or no issues. Eligible for admission.',
-        'FAIR': 'Some concerns noted. Review recommended.',
-        'POOR': 'Significant disciplinary issues. Requires evaluation.',
-        'UNKNOWN': 'Status not determined.'
-    }
-    return descriptions.get(status, 'Status not determined.')
-
-# ================= NEW: SEARCH STUDENTS BY MORAL STATUS =================
-@app.route('/search-by-moral-status', methods=['GET'])
-def search_by_moral_status():
-    """Search records by Good Moral status"""
+# ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
+@app.route('/upload-other-document/<int:record_id>', methods=['POST'])
+def upload_other_document(record_id):
+    """Upload other documents with title"""
     if not session.get('logged_in'):
         return jsonify({"error": "Unauthorized"}), 401
     
-    status = request.args.get('status', '')  # EXCELLENT, GOOD, FAIR, POOR
+    if 'file' not in request.files or 'title' not in request.form:
+        return jsonify({"error": "File and title required"}), 400
     
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        if status:
-            cur.execute("""
-                SELECT id, name, goodmoral_score, disciplinary_status, 
-                       has_disciplinary_record, created_at
-                FROM records 
-                WHERE disciplinary_status = %s
-                ORDER BY goodmoral_score DESC
-            """, (status,))
-        else:
-            cur.execute("""
-                SELECT id, name, goodmoral_score, disciplinary_status, 
-                       has_disciplinary_record, created_at
-                FROM records 
-                WHERE disciplinary_status IS NOT NULL
-                ORDER BY goodmoral_score DESC
-            """)
-        
-        records = cur.fetchall()
-        
-        # Format dates
-        for r in records:
-            if r['created_at']:
-                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        return jsonify({
-            "status_filter": status,
-            "count": len(records),
-            "records": records
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-# ================= NEW: GET STUDENTS WITH DISCIPLINARY ISSUES =================
-@app.route('/students-with-issues', methods=['GET'])
-def students_with_issues():
-    """Get all students with disciplinary issues"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
+    file = request.files['file']
+    title = request.form['title'].strip()
     
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT id, name, goodmoral_score, disciplinary_status, 
-                   disciplinary_details, has_disciplinary_record, created_at
-            FROM records 
-            WHERE has_disciplinary_record = TRUE OR disciplinary_status IN ('FAIR', 'POOR')
-            ORDER BY goodmoral_score ASC, created_at DESC
-        """)
-        
-        records = cur.fetchall()
-        
-        for r in records:
-            if r['created_at']:
-                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        return jsonify({
-            "count": len(records),
-            "records": records
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-# ================= NEW: UPDATE GOOD MORAL STATUS MANUALLY =================
-@app.route('/update-goodmoral-status/<int:record_id>', methods=['POST'])
-def update_goodmoral_status(record_id):
-    """Manually update Good Moral status (for admin)"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
     
-    data = request.json
-    conn = get_db_connection()
+    if not title:
+        return jsonify({"error": "Document title required"}), 400
     
     try:
+        # Save the file
+        timestamp = int(datetime.now().timestamp())
+        filename = secure_filename(f"OTHER_{record_id}_{timestamp}_{file.filename}")
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(path)
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "DB Connection Failed"}), 500
+        
         cur = conn.cursor()
         
-        cur.execute("""
-            UPDATE records SET 
-                disciplinary_status = %s,
-                goodmoral_score = %s,
-                disciplinary_remarks = %s,
-                has_disciplinary_record = %s,
-                disciplinary_details = %s,
-                recommendation_status = %s
-            WHERE id = %s
-        """, (
-            data.get('disciplinary_status'),
-            data.get('goodmoral_score'),
-            data.get('disciplinary_remarks'),
-            data.get('has_disciplinary_record', False),
-            data.get('disciplinary_details'),
-            data.get('recommendation_status'),
-            record_id
-        ))
+        # Get existing other_documents
+        cur.execute("SELECT other_documents FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
         
+        existing_documents = []
+        if result and result[0]:
+            try:
+                existing_documents = json.loads(result[0])
+            except:
+                existing_documents = []
+        
+        # Add new document
+        new_document = {
+            'id': len(existing_documents) + 1,
+            'title': title,
+            'filename': filename,
+            'uploaded_at': datetime.now().isoformat()
+        }
+        
+        existing_documents.append(new_document)
+        new_documents_json = json.dumps(existing_documents)
+        
+        # Update database
+        cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
+                   (new_documents_json, record_id))
         conn.commit()
         
         return jsonify({
-            "success": True,
-            "message": "Good Moral status updated successfully"
+            "status": "success",
+            "message": "Document uploaded successfully",
+            "document": new_document,
+            "download_url": f"{request.host_url}uploads/{filename}"
         })
+        
     except Exception as e:
-        conn.rollback()
+        print(f"❌ Upload error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
-# ================= NEW: GOOD MORAL STATISTICS =================
-@app.route('/goodmoral-statistics', methods=['GET'])
-def goodmoral_statistics():
-    """Get statistics about Good Moral certificates"""
+# ================= DELETE OTHER DOCUMENT ENDPOINT =================
+@app.route('/delete-other-document/<int:record_id>/<int:doc_id>', methods=['DELETE'])
+def delete_other_document(record_id, doc_id):
+    """Delete an other document"""
     if not session.get('logged_in'):
         return jsonify({"error": "Unauthorized"}), 401
     
@@ -1076,49 +967,54 @@ def goodmoral_statistics():
     try:
         cur = conn.cursor()
         
-        # Total records with Good Moral
-        cur.execute("SELECT COUNT(*) FROM records WHERE goodmoral_path IS NOT NULL")
-        total_with_goodmoral = cur.fetchone()[0]
+        # Get existing other_documents
+        cur.execute("SELECT other_documents FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
         
-        # Count by status
-        cur.execute("""
-            SELECT disciplinary_status, COUNT(*) as count
-            FROM records 
-            WHERE disciplinary_status IS NOT NULL
-            GROUP BY disciplinary_status
-        """)
-        status_counts = dict(cur.fetchall())
+        if not result or not result[0]:
+            return jsonify({"error": "No documents found"}), 404
         
-        # Average score
-        cur.execute("SELECT AVG(goodmoral_score) FROM records WHERE goodmoral_score > 0")
-        avg_score = cur.fetchone()[0] or 0
+        existing_documents = json.loads(result[0])
         
-        # Students with issues
-        cur.execute("SELECT COUNT(*) FROM records WHERE has_disciplinary_record = TRUE")
-        with_issues = cur.fetchone()[0]
+        # Find and remove the document
+        document_to_delete = None
+        updated_documents = []
         
-        # Recent certificates (last 30 days)
-        cur.execute("""
-            SELECT COUNT(*) FROM records 
-            WHERE goodmoral_path IS NOT NULL 
-            AND created_at >= CURRENT_DATE - INTERVAL '30 days'
-        """)
-        recent_certificates = cur.fetchone()[0]
+        for doc in existing_documents:
+            if doc.get('id') == doc_id:
+                document_to_delete = doc
+            else:
+                updated_documents.append(doc)
+        
+        if not document_to_delete:
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Delete the file
+        filename = document_to_delete.get('filename')
+        if filename:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Update database
+        updated_documents_json = json.dumps(updated_documents)
+        cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
+                   (updated_documents_json, record_id))
+        conn.commit()
         
         return jsonify({
-            "total_with_goodmoral": total_with_goodmoral,
-            "status_distribution": status_counts,
-            "average_score": float(avg_score),
-            "students_with_issues": with_issues,
-            "recent_certificates": recent_certificates,
-            "generated_at": datetime.now().isoformat()
+            "status": "success",
+            "message": "Document deleted successfully"
         })
+        
     except Exception as e:
+        print(f"❌ Delete error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
-# ================= OTHER EXISTING ENDPOINTS =================
+# ================= OTHER ENDPOINTS =================
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     """Serve uploaded files"""
@@ -1196,6 +1092,15 @@ def view_form(record_id):
                     record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
                 except:
                     record['goodmoral_analysis'] = {}
+            
+            # Parse other_documents
+            if record.get('other_documents'):
+                try:
+                    record['other_documents'] = json.loads(record['other_documents'])
+                except:
+                    record['other_documents'] = []
+            else:
+                record['other_documents'] = []
 
             return render_template('print_form.html', r=record)
         else:
@@ -1373,7 +1278,7 @@ def send_email_only(record_id):
         # Get record details
         cur.execute("""
             SELECT name, email, email_sent, 
-                   goodmoral_score, disciplinary_status,
+                   goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
                    mother_name, mother_citizenship, mother_contact,
@@ -1448,7 +1353,7 @@ def resend_email(record_id):
         
         cur.execute("""
             SELECT name, email, 
-                   goodmoral_score, disciplinary_status,
+                   goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
                    mother_name, mother_citizenship, mother_contact,
@@ -1592,22 +1497,7 @@ def check_email_status(record_id):
     finally:
         conn.close()
 
-# ================= NEW FRONTEND ROUTES =================
-@app.route('/goodmoral-dashboard.html')
-def goodmoral_dashboard():
-    """Dashboard for Good Moral analysis"""
-    if not session.get('logged_in'):
-        return redirect('/login')
-    return render_template('goodmoral_dashboard.html')
-
-@app.route('/student-issues.html')
-def student_issues_page():
-    """Page showing students with disciplinary issues"""
-    if not session.get('logged_in'):
-        return redirect('/login')
-    return render_template('student_issues.html')
-
-# ================= DIAGNOSTIC ENDPOINTS =================
+# ================= HEALTH AND DIAGNOSTIC ENDPOINTS =================
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -1655,20 +1545,16 @@ if __name__ == '__main__':
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
     print("="*60)
-    print("📊 NEW FEATURES:")
-    print("   • Good Moral Certificate Scanning")
-    print("   • Automatic Disciplinary Status Detection")
-    print("   • Good Moral Scoring System (0-100)")
-    print("   • Student Issue Dashboard")
-    print("   • Email includes Good Moral status")
+    print("📊 FEATURES:")
+    print("   • PSA, Form 137, Good Moral scanning")
+    print("   • Disciplinary record detection")
+    print("   • Other documents upload with title")
+    print("   • Email notifications")
+    print("   • Complete student record management")
     print("="*60)
     print("🔗 NEW ENDPOINTS:")
-    print("   POST /scan-goodmoral - Scan Good Moral Certificate")
-    print("   GET  /get-goodmoral-status/<id> - Get moral status")
-    print("   GET  /search-by-moral-status - Search by status")
-    print("   GET  /students-with-issues - Students with issues")
-    print("   GET  /goodmoral-statistics - Statistics")
-    print("   POST /update-goodmoral-status/<id> - Update status")
+    print("   POST /upload-other-document/<id> - Upload other docs")
+    print("   DELETE /delete-other-document/<id>/<doc_id> - Delete doc")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
