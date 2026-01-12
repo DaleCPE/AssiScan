@@ -45,12 +45,13 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
 
-# Setup CORS for Render
+# Setup CORS for Render - FIXED FOR MULTIPLE ORIGINS
 CORS(app, resources={
     r"/*": {
-        "origins": ["https://assiscan-app.onrender.com", "http://localhost:10000", "http://localhost:5000"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept"]
+        "origins": ["*"],  # Allow all origins for testing
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept", "X-Requested-With"],
+        "supports_credentials": True
     }
 })
 
@@ -118,6 +119,7 @@ def init_db():
                     form137_path TEXT,
                     form138_path TEXT,
                     goodmoral_path TEXT,
+                    other_docs_path TEXT,  -- NEW COLUMN FOR OTHER DOCUMENTS
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     email_sent BOOLEAN DEFAULT FALSE,
                     email_sent_at TIMESTAMP,
@@ -209,7 +211,8 @@ def check_and_add_columns(cur, conn):
         ("goodmoral_status", "VARCHAR(50)"),
         ("goodmoral_offenses", "TEXT"),
         ("goodmoral_remarks", "TEXT"),
-        ("goodmoral_date_issued", "DATE")
+        ("goodmoral_date_issued", "DATE"),
+        ("other_docs_path", "TEXT")  # ADDED FOR OTHER DOCUMENTS
     ]
     
     for column_name, column_type in columns_to_add:
@@ -599,7 +602,7 @@ def get_records():
                 r['goodmoral_date_issued'] = str(r['goodmoral_date_issued'])
             
             # FIX: Process image paths for frontend
-            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path', 'other_docs_path']
             for field in image_fields:
                 if r.get(field):
                     # Handle comma-separated paths
@@ -1317,6 +1320,200 @@ def resend_email(record_id):
         if conn:
             conn.close()
 
+# ================= UPDATED UPLOAD ADDITIONAL FILES ENDPOINT =================
+@app.route('/upload-additional', methods=['POST'])
+def upload_additional():
+    """Handle multiple file uploads for additional documents - UPDATED FOR MULTIPLE FILES"""
+    try:
+        print(f"\n📤 [UPLOAD ADDITIONAL] Processing upload request")
+        
+        # Check if files are in the request
+        if 'files' not in request.files:
+            return jsonify({"error": "No files uploaded"}), 400
+        
+        files = request.files.getlist('files')
+        record_id = request.form.get('id')
+        file_type = request.form.get('type')
+        
+        print(f"   Record ID: {record_id}")
+        print(f"   File Type: {file_type}")
+        print(f"   Files Count: {len(files)}")
+        
+        if not files or files[0].filename == '':
+            return jsonify({"error": "No selected files"}), 400
+        
+        if not record_id or not file_type:
+            return jsonify({"error": "Missing record ID or file type"}), 400
+        
+        # Validate file type
+        allowed_types = ['form138', 'goodmoral', 'otherdocs']
+        if file_type not in allowed_types:
+            return jsonify({"error": f"Invalid file type. Allowed: {allowed_types}"}), 400
+        
+        saved_paths = []
+        for i, file in enumerate(files):
+            if file and file.filename:
+                # Validate file extension
+                allowed_extensions = {'.jpg', '.jpeg', '.png', '.pdf', '.gif', '.jfif'}
+                filename = secure_filename(file.filename)
+                file_ext = os.path.splitext(filename)[1].lower()
+                
+                if file_ext not in allowed_extensions:
+                    return jsonify({"error": f"Invalid file type: {file_ext}. Allowed: {allowed_extensions}"}), 400
+                
+                # Generate unique filename
+                timestamp = int(datetime.now().timestamp())
+                new_filename = f"{file_type}_{record_id}_{timestamp}_{i}_{filename}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+                
+                # Save file
+                file.save(file_path)
+                saved_paths.append(new_filename)
+                print(f"   ✅ Saved: {new_filename} ({file_ext})")
+        
+        if not saved_paths:
+            return jsonify({"error": "No files were saved"}), 400
+        
+        # Update database
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cur = conn.cursor()
+            
+            # Map file types to database columns
+            column_map = {
+                'form138': 'form138_path',
+                'goodmoral': 'goodmoral_path',
+                'otherdocs': 'other_docs_path'
+            }
+            
+            if file_type not in column_map:
+                return jsonify({"error": f"Unknown file type: {file_type}"}), 400
+            
+            column_name = column_map[file_type]
+            
+            # Check if column exists, create if not
+            cur.execute(f"""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'records' AND column_name = %s
+            """, (column_name,))
+            
+            if not cur.fetchone():
+                print(f"🔄 Creating column: {column_name}")
+                cur.execute(f"ALTER TABLE records ADD COLUMN {column_name} TEXT")
+                conn.commit()
+            
+            # Get existing paths
+            cur.execute(f"SELECT {column_name} FROM records WHERE id = %s", (record_id,))
+            existing = cur.fetchone()
+            
+            # Combine existing and new paths
+            existing_paths = []
+            if existing and existing[0]:
+                existing_paths = existing[0].split(',')
+            
+            # Add new paths
+            all_paths = existing_paths + saved_paths
+            # Remove empty strings and duplicates
+            all_paths = list(dict.fromkeys([p.strip() for p in all_paths if p.strip()]))
+            
+            # Update database
+            new_path_str = ','.join(all_paths)
+            cur.execute(f"UPDATE records SET {column_name} = %s WHERE id = %s", 
+                       (new_path_str, record_id))
+            
+            conn.commit()
+            
+            print(f"✅ Updated database: {len(all_paths)} total files for {file_type}")
+            
+            return jsonify({
+                "status": "success",
+                "message": f"Uploaded {len(saved_paths)} file(s)",
+                "saved_paths": saved_paths,
+                "total_files": len(all_paths),
+                "file_type": file_type,
+                "record_id": record_id
+            })
+            
+        except Exception as db_error:
+            conn.rollback()
+            print(f"❌ Database error: {db_error}")
+            traceback.print_exc()
+            return jsonify({"error": f"Database error: {str(db_error)[:100]}"}), 500
+        finally:
+            conn.close()
+            
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(e)[:100]}"}), 500
+
+# --- NEW ENDPOINT: GET ADDITIONAL FILES ---
+@app.route('/get-additional-files/<int:record_id>', methods=['GET'])
+def get_additional_files(record_id):
+    """Get all additional files for a record"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get all file paths
+        cur.execute("""
+            SELECT 
+                image_path,
+                form137_path,
+                form138_path,
+                goodmoral_path,
+                other_docs_path
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        result = {
+            "psa": [],
+            "form137": [],
+            "form138": [],
+            "goodmoral": [],
+            "otherdocs": []
+        }
+        
+        # Parse each file type
+        file_types = [
+            ('image_path', 'psa'),
+            ('form137_path', 'form137'),
+            ('form138_path', 'form138'),
+            ('goodmoral_path', 'goodmoral'), 
+            ('other_docs_path', 'otherdocs')
+        ]
+        
+        for column_name, file_type in file_types:
+            if record.get(column_name):
+                paths = record[column_name].split(',')
+                for path in paths:
+                    if path.strip():
+                        result[file_type].append({
+                            "filename": path.strip(),
+                            "url": f"{request.host_url}uploads/{path.strip()}"
+                        })
+        
+        return jsonify({
+            "status": "success",
+            "record_id": record_id,
+            "files": result
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting files: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # --- DIAGNOSTIC ENDPOINTS ---
 @app.route('/list-models', methods=['GET'])
 def list_models():
@@ -1495,7 +1692,8 @@ def fix_db_schema():
                 ("goodmoral_status", "VARCHAR(50)"),
                 ("goodmoral_offenses", "TEXT"),
                 ("goodmoral_remarks", "TEXT"),
-                ("goodmoral_date_issued", "DATE")
+                ("goodmoral_date_issued", "DATE"),
+                ("other_docs_path", "TEXT")
             ]
             
             added_columns = []
@@ -1528,55 +1726,6 @@ def fix_db_schema():
         print(f"❌ Schema fix error: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
-# --- OTHER ROUTES ---
-@app.route('/upload-additional', methods=['POST'])
-def upload_additional():
-    files = request.files.getlist('files')
-    rid, dtype = request.form.get('id'), request.form.get('type')
-    
-    if not files or not rid: 
-        return jsonify({"error": "Data Missing"}), 400
-    
-    saved_paths = []
-    for i, file in enumerate(files):
-        if file and file.filename:
-            timestamp = int(datetime.now().timestamp())
-            fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
-            file.save(path)
-            saved_paths.append(fname)  # Store only filename
-
-    full_path_str = ",".join(saved_paths)
-    
-    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
-    
-    if dtype not in col_map:
-        return jsonify({"error": "Invalid document type"}), 400
-    
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        
-        # Get existing paths
-        cur.execute(f"SELECT {col_map[dtype]} FROM records WHERE id = %s", (rid,))
-        existing = cur.fetchone()
-        
-        new_paths = []
-        if existing and existing[0]:
-            new_paths = existing[0].split(',')
-        
-        new_paths.extend(saved_paths)
-        new_path_str = ','.join([p for p in new_paths if p])
-        
-        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
-        conn.commit()
-        return jsonify({"status": "success", "message": "File uploaded successfully"})
-    except Exception as e:
-        print(f"❌ Upload error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally: 
-        conn.close()
 
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
@@ -1703,6 +1852,7 @@ if __name__ == '__main__':
     print("   • Database tracks email status")
     print("   • Resend email capability")
     print("   • Fixed image serving for Render")
+    print("   • MULTIPLE FILE UPLOAD SUPPORT")
     print("="*60)
     
     if GEMINI_API_KEY:
@@ -1729,9 +1879,13 @@ if __name__ == '__main__':
     print("   GET  /list-uploads - List uploaded files")
     print("   GET  /uploads/<filename> - Access uploaded files")
     print("   GET  /fix-db-schema - Fix missing database columns")
+    print("   GET  /get-additional-files/<id> - Get all files for record")
     print("="*60)
     print("🔗 NEW GOOD MORAL ENDPOINT:")
     print("   POST /extract-goodmoral - Extract Good Moral Certificate")
+    print("="*60)
+    print("🔗 MULTIPLE FILE UPLOAD ENDPOINTS:")
+    print("   POST /upload-additional - Upload multiple files")
     print("="*60)
     print("🔗 DIAGNOSTIC ENDPOINTS:")
     print("   GET  /list-models - List available Gemini models")
