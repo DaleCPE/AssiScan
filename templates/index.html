@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AssiScan | Dale Vincent</title>
+    <title>AssiScan | University of Batangas Lipa</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -286,9 +286,50 @@
             .scan-frame { height: 200px; }
             .form-panel { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border-dim); padding-bottom: 50px; }
         }
+        
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(212, 175, 55, 0.3);
+            border-top: 4px solid var(--primary-gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 15px;
+            color: var(--primary-gold);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div id="loadingText" class="loading-text">Processing...</div>
+    </div>
 
     <nav class="sidebar">
         <div><div class="brand-title">ASSISCAN</div><div class="brand-subtitle">University of Batangas Lipa</div></div>
@@ -311,7 +352,7 @@
                     <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="psaPreview" class="img-preview">
-                <input type="file" id="psaInput" hidden accept="image/*" multiple onchange="processPSA(this)">
+                <input type="file" id="psaInput" hidden accept="image/*, .pdf" multiple onchange="processPSA(this)">
             </div>
         </div>
 
@@ -330,7 +371,7 @@
                     <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="f137Preview" class="img-preview">
-                <input type="file" id="f137Input" hidden accept="image/*" multiple onchange="processForm137(this)">
+                <input type="file" id="f137Input" hidden accept="image/*, .pdf" multiple onchange="processForm137(this)">
             </div>
         </div>
 
@@ -350,7 +391,7 @@
                     <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
                 </div>
                 <img id="goodmoralPreview" class="img-preview">
-                <input type="file" id="goodmoralInput" hidden accept="image/*" multiple onchange="processGoodMoral(this)">
+                <input type="file" id="goodmoralInput" hidden accept="image/*, .pdf" multiple onchange="processGoodMoral(this)">
             </div>
             
             <!-- Good Moral Result Display -->
@@ -577,11 +618,11 @@
         <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
         <div class="file-upload-group">
             <span class="file-label">Form 138 (Report Card)</span>
-            <input type="file" id="fileForm138" accept="image/*">
+            <input type="file" id="fileForm138" accept="image/*, .pdf">
         </div>
         <div class="file-upload-group">
             <span class="file-label">Good Moral Certificate (Manual Upload)</span>
-            <input type="file" id="fileGoodMoral" accept="image/*">
+            <input type="file" id="fileGoodMoral" accept="image/*, .pdf">
         </div>
 
         <!-- SAVE BUTTON (Save to Database Only) -->
@@ -673,6 +714,16 @@
             document.getElementById('childAge').value = age >= 0 ? age : 0;
         }
 
+        // --- LOADING FUNCTIONS ---
+        function showLoading(message = 'Processing...') {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').textContent = message;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
         // --- PREVIEW LOGIC ---
         function showPreview(files, imgId, placeholderId) {
             if (files && files.length > 0) {
@@ -692,9 +743,9 @@
             const newRow = table.insertRow();
             
             newRow.innerHTML = `
-                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0;"></td>
-                <td><input type="number" class="sib-age" placeholder="0" style="margin:0;"></td>
-                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0;"></td>
+                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0; padding: 8px; font-size: 11px;"></td>
+                <td><input type="number" class="sib-age" placeholder="0" style="margin:0; padding: 8px; font-size: 11px;"></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0; padding: 8px; font-size: 11px;"></td>
                 <td style="text-align: center;">
                     <button type="button" onclick="this.closest('tr').remove()" style="
                         background: #331010; 
@@ -702,7 +753,7 @@
                         border: none; 
                         cursor: pointer; 
                         font-size: 12px; 
-                        padding: 5px;">&times;</button>
+                        padding: 5px 8px;">&times;</button>
                 </td>
             `;
         }
@@ -730,6 +781,7 @@
                     const d = data.structured_data;
                     document.getElementById('psaStatus').innerText = "✅ Data Extracted";
                     
+                    // Map the extracted data to form fields
                     document.getElementById('childName').value = d.Name || "";
                     document.getElementById('childSex').value = d.Sex || "";
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
@@ -747,10 +799,14 @@
                     psaImagePath = data.image_paths; 
                 } else {
                     document.getElementById('psaStatus').innerText = "❌ Scan Failed";
+                    if (data.error) {
+                        alert("PSA Scan Error: " + data.error);
+                    }
                 }
             } catch (e) {
                 document.getElementById('psaLaser').style.display = 'none';
-                document.getElementById('psaStatus').innerText = "❌ Error";
+                document.getElementById('psaStatus').innerText = "❌ Connection Error";
+                console.error('PSA Error:', e);
             }
         }
 
@@ -783,10 +839,14 @@
                     f137ImagePath = data.image_paths;
                 } else {
                     document.getElementById('f137Status').innerText = "❌ Scan Failed";
+                    if (data.error) {
+                        alert("Form 137 Scan Error: " + data.error);
+                    }
                 }
             } catch (e) {
                 document.getElementById('f137Laser').style.display = 'none';
-                document.getElementById('f137Status').innerText = "❌ Error";
+                document.getElementById('f137Status').innerText = "❌ Connection Error";
+                console.error('Form 137 Error:', e);
             }
         }
 
@@ -819,10 +879,13 @@
                     displayGoodMoralResult(d);
                 } else {
                     document.getElementById('goodmoralStatus').innerText = "❌ Scan Failed";
+                    if (data.error) {
+                        alert("Good Moral Scan Error: " + data.error);
+                    }
                 }
             } catch (e) {
                 document.getElementById('goodmoralLaser').style.display = 'none';
-                document.getElementById('goodmoralStatus').innerText = "❌ Error";
+                document.getElementById('goodmoralStatus').innerText = "❌ Connection Error";
                 console.error("Good Moral Error:", e);
             }
         }
@@ -919,27 +982,18 @@
             const btn = document.getElementById('saveBtn');
             const name = document.getElementById('childName').value;
             
-            if(!name) {
+            if(!name || name.trim() === "") {
                 alert("Student Name is required!");
+                document.getElementById('childName').focus();
+                document.getElementById('childName').style.borderColor = 'red';
                 return;
             }
-
-            // 🔥 EMAIL VALIDATION (optional for save, required for send)
-            const emailInput = document.getElementById('contactEmail');
-            const emailValue = emailInput ? emailInput.value.trim() : '';
             
-            // If email is provided, validate it
-            if (emailValue && !validateEmail(emailValue)) {
-                alert("Please enter a valid email address!");
-                emailInput.focus();
-                emailInput.style.borderColor = 'red';
-                return;
-            } else if (emailInput) {
-                emailInput.style.borderColor = ''; // Reset border color
-            }
+            // Reset border colors
+            document.getElementById('childName').style.borderColor = '';
 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-            btn.disabled = true;
+            // Show loading
+            showLoading('Saving record to database...');
 
             // 1. COLLECT SIBLINGS DATA
             let siblingsList = [];
@@ -964,7 +1018,7 @@
                 birthplace: document.getElementById('childBirthplace').value,
                 birth_order: document.getElementById('birthOrder').value,
                 religion: document.getElementById('childReligion').value,
-                age: document.getElementById('childAge').value,
+                age: document.getElementById('childAge').value || 0,
                 civil_status: document.getElementById('childCivilStatus').value,
                 nationality: document.getElementById('childNationality').value,
                 mobile_no: document.getElementById('childMobile').value,
@@ -992,7 +1046,7 @@
                 guardian_relation: document.getElementById('guardianRelation').value,
                 guardian_contact: document.getElementById('guardianContact').value,
                 
-                // ADDED SIBLINGS HERE
+                // SIBLINGS DATA
                 siblings: siblingsList,
 
                 lrn: document.getElementById('lrn').value,
@@ -1004,8 +1058,8 @@
                 special_talents: document.getElementById('specialTalents').value, 
                 is_scholar: document.getElementById('isScholar').value, 
                 
-                // EMAIL FIELD
-                email: emailValue,
+                // EMAIL FIELD (optional for save)
+                email: document.getElementById('contactEmail').value.trim(),
                 
                 // IMAGE PATHS
                 psa_image_path: psaImagePath,
@@ -1016,7 +1070,7 @@
                 goodmoral_data: goodmoralData || {}
             };
 
-            console.log("📤 Saving record data:", recordData);
+            console.log("📤 Saving record data to /save-record:", recordData);
 
             try {
                 const res = await fetch('/save-record', {
@@ -1028,6 +1082,8 @@
                 const result = await res.json();
                 
                 console.log("Backend response:", result);
+                
+                hideLoading();
                 
                 if(result.status === "success") {
                     currentRecordId = result.db_id;
@@ -1044,8 +1100,12 @@
                     // Update Save button
                     btn.innerHTML = '<i class="fas fa-check"></i> Saved to Database';
                     btn.style.background = 'linear-gradient(90deg, #2E7D32, #388E3C)';
+                    btn.disabled = true;
                     
                     console.log(`Record saved with ID: ${currentRecordId}`);
+                    
+                    // Upload additional files if any
+                    await uploadAdditionalFilesAfterSave();
                     
                 } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
                     updateStatus('saveStatus', '⚠️ Record already exists in the system!', 'error');
@@ -1060,6 +1120,7 @@
                     btn.disabled = false;
                 }
             } catch(e) {
+                hideLoading();
                 console.error('Connection Error:', e);
                 updateStatus('saveStatus', '❌ Connection Error! Check console for details.', 'error');
                 btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
@@ -1067,152 +1128,25 @@
             }
         }
 
-        // --- SEND EMAIL ONLY ---
-        async function sendEmail() {
-            if (!currentRecordId) {
-                alert("Please save the record first before sending email!");
-                return;
-            }
-            
-            const emailValue = document.getElementById('contactEmail').value.trim();
-            if (!emailValue) {
-                alert("Email address is required to send notification!");
-                return;
-            }
-            
-            if (!validateEmail(emailValue)) {
-                alert("Please enter a valid email address!");
-                document.getElementById('contactEmail').focus();
-                document.getElementById('contactEmail').style.borderColor = 'red';
-                return;
-            }
-            
-            const btn = document.getElementById('sendBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
-            btn.disabled = true;
-            
-            updateStatus('sendStatus', '📧 Preparing to send email...', 'info');
-            
-            try {
-                const response = await fetch(`/send-email/${currentRecordId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                console.log("Email send response:", result);
-                
-                if (response.ok) {
-                    if (result.status === "success") {
-                        updateStatus('sendStatus', 
-                            `✅ Email sent successfully to ${emailValue}`, 
-                            'success');
-                        
-                        btn.innerHTML = '<i class="fas fa-check"></i> Email Sent';
-                        btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
-                        btn.disabled = true;
-                        
-                    } else if (result.warning === "Email has already been sent for this record") {
-                        updateStatus('sendStatus', 
-                            '⚠️ Email was already sent for this record. You can resend if needed.', 
-                            'info');
-                        
-                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                        btn.disabled = false;
-                        
-                        // Add resend functionality
-                        btn.onclick = function() { resendEmail(); };
-                    }
-                } else {
-                    updateStatus('sendStatus', 
-                        `❌ Failed to send email: ${result.error || 'Unknown error'}`, 
-                        'error');
-                    
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error("Email send error:", error);
-                updateStatus('sendStatus', 
-                    '❌ Connection error while sending email', 
-                    'error');
-                
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
-                btn.disabled = false;
-            }
-        }
-
-        // --- RESEND EMAIL ---
-        async function resendEmail() {
+        // --- UPLOAD ADDITIONAL FILES AFTER SAVE ---
+        async function uploadAdditionalFilesAfterSave() {
             if (!currentRecordId) return;
             
-            const btn = document.getElementById('sendBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> RESENDING...';
-            btn.disabled = true;
+            const form138File = document.getElementById('fileForm138').files;
+            const goodmoralFile = document.getElementById('fileGoodMoral').files;
             
-            updateStatus('sendStatus', '📧 Resending email...', 'info');
+            // Upload Form 138 if selected
+            if (form138File.length > 0) {
+                await uploadAdditionalFiles(currentRecordId, 'form138', form138File);
+            }
             
-            try {
-                const response = await fetch(`/resend-email/${currentRecordId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok && result.status === "success") {
-                    updateStatus('sendStatus', 
-                        `✅ Email resent successfully!`, 
-                        'success');
-                    
-                    btn.innerHTML = '<i class="fas fa-check"></i> Email Resent';
-                    btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
-                    btn.disabled = true;
-                } else {
-                    updateStatus('sendStatus', 
-                        `❌ Failed to resend email: ${result.error || 'Unknown error'}`, 
-                        'error');
-                    
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error("Resend error:", error);
-                updateStatus('sendStatus', '❌ Connection error', 'error');
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                btn.disabled = false;
+            // Upload additional Good Moral if selected
+            if (goodmoralFile.length > 0) {
+                await uploadAdditionalFiles(currentRecordId, 'goodmoral', goodmoralFile);
             }
         }
 
-        // --- DEBUG FUNCTION ---
-        function showRecordInfo() {
-            const info = {
-                currentRecordId: currentRecordId,
-                psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
-                f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
-                goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
-                studentName: document.getElementById('childName').value || "Not entered",
-                email: document.getElementById('contactEmail').value || "Not entered",
-                goodmoralStatus: goodmoralData ? goodmoralData.certificate_status || "Unknown" : "Not scanned"
-            };
-            
-            let message = `Record Information:\n
-📋 Record ID: ${info.currentRecordId || "Not saved yet"}
-📸 PSA Images: ${info.psaImagePath}
-📄 Form 137: ${info.f137ImagePath}
-📜 Good Moral: ${info.goodmoralImagePath}
-👤 Student: ${info.studentName}
-📧 Email: ${info.email}
-🎯 Good Moral Status: ${info.goodmoralStatus}`;
-            
-            if (goodmoralData && goodmoralData.offenses_detected && goodmoralData.offenses_detected.length > 0) {
-                message += `\n⚠️ Offenses: ${goodmoralData.offenses_detected.length} found`;
-            }
-            
-            alert(message);
-        }
-
-        // --- UPLOAD ADDITIONAL FILES (if needed) ---
+        // --- UPLOAD ADDITIONAL FILES ---
         async function uploadAdditionalFiles(recordId, fileType, files) {
             if (!recordId) {
                 alert("Please save the record first!");
@@ -1235,24 +1169,178 @@
                 
                 const result = await response.json();
                 if (result.status === "success") {
-                    console.log(`${fileType} uploaded successfully`);
+                    console.log(`${fileType} uploaded successfully:`, result);
+                    updateStatus('saveStatus', `✅ ${fileType} uploaded: ${result.saved_paths.length} file(s)`, 'info');
+                } else {
+                    console.error(`Error uploading ${fileType}:`, result);
                 }
             } catch (error) {
                 console.error("Upload error:", error);
             }
         }
 
-        // Handle Form 138 and Good Moral uploads when record is saved
+        // --- SEND EMAIL ONLY ---
+        async function sendEmail() {
+            if (!currentRecordId) {
+                alert("Please save the record first before sending email!");
+                return;
+            }
+            
+            const emailValue = document.getElementById('contactEmail').value.trim();
+            if (!emailValue) {
+                alert("Email address is required to send notification!");
+                document.getElementById('contactEmail').focus();
+                document.getElementById('contactEmail').style.borderColor = 'red';
+                return;
+            }
+            
+            if (!validateEmail(emailValue)) {
+                alert("Please enter a valid email address!");
+                document.getElementById('contactEmail').focus();
+                document.getElementById('contactEmail').style.borderColor = 'red';
+                return;
+            }
+            
+            // Reset border color
+            document.getElementById('contactEmail').style.borderColor = '';
+            
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
+            btn.disabled = true;
+            
+            showLoading('Sending email...');
+            
+            try {
+                const response = await fetch(`/send-email/${currentRecordId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                console.log("Email send response:", result);
+                
+                hideLoading();
+                
+                if (response.ok) {
+                    if (result.status === "success") {
+                        updateStatus('sendStatus', 
+                            `✅ Email sent successfully to ${emailValue}`, 
+                            'success');
+                        
+                        btn.innerHTML = '<i class="fas fa-check"></i> Email Sent';
+                        btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
+                        btn.disabled = true;
+                        
+                    } else if (result.warning) {
+                        updateStatus('sendStatus', result.warning, 'info');
+                        
+                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
+                        btn.disabled = false;
+                        
+                        // Add resend functionality
+                        btn.onclick = function() { resendEmail(); };
+                    }
+                } else {
+                    updateStatus('sendStatus', 
+                        `❌ Failed to send email: ${result.error || 'Unknown error'}`, 
+                        'error');
+                    
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                hideLoading();
+                console.error("Email send error:", error);
+                updateStatus('sendStatus', 
+                    '❌ Connection error while sending email', 
+                    'error');
+                
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                btn.disabled = false;
+            }
+        }
+
+        // --- RESEND EMAIL ---
+        async function resendEmail() {
+            if (!currentRecordId) return;
+            
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> RESENDING...';
+            btn.disabled = true;
+            
+            showLoading('Resending email...');
+            
+            try {
+                const response = await fetch(`/resend-email/${currentRecordId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                hideLoading();
+                
+                if (response.ok && result.status === "success") {
+                    updateStatus('sendStatus', 
+                        `✅ Email resent successfully!`, 
+                        'success');
+                    
+                    btn.innerHTML = '<i class="fas fa-check"></i> Email Resent';
+                    btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
+                    btn.disabled = true;
+                } else {
+                    updateStatus('sendStatus', 
+                        `❌ Failed to resend email: ${result.error || 'Unknown error'}`, 
+                        'error');
+                    
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                hideLoading();
+                console.error("Resend error:", error);
+                updateStatus('sendStatus', '❌ Connection error', 'error');
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
+                btn.disabled = false;
+            }
+        }
+
+        // --- DEBUG FUNCTION ---
+        function showRecordInfo() {
+            const info = {
+                currentRecordId: currentRecordId,
+                psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
+                f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
+                goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
+                studentName: document.getElementById('childName').value || "Not entered",
+                email: document.getElementById('contactEmail').value || "Not entered",
+                goodmoralStatus: goodmoralData ? goodmoralData.certificate_status || "Unknown" : "Not scanned"
+            };
+            
+            let message = `Record Information:\n\n📋 Record ID: ${info.currentRecordId || "Not saved yet"}\n📸 PSA Images: ${info.psaImagePath}\n📄 Form 137: ${info.f137ImagePath}\n📜 Good Moral: ${info.goodmoralImagePath}\n👤 Student: ${info.studentName}\n📧 Email: ${info.email}\n🎯 Good Moral Status: ${info.goodmoralStatus}`;
+            
+            if (goodmoralData && goodmoralData.offenses_detected && goodmoralData.offenses_detected.length > 0) {
+                message += `\n⚠️ Offenses: ${goodmoralData.offenses_detected.length} found`;
+            }
+            
+            alert(message);
+        }
+
+        // Handle Form 138 and Good Moral uploads when files are selected
         document.getElementById('fileForm138').addEventListener('change', function(e) {
-            if (currentRecordId && e.target.files.length > 0) {
-                uploadAdditionalFiles(currentRecordId, 'form138', e.target.files);
+            if (e.target.files.length > 0) {
+                console.log('Form 138 file selected:', e.target.files[0].name);
             }
         });
         
         document.getElementById('fileGoodMoral').addEventListener('change', function(e) {
-            if (currentRecordId && e.target.files.length > 0) {
-                uploadAdditionalFiles(currentRecordId, 'goodmoral', e.target.files);
+            if (e.target.files.length > 0) {
+                console.log('Good Moral file selected:', e.target.files[0].name);
             }
+        });
+
+        // Add initial sibling row
+        document.addEventListener('DOMContentLoaded', function() {
+            addSiblingRow();
         });
     </script>
 </body>
