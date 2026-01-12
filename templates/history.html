@@ -231,6 +231,7 @@
             height: 150px;
             object-fit: cover;
             background: #000;
+            cursor: pointer;
         }
 
         .image-info {
@@ -300,6 +301,85 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Search and Filter */
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            color: var(--text-main);
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-gold);
+        }
+
+        /* File Type Tabs */
+        .file-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 10px;
+        }
+
+        .file-tab {
+            padding: 8px 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .file-tab:hover,
+        .file-tab.active {
+            background: var(--primary-gold);
+            color: #000;
+            border-color: var(--primary-gold);
+        }
+
+        /* Record Details Panel */
+        .record-details {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .detail-label {
+            width: 150px;
+            color: var(--primary-gold);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .detail-value {
+            flex: 1;
+            color: var(--text-main);
+            font-size: 12px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header {
@@ -321,6 +401,15 @@
             .image-gallery {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
+            
+            .detail-row {
+                flex-direction: column;
+            }
+            
+            .detail-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
         }
     </style>
 </head>
@@ -336,24 +425,39 @@
                 <a href="index.html" class="btn btn-outline-warning">
                     <i class="fas fa-arrow-left"></i> Back to Scanner
                 </a>
+                <button class="btn btn-outline-danger ms-2" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
 
         <!-- Control Panel -->
         <div class="control-panel">
             <div class="row align-items-center">
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <h5 style="color: var(--primary-gold); margin: 0;">
                         <i class="fas fa-database"></i> Student Records
                     </h5>
                     <small style="color: var(--text-muted);">Total Records: <span id="totalRecords">0</span></small>
                 </div>
-                <div class="col-md-4 text-end">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search by name, LRN, or school..." 
+                               onkeyup="filterRecords()">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12 text-end">
                     <button class="btn btn-outline-primary btn-sm" onclick="refreshRecords()">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                     <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">
                         <i class="fas fa-download"></i> Export CSV
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="showStats()">
+                        <i class="fas fa-chart-bar"></i> Statistics
                     </button>
                 </div>
             </div>
@@ -409,55 +513,43 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="fas fa-images"></i> Uploaded Images - <span id="modalStudentName"></span>
+                        <i class="fas fa-images"></i> Uploaded Documents - <span id="modalStudentName"></span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- PSA Images -->
-                    <div id="psaImagesSection" style="display: none;">
-                        <h6 class="text-warning mb-3">
-                            <i class="fas fa-baby"></i> PSA Birth Certificate
-                        </h6>
-                        <div id="psaImages" class="image-gallery">
-                            <!-- PSA images will be loaded here -->
+                    <!-- File Type Tabs -->
+                    <div class="file-tabs">
+                        <div class="file-tab active" onclick="showFileType('psa')">
+                            <i class="fas fa-baby"></i> PSA
+                        </div>
+                        <div class="file-tab" onclick="showFileType('form137')">
+                            <i class="fas fa-file-contract"></i> Form 137
+                        </div>
+                        <div class="file-tab" onclick="showFileType('form138')">
+                            <i class="fas fa-file-alt"></i> Form 138
+                        </div>
+                        <div class="file-tab" onclick="showFileType('goodmoral')">
+                            <i class="fas fa-certificate"></i> Good Moral
+                        </div>
+                        <div class="file-tab" onclick="showFileType('otherdocs')">
+                            <i class="fas fa-paperclip"></i> Other Docs
                         </div>
                     </div>
 
-                    <!-- Form 137 Images -->
-                    <div id="form137ImagesSection" style="display: none;">
-                        <h6 class="text-warning mb-3">
-                            <i class="fas fa-file-contract"></i> Form 137 / SF10
-                        </h6>
-                        <div id="form137Images" class="image-gallery">
-                            <!-- Form 137 images will be loaded here -->
-                        </div>
+                    <!-- File Type Content -->
+                    <div id="fileTypeContent">
+                        <!-- Content will be loaded dynamically -->
                     </div>
 
-                    <!-- Form 138 Images -->
-                    <div id="form138ImagesSection" style="display: none;">
+                    <!-- Record Details -->
+                    <div class="record-details" id="recordDetailsSection" style="display: none;">
                         <h6 class="text-warning mb-3">
-                            <i class="fas fa-file-alt"></i> Form 138 (Report Card)
+                            <i class="fas fa-info-circle"></i> Record Details
                         </h6>
-                        <div id="form138Images" class="image-gallery">
-                            <!-- Form 138 images will be loaded here -->
+                        <div id="recordDetails">
+                            <!-- Details will be loaded here -->
                         </div>
-                    </div>
-
-                    <!-- Good Moral Certificate Images -->
-                    <div id="goodmoralImagesSection" style="display: none;">
-                        <h6 class="text-warning mb-3">
-                            <i class="fas fa-certificate"></i> Good Moral Certificate
-                        </h6>
-                        <div id="goodmoralImages" class="image-gallery">
-                            <!-- Good Moral images will be loaded here -->
-                        </div>
-                    </div>
-
-                    <!-- No Images Message -->
-                    <div id="noImagesMessage" class="no-images">
-                        <i class="fas fa-image fa-3x mb-3" style="color: var(--border-dim);"></i>
-                        <p>No images uploaded for this record.</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -485,7 +577,7 @@
                         <input type="hidden" id="editRecordId">
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Student Name</label>
+                                <label class="form-label">Student Name *</label>
                                 <input type="text" id="editName" class="form-control" required>
                             </div>
                             <div class="col-md-6">
@@ -552,6 +644,10 @@
                 <div class="modal-body">
                     <p>Are you sure you want to delete this record?</p>
                     <p class="text-warning"><strong>This action cannot be undone.</strong></p>
+                    <div class="mt-3">
+                        <label class="form-label">Delete Reason (Optional)</label>
+                        <textarea id="deleteReason" class="form-control" rows="2" placeholder="Enter reason for deletion..."></textarea>
+                    </div>
                     <input type="hidden" id="deleteRecordId">
                 </div>
                 <div class="modal-footer">
@@ -564,26 +660,142 @@
         </div>
     </div>
 
+    <!-- Statistics Modal -->
+    <div class="modal fade" id="statsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-bar"></i> System Statistics
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-center p-3 mb-3">
+                                <h2 id="totalRecordsStat" class="text-primary">0</h2>
+                                <p class="mb-0">Total Records</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-center p-3 mb-3">
+                                <h2 id="emailSentStat" class="text-success">0</h2>
+                                <p class="mb-0">Emails Sent</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-center p-3 mb-3">
+                                <h2 id="goodmoralClearStat" class="text-success">0</h2>
+                                <p class="mb-0">Good Moral Clear</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-center p-3 mb-3">
+                                <h2 id="goodmoralOffenseStat" class="text-danger">0</h2>
+                                <p class="mb-0">With Offenses</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="record-details mt-3">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-calendar"></i> Recent Activity
+                        </h6>
+                        <div id="recentActivity">
+                            <!-- Recent activity will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Additional Files Modal -->
+    <div class="modal fade" id="uploadFilesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-upload"></i> Upload Additional Files
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="uploadRecordId">
+                    <div class="mb-3">
+                        <label class="form-label">Select File Type</label>
+                        <select id="uploadFileType" class="form-control">
+                            <option value="form138">Form 138 (Report Card)</option>
+                            <option value="goodmoral">Good Moral Certificate</option>
+                            <option value="otherdocs">Other Documents</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Files</label>
+                        <input type="file" id="uploadFilesInput" class="form-control" multiple accept="image/*,.pdf">
+                        <small class="text-muted">You can select multiple files (images or PDFs)</small>
+                    </div>
+                    <div class="mb-3">
+                        <div id="uploadProgress" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted mt-2 d-block" id="uploadStatus">Uploading...</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="uploadAdditionalFiles()" id="uploadBtn">
+                        <i class="fas fa-upload"></i> Upload Files
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentRecords = [];
+        let filteredRecords = [];
         let currentPage = 1;
         let recordsPerPage = 10;
         let currentViewingRecord = null;
         let serverUrl = '';
+        let currentFileType = 'psa';
 
         // Initialize modal instances
         let viewImagesModal = null;
         let editRecordModal = null;
         let confirmDeleteModal = null;
+        let statsModal = null;
+        let uploadFilesModal = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             viewImagesModal = new bootstrap.Modal(document.getElementById('viewImagesModal'));
             editRecordModal = new bootstrap.Modal(document.getElementById('editRecordModal'));
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+            uploadFilesModal = new bootstrap.Modal(document.getElementById('uploadFilesModal'));
             
             loadRecords();
         });
+
+        // Check authentication
+        function checkAuth() {
+            // Check if user is logged in by trying to access records
+            // If not logged in, redirect to login page
+            fetch('/get-records').then(response => {
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                }
+            });
+        }
 
         // Load records from backend
         async function loadRecords() {
@@ -598,8 +810,9 @@
                 }
                 
                 if (data.records) {
-                    serverUrl = data.server_url || '';
+                    serverUrl = data.server_url || window.location.origin;
                     currentRecords = data.records;
+                    filteredRecords = [...currentRecords];
                     updateTable();
                     updatePagination();
                 }
@@ -615,17 +828,42 @@
             }
         }
 
+        // Filter records based on search input
+        function filterRecords() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredRecords = [...currentRecords];
+            } else {
+                filteredRecords = currentRecords.filter(record => {
+                    return (
+                        (record.name && record.name.toLowerCase().includes(searchTerm)) ||
+                        (record.lrn && record.lrn.toLowerCase().includes(searchTerm)) ||
+                        (record.school_name && record.school_name.toLowerCase().includes(searchTerm)) ||
+                        (record.email && record.email.toLowerCase().includes(searchTerm)) ||
+                        (record.program && record.program.toLowerCase().includes(searchTerm))
+                    );
+                });
+            }
+            
+            currentPage = 1;
+            updateTable();
+            updatePagination();
+        }
+
         // Update table with records
         function updateTable() {
             const tbody = document.getElementById('recordsTableBody');
             
-            if (currentRecords.length === 0) {
+            if (filteredRecords.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="9" class="text-center" style="color: var(--text-muted); padding: 40px;">
                             <i class="fas fa-database fa-2x mb-3"></i>
                             <p>No records found.</p>
-                            <small>Scan and save records in the main scanner page.</small>
+                            ${document.getElementById('searchInput').value ? 
+                                '<small>Try a different search term.</small>' : 
+                                '<small>Scan and save records in the main scanner page.</small>'}
                         </td>
                     </tr>
                 `;
@@ -637,51 +875,77 @@
             
             // Calculate pagination
             const startIndex = (currentPage - 1) * recordsPerPage;
-            const endIndex = Math.min(startIndex + recordsPerPage, currentRecords.length);
-            const pageRecords = currentRecords.slice(startIndex, endIndex);
+            const endIndex = Math.min(startIndex + recordsPerPage, filteredRecords.length);
+            const pageRecords = filteredRecords.slice(startIndex, endIndex);
             
             let html = '';
             
             pageRecords.forEach(record => {
                 // Format date
-                const createdDate = record.created_at ? new Date(record.created_at).toLocaleDateString() : 'N/A';
+                const createdDate = record.created_at ? new Date(record.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }) : 'N/A';
                 
-                // Email status
-                const emailStatus = record.email_sent ? 
-                    '<span class="status-badge status-sent"><i class="fas fa-check-circle"></i> Sent</span>' : 
-                    '<span class="status-badge status-pending"><i class="fas fa-clock"></i> Pending</span>';
+                // Email status with time
+                let emailStatus = '';
+                if (record.email_sent && record.email_sent_at) {
+                    const sentDate = new Date(record.email_sent_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    emailStatus = `<span class="status-badge status-sent" title="Sent on ${sentDate}">
+                        <i class="fas fa-check-circle"></i> Sent
+                    </span>`;
+                } else {
+                    emailStatus = `<span class="status-badge status-pending">
+                        <i class="fas fa-clock"></i> Pending
+                    </span>`;
+                }
                 
                 // Good Moral status
-                let goodmoralStatus = 'N/A';
+                let goodmoralStatus = '<span class="text-muted">N/A</span>';
                 if (record.goodmoral_status) {
                     if (record.goodmoral_status === 'CLEAR') {
-                        goodmoralStatus = `<span class="goodmoral-status goodmoral-clear">
+                        goodmoralStatus = `<span class="goodmoral-status goodmoral-clear" title="${record.goodmoral_remarks || 'Clear record'}">
                             <i class="fas fa-check-circle"></i> Clear
                         </span>`;
                     } else if (record.goodmoral_status === 'WITH OFFENSE') {
-                        goodmoralStatus = `<span class="goodmoral-status goodmoral-offense">
+                        goodmoralStatus = `<span class="goodmoral-status goodmoral-offense" title="${record.goodmoral_offenses || 'Has offenses'}">
                             <i class="fas fa-exclamation-triangle"></i> With Offense
                         </span>`;
                     }
                 }
                 
+                // School name (truncated)
+                const schoolName = record.school_name ? 
+                    (record.school_name.length > 25 ? record.school_name.substring(0, 25) + '...' : record.school_name) : 
+                    'N/A';
+                
                 html += `
                     <tr>
-                        <td>${record.id}</td>
-                        <td><strong>${record.name || 'N/A'}</strong></td>
+                        <td><strong>${record.id}</strong></td>
+                        <td>
+                            <strong>${record.name || 'N/A'}</strong>
+                            ${record.email ? `<br><small class="text-muted">${record.email}</small>` : ''}
+                        </td>
                         <td>${record.lrn || 'N/A'}</td>
-                        <td>${record.school_name ? record.school_name.substring(0, 30) + (record.school_name.length > 30 ? '...' : '') : 'N/A'}</td>
+                        <td>${schoolName}</td>
                         <td>${record.program || 'N/A'}</td>
                         <td>${emailStatus}</td>
                         <td>${goodmoralStatus}</td>
                         <td>${createdDate}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn-icon view" title="View Images" onclick="viewImages(${record.id})">
+                                <button class="btn-icon view" title="View Documents" onclick="viewImages(${record.id})">
                                     <i class="fas fa-images"></i>
                                 </button>
                                 <button class="btn-icon edit" title="Edit Record" onclick="editRecord(${record.id})">
                                     <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" title="Upload Files" onclick="openUploadModal(${record.id})" style="background: rgba(33, 150, 243, 0.1);">
+                                    <i class="fas fa-upload"></i>
                                 </button>
                                 ${record.email_sent ? `
                                     <button class="btn-icon resend" title="Resend Email" onclick="resendEmail(${record.id})">
@@ -706,13 +970,13 @@
             // Update pagination info
             document.getElementById('startRecord').textContent = startIndex + 1;
             document.getElementById('endRecord').textContent = endIndex;
-            document.getElementById('totalCount').textContent = currentRecords.length;
+            document.getElementById('totalCount').textContent = filteredRecords.length;
         }
 
         // Update pagination
         function updatePagination() {
             const pagination = document.getElementById('pagination');
-            const totalPages = Math.ceil(currentRecords.length / recordsPerPage);
+            const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
             
             if (totalPages <= 1) {
                 pagination.innerHTML = '';
@@ -724,29 +988,33 @@
             // Previous button
             html += `
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
                         <i class="fas fa-chevron-left"></i>
                     </a>
                 </li>
             `;
             
             // Page numbers
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                    html += `
-                        <li class="page-item ${i === currentPage ? 'active' : ''}">
-                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                        </li>
-                    `;
-                } else if (i === currentPage - 3 || i === currentPage + 3) {
-                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-                }
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
             }
             
             // Next button
             html += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
                         <i class="fas fa-chevron-right"></i>
                     </a>
                 </li>
@@ -757,14 +1025,16 @@
 
         // Change page
         function changePage(page) {
-            if (page < 1 || page > Math.ceil(currentRecords.length / recordsPerPage)) {
+            if (page < 1 || page > Math.ceil(filteredRecords.length / recordsPerPage)) {
                 return;
             }
             currentPage = page;
             updateTable();
+            // Scroll to top of table
+            document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // View all uploaded images for a record
+        // View all uploaded documents for a record
         async function viewImages(recordId) {
             const record = currentRecords.find(r => r.id == recordId);
             if (!record) return;
@@ -772,146 +1042,365 @@
             currentViewingRecord = recordId;
             document.getElementById('modalStudentName').textContent = record.name || 'Unknown';
             
+            // Reset tabs
+            document.querySelectorAll('.file-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector('.file-tab').classList.add('active');
+            currentFileType = 'psa';
+            
             // Show loading
-            document.getElementById('psaImages').innerHTML = '<div class="spinner"></div>';
-            document.getElementById('form137Images').innerHTML = '<div class="spinner"></div>';
-            document.getElementById('form138Images').innerHTML = '<div class="spinner"></div>';
-            document.getElementById('goodmoralImages').innerHTML = '<div class="spinner"></div>';
+            document.getElementById('fileTypeContent').innerHTML = `
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: var(--text-muted);">Loading documents...</p>
+                </div>
+            `;
             
-            // Hide all sections initially
-            document.getElementById('psaImagesSection').style.display = 'none';
-            document.getElementById('form137ImagesSection').style.display = 'none';
-            document.getElementById('form138ImagesSection').style.display = 'none';
-            document.getElementById('goodmoralImagesSection').style.display = 'none';
-            document.getElementById('noImagesMessage').style.display = 'none';
-            
-            let hasImages = false;
-            
-            // Load PSA Images
-            if (record.image_path) {
-                hasImages = true;
-                document.getElementById('psaImagesSection').style.display = 'block';
-                await loadImages('psaImages', record.image_path, 'PSA Birth Certificate');
-            }
-            
-            // Load Form 137 Images
-            if (record.form137_path) {
-                hasImages = true;
-                document.getElementById('form137ImagesSection').style.display = 'block';
-                await loadImages('form137Images', record.form137_path, 'Form 137');
-            }
-            
-            // Load Form 138 Images
-            if (record.form138_path) {
-                hasImages = true;
-                document.getElementById('form138ImagesSection').style.display = 'block';
-                await loadImages('form138Images', record.form138_path, 'Form 138');
-            }
-            
-            // Load Good Moral Images
-            if (record.goodmoral_path) {
-                hasImages = true;
-                document.getElementById('goodmoralImagesSection').style.display = 'block';
-                await loadImages('goodmoralImages', record.goodmoral_path, 'Good Moral Certificate');
-            }
-            
-            // Show no images message if none
-            if (!hasImages) {
-                document.getElementById('noImagesMessage').style.display = 'block';
-            }
+            // Load record details and files
+            await loadRecordDetails(record);
+            await loadFileTypeContent('psa', record);
             
             viewImagesModal.show();
         }
 
-        // Load images into a gallery
-        async function loadImages(containerId, imagePaths, imageType) {
-            const container = document.getElementById(containerId);
+        // Show specific file type
+        async function showFileType(fileType) {
+            currentFileType = fileType;
             
-            if (!imagePaths) {
-                container.innerHTML = '<div class="no-images"><p>No images available</p></div>';
+            // Update active tab
+            document.querySelectorAll('.file-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.file-tab').forEach(tab => {
+                if (tab.textContent.includes(getFileTypeLabel(fileType))) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // Get record
+            const record = currentRecords.find(r => r.id == currentViewingRecord);
+            if (!record) return;
+            
+            await loadFileTypeContent(fileType, record);
+        }
+
+        // Get file type label
+        function getFileTypeLabel(fileType) {
+            const labels = {
+                'psa': 'PSA',
+                'form137': 'Form 137',
+                'form138': 'Form 138',
+                'goodmoral': 'Good Moral',
+                'otherdocs': 'Other Docs'
+            };
+            return labels[fileType] || fileType;
+        }
+
+        // Load file type content
+        async function loadFileTypeContent(fileType, record) {
+            const container = document.getElementById('fileTypeContent');
+            
+            // Get file paths based on type
+            let filePaths = '';
+            let fieldName = '';
+            
+            switch(fileType) {
+                case 'psa':
+                    filePaths = record.image_path;
+                    fieldName = 'image_path';
+                    break;
+                case 'form137':
+                    filePaths = record.form137_path;
+                    fieldName = 'form137_path';
+                    break;
+                case 'form138':
+                    filePaths = record.form138_path;
+                    fieldName = 'form138_path';
+                    break;
+                case 'goodmoral':
+                    filePaths = record.goodmoral_path;
+                    fieldName = 'goodmoral_path';
+                    break;
+                case 'otherdocs':
+                    filePaths = record.other_docs_path;
+                    fieldName = 'other_docs_path';
+                    break;
+            }
+            
+            if (!filePaths || filePaths.trim() === '') {
+                container.innerHTML = `
+                    <div class="no-images">
+                        <i class="fas fa-folder-open fa-3x mb-3" style="color: var(--border-dim);"></i>
+                        <p>No ${getFileTypeLabel(fileType)} documents uploaded.</p>
+                        <button class="btn btn-sm btn-outline-warning mt-2" onclick="openUploadModal(${record.id}, '${fileType}')">
+                            <i class="fas fa-upload"></i> Upload ${getFileTypeLabel(fileType)}
+                        </button>
+                    </div>
+                `;
                 return;
             }
             
             // Split comma-separated paths
-            const paths = imagePaths.split(',').filter(path => path.trim());
+            const paths = filePaths.split(',').filter(path => path.trim());
             
             if (paths.length === 0) {
-                container.innerHTML = '<div class="no-images"><p>No images available</p></div>';
+                container.innerHTML = `
+                    <div class="no-images">
+                        <i class="fas fa-folder-open fa-3x mb-3" style="color: var(--border-dim);"></i>
+                        <p>No ${getFileTypeLabel(fileType)} documents uploaded.</p>
+                    </div>
+                `;
                 return;
             }
             
-            let html = '';
+            let html = `<div class="image-gallery">`;
             
             for (let i = 0; i < paths.length; i++) {
                 const path = paths[i].trim();
                 const imageUrl = `${serverUrl}/uploads/${encodeURIComponent(path)}`;
                 const fileName = path.split('/').pop() || path;
+                const fileExt = fileName.split('.').pop().toLowerCase();
+                const isPDF = fileExt === 'pdf';
                 
                 html += `
                     <div class="image-card">
-                        <img src="${imageUrl}" 
-                             class="image-preview" 
-                             alt="${imageType} ${i+1}"
-                             loading="lazy"
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/333/666?text=Image+Not+Found';"
-                             onclick="openImageModal('${imageUrl}', '${fileName}')">
+                        ${isPDF ? `
+                            <div class="image-preview" style="background: #f44336; display: flex; align-items: center; justify-content: center; color: white;"
+                                 onclick="openFile('${imageUrl}', '${fileName}')">
+                                <i class="fas fa-file-pdf fa-3x"></i>
+                            </div>
+                        ` : `
+                            <img src="${imageUrl}" 
+                                 class="image-preview" 
+                                 alt="${getFileTypeLabel(fileType)} ${i+1}"
+                                 loading="lazy"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/333/666?text=Image+Error';"
+                                 onclick="openFile('${imageUrl}', '${fileName}')">
+                        `}
                         <div class="image-info">
-                            <div class="image-title">${imageType} ${i+1}</div>
-                            <div class="image-type">${fileName}</div>
+                            <div class="image-title">${getFileTypeLabel(fileType)} ${i+1}</div>
+                            <div class="image-type">
+                                <i class="fas fa-${isPDF ? 'file-pdf' : 'file-image'}"></i> ${fileName}
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-light btn-sm" onclick="openFile('${imageUrl}', '${fileName}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning btn-sm" onclick="downloadFile('${imageUrl}', '${fileName}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             }
             
-            container.innerHTML = html;
-        }
-
-        // Open image in modal for full view
-        function openImageModal(imageUrl, fileName) {
-            const modalHtml = `
-                <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <div class="modal-content" style="background: #000;">
-                            <div class="modal-header border-secondary">
-                                <h6 class="modal-title text-white">${fileName}</h6>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body p-0">
-                                <img src="${imageUrl}" 
-                                     style="width: 100%; height: auto; max-height: 70vh; object-fit: contain;"
-                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/800x600/333/666?text=Image+Not+Found';">
-                            </div>
-                            <div class="modal-footer border-secondary">
-                                <a href="${imageUrl}" 
-                                   class="btn btn-sm btn-outline-light" 
-                                   target="_blank" 
-                                   download="${fileName}">
-                                    <i class="fas fa-download"></i> Download
-                                </a>
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-                    </div>
+            html += `</div>`;
+            
+            // Add upload more button
+            html += `
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-warning" onclick="openUploadModal(${record.id}, '${fileType}')">
+                        <i class="fas fa-plus"></i> Upload More ${getFileTypeLabel(fileType)}
+                    </button>
                 </div>
             `;
             
-            // Remove existing modal if any
-            const existingModal = document.getElementById('imageModal');
-            if (existingModal) {
-                existingModal.remove();
+            container.innerHTML = html;
+        }
+
+        // Open file in new tab or modal
+        function openFile(url, fileName) {
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            
+            if (fileExt === 'pdf') {
+                // Open PDF in new tab
+                window.open(url, '_blank');
+            } else {
+                // Open image in modal
+                const modalHtml = `
+                    <div class="modal fade" id="fileModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content" style="background: #000;">
+                                <div class="modal-header border-secondary">
+                                    <h6 class="modal-title text-white">${fileName}</h6>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body p-0">
+                                    <img src="${url}" 
+                                         style="width: 100%; height: auto; max-height: 70vh; object-fit: contain;"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/800x600/333/666?text=Image+Not+Found';">
+                                </div>
+                                <div class="modal-footer border-secondary">
+                                    <button class="btn btn-sm btn-outline-light" onclick="downloadFile('${url}', '${fileName}')">
+                                        <i class="fas fa-download"></i> Download
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('fileModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add new modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show modal
+                const fileModal = new bootstrap.Modal(document.getElementById('fileModal'));
+                fileModal.show();
+                
+                // Remove modal from DOM when hidden
+                document.getElementById('fileModal').addEventListener('hidden.bs.modal', function() {
+                    this.remove();
+                });
+            }
+        }
+
+        // Download file
+        function downloadFile(url, fileName) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Load record details
+        async function loadRecordDetails(record) {
+            const detailsContainer = document.getElementById('recordDetails');
+            
+            let detailsHtml = `
+                <div class="detail-row">
+                    <div class="detail-label">Student Name:</div>
+                    <div class="detail-value">${record.name || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">LRN:</div>
+                    <div class="detail-value">${record.lrn || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Age / Sex:</div>
+                    <div class="detail-value">${record.age || 'N/A'} / ${record.sex || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Program:</div>
+                    <div class="detail-value">${record.program || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">School:</div>
+                    <div class="detail-value">${record.school_name || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Email:</div>
+                    <div class="detail-value">${record.email || 'N/A'}</div>
+                </div>
+            `;
+            
+            // Add Good Moral details if available
+            if (record.goodmoral_status) {
+                detailsHtml += `
+                    <div class="detail-row">
+                        <div class="detail-label">Good Moral:</div>
+                        <div class="detail-value">
+                            <span class="${record.goodmoral_status === 'CLEAR' ? 'goodmoral-clear' : 'goodmoral-offense'}">
+                                ${record.goodmoral_status}
+                            </span>
+                            ${record.goodmoral_date_issued ? `<br><small>Issued: ${record.goodmoral_date_issued}</small>` : ''}
+                            ${record.goodmoral_remarks ? `<br><small>${record.goodmoral_remarks}</small>` : ''}
+                        </div>
+                    </div>
+                `;
             }
             
-            // Add new modal to body
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            detailsContainer.innerHTML = detailsHtml;
+            document.getElementById('recordDetailsSection').style.display = 'block';
+        }
+
+        // Open upload modal
+        function openUploadModal(recordId, fileType = null) {
+            document.getElementById('uploadRecordId').value = recordId;
+            if (fileType) {
+                document.getElementById('uploadFileType').value = fileType;
+            }
             
-            // Show modal
-            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-            imageModal.show();
+            // Reset form
+            document.getElementById('uploadFilesInput').value = '';
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('uploadBtn').disabled = false;
             
-            // Remove modal from DOM when hidden
-            document.getElementById('imageModal').addEventListener('hidden.bs.modal', function() {
-                this.remove();
-            });
+            uploadFilesModal.show();
+        }
+
+        // Upload additional files
+        async function uploadAdditionalFiles() {
+            const recordId = document.getElementById('uploadRecordId').value;
+            const fileType = document.getElementById('uploadFileType').value;
+            const filesInput = document.getElementById('uploadFilesInput');
+            
+            if (!filesInput.files.length) {
+                alert('Please select files to upload.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('id', recordId);
+            formData.append('type', fileType);
+            
+            for (let i = 0; i < filesInput.files.length; i++) {
+                formData.append('files', filesInput.files[i]);
+            }
+            
+            // Show progress
+            const progressBar = document.querySelector('.progress-bar');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            document.getElementById('uploadProgress').style.display = 'block';
+            progressBar.style.width = '0%';
+            uploadStatus.textContent = 'Starting upload...';
+            uploadBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/upload-additional', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    progressBar.style.width = '100%';
+                    uploadStatus.textContent = `Uploaded ${result.saved_paths.length} file(s) successfully!`;
+                    uploadStatus.className = 'text-success';
+                    
+                    // Refresh the current view
+                    setTimeout(() => {
+                        uploadFilesModal.hide();
+                        // Reload the current file type view
+                        const record = currentRecords.find(r => r.id == recordId);
+                        if (record && currentViewingRecord == recordId) {
+                            loadFileTypeContent(currentFileType, record);
+                        }
+                        // Refresh records list
+                        loadRecords();
+                    }, 1500);
+                    
+                } else {
+                    uploadStatus.textContent = `Error: ${result.error || 'Upload failed'}`;
+                    uploadStatus.className = 'text-danger';
+                    uploadBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                uploadStatus.textContent = 'Connection error. Please try again.';
+                uploadStatus.className = 'text-danger';
+                uploadBtn.disabled = false;
+            }
         }
 
         // Edit record
@@ -924,7 +1413,7 @@
             document.getElementById('editName').value = record.name || '';
             document.getElementById('editLrn').value = record.lrn || '';
             document.getElementById('editSex').value = record.sex || '';
-            document.getElementById('editBirthdate').value = record.birthdate || '';
+            document.getElementById('editBirthdate').value = record.birthdate ? record.birthdate.split('T')[0] : '';
             document.getElementById('editProvince').value = record.province || '';
             document.getElementById('editProgram').value = record.program || '';
             document.getElementById('editSchoolName').value = record.school_name || '';
@@ -936,16 +1425,23 @@
         // Save edited record
         async function saveEditedRecord() {
             const recordId = document.getElementById('editRecordId').value;
+            const name = document.getElementById('editName').value.trim();
+            
+            if (!name) {
+                alert('Student Name is required!');
+                return;
+            }
+            
             const record = {
                 id: recordId,
-                name: document.getElementById('editName').value,
-                lrn: document.getElementById('editLrn').value,
+                name: name,
+                lrn: document.getElementById('editLrn').value.trim(),
                 sex: document.getElementById('editSex').value,
                 birthdate: document.getElementById('editBirthdate').value,
-                province: document.getElementById('editProvince').value,
-                program: document.getElementById('editProgram').value,
-                school_name: document.getElementById('editSchoolName').value,
-                final_general_average: document.getElementById('editFinalAverage').value
+                province: document.getElementById('editProvince').value.trim(),
+                program: document.getElementById('editProgram').value.trim(),
+                school_name: document.getElementById('editSchoolName').value.trim(),
+                final_general_average: document.getElementById('editFinalAverage').value.trim()
             };
             
             try {
@@ -975,12 +1471,18 @@
         // Delete record confirmation
         function deleteRecord(recordId) {
             document.getElementById('deleteRecordId').value = recordId;
+            document.getElementById('deleteReason').value = '';
             confirmDeleteModal.show();
         }
 
         // Confirm delete
         async function confirmDelete() {
             const recordId = document.getElementById('deleteRecordId').value;
+            const reason = document.getElementById('deleteReason').value.trim();
+            
+            if (!confirm('Are you absolutely sure? This action cannot be undone.')) {
+                return;
+            }
             
             try {
                 const response = await fetch(`/delete-record/${recordId}`, {
@@ -1021,7 +1523,7 @@
                     loadRecords(); // Reload to update status
                 } else if (result.warning === "Email has already been sent for this record") {
                     if (confirm('Email was already sent. Do you want to resend?')) {
-                        resendEmail(recordId);
+                        await resendEmail(recordId);
                     }
                 } else {
                     alert('Error sending email: ' + (result.error || 'Unknown error'));
@@ -1061,9 +1563,72 @@
             window.open(`/view-form/${recordId}`, '_blank');
         }
 
+        // Show statistics
+        function showStats() {
+            // Calculate statistics
+            const totalRecords = currentRecords.length;
+            const emailSent = currentRecords.filter(r => r.email_sent).length;
+            const goodmoralClear = currentRecords.filter(r => r.goodmoral_status === 'CLEAR').length;
+            const goodmoralOffense = currentRecords.filter(r => r.goodmoral_status === 'WITH OFFENSE').length;
+            
+            // Update stats
+            document.getElementById('totalRecordsStat').textContent = totalRecords;
+            document.getElementById('emailSentStat').textContent = emailSent;
+            document.getElementById('goodmoralClearStat').textContent = goodmoralClear;
+            document.getElementById('goodmoralOffenseStat').textContent = goodmoralOffense;
+            
+            // Show recent activity
+            const recentActivity = document.getElementById('recentActivity');
+            const recentRecords = [...currentRecords]
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .slice(0, 5);
+            
+            let activityHtml = '';
+            recentRecords.forEach(record => {
+                const timeAgo = getTimeAgo(record.created_at);
+                activityHtml += `
+                    <div class="detail-row">
+                        <div class="detail-label">${record.name}</div>
+                        <div class="detail-value">
+                            ${record.program || 'N/A'}
+                            <br><small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            recentActivity.innerHTML = activityHtml || '<p class="text-muted">No recent activity</p>';
+            
+            statsModal.show();
+        }
+
+        // Get time ago string
+        function getTimeAgo(dateString) {
+            if (!dateString) return 'Unknown';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+            
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
         // Refresh records
         function refreshRecords() {
             currentPage = 1;
+            document.getElementById('searchInput').value = '';
             loadRecords();
         }
 
@@ -1078,76 +1643,60 @@
             const headers = [
                 'ID', 'Name', 'LRN', 'Sex', 'Birthdate', 'Age', 'Email',
                 'Mobile No', 'School', 'Program', 'Final Average',
-                'Email Sent', 'Date Created', 'Good Moral Status'
+                'Email Sent', 'Date Created', 'Good Moral Status', 'Good Moral Remarks'
             ];
             
             // Create CSV content
-            let csvContent = headers.join(',') + '\n';
+            let csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n';
             
             currentRecords.forEach(record => {
                 const row = [
                     record.id,
-                    `"${record.name || ''}"`,
+                    `"${(record.name || '').replace(/"/g, '""')}"`,
                     record.lrn || '',
                     record.sex || '',
                     record.birthdate || '',
                     record.age || '',
                     record.email || '',
                     record.mobile_no || '',
-                    `"${record.school_name || ''}"`,
+                    `"${(record.school_name || '').replace(/"/g, '""')}"`,
                     record.program || '',
                     record.final_general_average || '',
                     record.email_sent ? 'Yes' : 'No',
                     record.created_at || '',
-                    record.goodmoral_status || 'N/A'
+                    record.goodmoral_status || 'N/A',
+                    `"${(record.goodmoral_remarks || '').replace(/"/g, '""')}"`
                 ];
                 
                 csvContent += row.join(',') + '\n';
             });
             
-            // Create blob and download
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
             const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute('href', url);
+            link.setAttribute('href', encodedUri);
             link.setAttribute('download', `assiscan-records-${new Date().toISOString().slice(0,10)}.csv`);
-            link.style.visibility = 'hidden';
-            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        // Check email status
-        async function checkEmailStatus(recordId) {
-            try {
-                const response = await fetch(`/check-email-status/${recordId}`);
-                const result = await response.json();
-                
-                if (result.email_sent) {
-                    return {
-                        sent: true,
-                        sentAt: result.email_sent_at
-                    };
-                } else {
-                    return {
-                        sent: false,
-                        sentAt: null
-                    };
-                }
-            } catch (error) {
-                console.error('Error checking email status:', error);
-                return null;
+        // Logout
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/logout';
             }
         }
 
-        // Auto-refresh every 30 seconds
+        // Check authentication periodically
+        setInterval(checkAuth, 30000);
+
+        // Auto-refresh records every 60 seconds if page is visible
         setInterval(() => {
             if (!document.hidden) {
                 loadRecords();
             }
-        }, 30000);
+        }, 60000);
     </script>
 </body>
 </html>
