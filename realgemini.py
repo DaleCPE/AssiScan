@@ -92,7 +92,7 @@ def init_db():
         try:
             cur = conn.cursor()
             
-            # Create main records table
+            # Create main records table with COLLEGE field added
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -134,7 +134,8 @@ def init_db():
                     mobile_no VARCHAR(50),
                     school_year VARCHAR(50),
                     student_type VARCHAR(50),
-                    program VARCHAR(100),
+                    college VARCHAR(150),          -- NEW: College/Department field
+                    program VARCHAR(150),          -- Changed from VARCHAR(100) to 150
                     last_level_attended VARCHAR(100),
                     is_ip VARCHAR(10),
                     is_pwd VARCHAR(10),
@@ -193,7 +194,8 @@ def check_and_add_columns(cur, conn):
         ("mobile_no", "VARCHAR(50)"),
         ("school_year", "VARCHAR(50)"),
         ("student_type", "VARCHAR(50)"),
-        ("program", "VARCHAR(100)"),
+        ("college", "VARCHAR(150)"),  # NEW: College field
+        ("program", "VARCHAR(150)"),
         ("last_level_attended", "VARCHAR(100)"),
         ("is_ip", "VARCHAR(10)"),
         ("is_pwd", "VARCHAR(10)"),
@@ -313,6 +315,7 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Final General Average: {student_data.get('final_general_average', 'N/A')}
 • Last Level Attended: {student_data.get('last_level_attended', 'N/A')}
 • Student Type: {student_data.get('student_type', 'N/A')}
+• College/Department: {student_data.get('college', 'N/A')}
 • Program Applied: {student_data.get('program', 'N/A')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -693,6 +696,13 @@ def save_record():
         siblings_list = d.get('siblings', [])
         siblings_json = json.dumps(siblings_list)
         
+        # Get college and program data from frontend
+        college = d.get('college', '')
+        program = d.get('program', '')
+        
+        print(f"🎓 College selected: {college}")
+        print(f"📚 Program selected: {program}")
+        
         conn = get_db_connection()
         if not conn: 
             return jsonify({"error": "DB Connection Failed"}), 500
@@ -718,7 +728,7 @@ def save_record():
             else:
                 goodmoral_analysis_json = goodmoral_analysis
         
-        # Insert record with Good Moral data
+        # Insert record with Good Moral data AND COLLEGE field
         cur.execute('''
             INSERT INTO records (
                 name, sex, birthdate, birthplace, birth_order, religion, age,
@@ -730,7 +740,7 @@ def save_record():
                 mother_contact, father_contact,
                 guardian_name, guardian_relation, guardian_contact,
                 region, province, specific_address,
-                school_year, student_type, program, last_level_attended,
+                school_year, student_type, college, program, last_level_attended,
                 is_ip, is_pwd, has_medication, is_working,
                 residence_type, employer_name, marital_status,
                 is_gifted, needs_assistance, school_type, year_attended, 
@@ -751,7 +761,7 @@ def save_record():
                 %s, %s,
                 %s, %s, %s,
                 %s, %s, %s,
-                %s, %s, %s, %s,
+                %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
@@ -774,7 +784,7 @@ def save_record():
             d.get('mother_contact'), d.get('father_contact'),
             d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
             d.get('region'), d.get('province'), d.get('specific_address'),
-            d.get('school_year'), d.get('student_type'), d.get('program'), d.get('last_level_attended'),
+            d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),  # Added college and program
             d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
             d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
             d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
@@ -794,6 +804,8 @@ def save_record():
         conn.commit()
 
         print(f"✅ Record saved with ID: {new_id}")
+        print(f"🎓 College: {college}")
+        print(f"📚 Program: {program}")
         print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
         
         if has_disciplinary_record:
@@ -802,6 +814,8 @@ def save_record():
         return jsonify({
             "status": "success", 
             "db_id": new_id,
+            "college": college,
+            "program": program,
             "goodmoral_score": goodmoral_score,
             "disciplinary_status": disciplinary_status,
             "has_disciplinary_record": has_disciplinary_record,
@@ -1275,7 +1289,7 @@ def send_email_only(record_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record details
+        # Get record details with college field
         cur.execute("""
             SELECT name, email, email_sent, 
                    goodmoral_score, disciplinary_status, disciplinary_details,
@@ -1285,7 +1299,7 @@ def send_email_only(record_id):
                    father_name, father_citizenship, father_contact,
                    province, specific_address, mobile_no,
                    school_name, school_address, final_general_average,
-                   last_level_attended, student_type, program,
+                   last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
                    special_talents
             FROM records WHERE id = %s
@@ -1306,6 +1320,8 @@ def send_email_only(record_id):
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Sending email for record ID: {record_id}")
+        print(f"🎓 College: {record.get('college', 'N/A')}")
+        print(f"📚 Program: {record.get('program', 'N/A')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -1360,7 +1376,7 @@ def resend_email(record_id):
                    father_name, father_citizenship, father_contact,
                    province, specific_address, mobile_no,
                    school_name, school_address, final_general_average,
-                   last_level_attended, student_type, program,
+                   last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
                    special_talents
             FROM records WHERE id = %s
@@ -1378,6 +1394,8 @@ def resend_email(record_id):
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Resending email for ID: {record_id}")
+        print(f"🎓 College: {record.get('college', 'N/A')}")
+        print(f"📚 Program: {record.get('program', 'N/A')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -1504,6 +1522,7 @@ def health_check():
         "status": "healthy",
         "service": "AssiScan Backend",
         "goodmoral_scanning": "ENABLED",
+        "dropdown_support": "ENABLED (College & Program dropdowns)",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected"
     })
@@ -1538,7 +1557,7 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GOOD MORAL SCANNING")
+    print("🚀 ASSISCAN WITH GOOD MORAL SCANNING & DROPDOWN SUPPORT")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
@@ -1547,12 +1566,21 @@ if __name__ == '__main__':
     print("="*60)
     print("📊 FEATURES:")
     print("   • PSA, Form 137, Good Moral scanning")
+    print("   • College & Program dropdown support")  # NEW
     print("   • Disciplinary record detection")
     print("   • Other documents upload with title")
     print("   • Email notifications")
     print("   • Complete student record management")
     print("="*60)
+    print("🎓 COLLEGE & PROGRAM SUPPORT:")
+    print("   • College of Criminal Justice Education (CCJE)")
+    print("   • College of Education, Arts and Sciences (CEAS)")
+    print("   • College of IT, Entertainment & Communication (CITEC)")
+    print("   • College of Engineering and Architecture (CENAR)")
+    print("   • College of Business, Accountancy & Auditing (CBAA)")
+    print("="*60)
     print("🔗 NEW ENDPOINTS:")
+    print("   POST /save-record - Now supports college and program fields")
     print("   POST /upload-other-document/<id> - Upload other docs")
     print("   DELETE /delete-other-document/<id>/<doc_id> - Delete doc")
     print("="*60)
