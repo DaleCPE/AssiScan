@@ -12,6 +12,9 @@ import traceback
 from PIL import Image
 import re
 import io
+import hashlib
+import secrets
+from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -51,6 +54,26 @@ else:
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+# Password hashing functions
+def hash_password(password):
+    """Hash a password using SHA-256 with salt"""
+    salt = secrets.token_hex(16)
+    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}${password_hash}"
+
+def verify_password(password, hashed_password):
+    """Verify a password against its hash"""
+    if not hashed_password or '$' not in hashed_password:
+        return False
+    
+    salt, stored_hash = hashed_password.split('$')
+    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return password_hash == stored_hash
+
+def generate_reset_token():
+    """Generate a password reset token"""
+    return secrets.token_urlsafe(32)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
@@ -165,7 +188,8 @@ def init_db():
                     goodmoral_score INTEGER DEFAULT 0,
                     has_disciplinary_record BOOLEAN DEFAULT FALSE,
                     disciplinary_details TEXT,
-                    other_documents JSONB
+                    other_documents JSONB,
+                    created_by INTEGER
                 )
             ''')
             
@@ -191,6 +215,40 @@ def init_db():
                     name VARCHAR(150) NOT NULL,
                     is_active BOOLEAN DEFAULT TRUE,
                     display_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create users table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(100) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    full_name VARCHAR(150),
+                    email VARCHAR(150),
+                    role VARCHAR(50) DEFAULT 'scanner_operator',
+                    college_id INTEGER REFERENCES colleges(id) ON DELETE SET NULL,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    last_login TIMESTAMP,
+                    failed_attempts INTEGER DEFAULT 0,
+                    locked_until TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_by INTEGER REFERENCES users(id),
+                    reset_token VARCHAR(100),
+                    reset_token_expiry TIMESTAMP
+                )
+            ''')
+            
+            # Create user_activities table for logging
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS user_activities (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    activity_type VARCHAR(50),
+                    description TEXT,
+                    ip_address VARCHAR(45),
+                    user_agent TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -260,6 +318,18 @@ def init_db():
                 conn.commit()
                 print("✅ Default colleges and programs inserted")
             
+            # Create default super admin user if no users exist
+            cur.execute("SELECT COUNT(*) FROM users")
+            if cur.fetchone()[0] == 0:
+                print("👤 Creating default super admin user...")
+                hashed_password = hash_password(ADMIN_PASSWORD)
+                cur.execute("""
+                    INSERT INTO users (username, password_hash, full_name, email, role, is_active)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (ADMIN_USERNAME, hashed_password, "System Administrator", "admin@assiscan.edu.ph", "super_admin", True))
+                conn.commit()
+                print("✅ Default super admin user created")
+            
             # Check for missing columns in records table
             check_and_add_columns(cur, conn)
             
@@ -311,7 +381,8 @@ def check_and_add_columns(cur, conn):
         ("goodmoral_score", "INTEGER DEFAULT 0"),
         ("has_disciplinary_record", "BOOLEAN DEFAULT FALSE"),
         ("disciplinary_details", "TEXT"),
-        ("other_documents", "JSONB")
+        ("other_documents", "JSONB"),
+        ("created_by", "INTEGER")
     ]
     
     for column_name, column_type in columns_to_add:
@@ -322,6 +393,21 @@ def check_and_add_columns(cur, conn):
             print(f"   ⚠️ Column {column_name} already exists or error: {e}")
     
     conn.commit()
+
+def log_user_activity(user_id, activity_type, description, ip_address=None, user_agent=None):
+    """Log user activity"""
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO user_activities (user_id, activity_type, description, ip_address, user_agent)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, activity_type, description, ip_address, user_agent))
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        print(f"❌ Failed to log activity: {e}")
 
 # Initialize database
 init_db()
@@ -622,14 +708,451 @@ def calculate_goodmoral_score(analysis_data):
     
     return score, status
 
+# ================= USER AUTHENTICATION MIDDLEWARE =================
+def login_required(f):
+    """Decorator to require login for routes"""
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect('/login')
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+def role_required(*required_roles):
+    """Decorator to require specific role(s)"""
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if not session.get('logged_in'):
+                return redirect('/login')
+            
+            user_role = session.get('user_role')
+            if user_role not in required_roles:
+                return jsonify({"error": "Insufficient permissions"}), 403
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
+
+# ================= USER MANAGEMENT ROUTES =================
+
+@app.route('/api/users', methods=['GET'])
+@login_required
+@role_required('super_admin', 'college_admin')
+def get_users():
+    """Get all users (with filtering based on role)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get current user's role and college
+        current_user_id = session.get('user_id')
+        current_user_role = session.get('user_role')
+        current_college_id = session.get('college_id')
+        
+        if current_user_role == 'super_admin':
+            # Super admin can see all users
+            cur.execute("""
+                SELECT u.*, c.name as college_name
+                FROM users u
+                LEFT JOIN colleges c ON u.college_id = c.id
+                ORDER BY u.created_at DESC
+            """)
+        elif current_user_role == 'college_admin':
+            # College admin can only see users from their college
+            cur.execute("""
+                SELECT u.*, c.name as college_name
+                FROM users u
+                LEFT JOIN colleges c ON u.college_id = c.id
+                WHERE u.college_id = %s OR u.id = %s
+                ORDER BY u.created_at DESC
+            """, (current_college_id, current_user_id))
+        else:
+            # Other roles can only see themselves
+            cur.execute("""
+                SELECT u.*, c.name as college_name
+                FROM users u
+                LEFT JOIN colleges c ON u.college_id = c.id
+                WHERE u.id = %s
+            """, (current_user_id,))
+        
+        users = cur.fetchall()
+        
+        # Remove password hash from response
+        for user in users:
+            if 'password_hash' in user:
+                del user['password_hash']
+            if 'reset_token' in user:
+                del user['reset_token']
+            if 'reset_token_expiry' in user:
+                del user['reset_token_expiry']
+        
+        return jsonify(users)
+    except Exception as e:
+        print(f"❌ Error getting users: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/users', methods=['POST'])
+@login_required
+@role_required('super_admin', 'college_admin')
+def create_user():
+    """Create a new user account"""
+    data = request.json
+    if not data or not data.get('username') or not data.get('password'):
+        return jsonify({"error": "Username and password are required"}), 400
+    
+    # Validate role permissions
+    current_user_role = session.get('user_role')
+    requested_role = data.get('role', 'scanner_operator')
+    
+    # College admins can only create scanner_operator or viewer roles
+    if current_user_role == 'college_admin' and requested_role in ['super_admin', 'college_admin']:
+        return jsonify({"error": "Insufficient permissions to create this role"}), 403
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if username already exists
+        cur.execute("SELECT id FROM users WHERE username = %s", (data['username'],))
+        if cur.fetchone():
+            return jsonify({"error": "Username already exists"}), 409
+        
+        # Hash the password
+        hashed_password = hash_password(data['password'])
+        
+        # If college admin is creating user, auto-assign their college
+        college_id = data.get('college_id')
+        if current_user_role == 'college_admin':
+            college_id = session.get('college_id')
+        
+        # Insert new user
+        cur.execute("""
+            INSERT INTO users (
+                username, password_hash, full_name, email, role, 
+                college_id, is_active, created_by
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, username, full_name, email, role, 
+                     college_id, is_active, created_at
+        """, (
+            data['username'],
+            hashed_password,
+            data.get('full_name'),
+            data.get('email'),
+            requested_role,
+            college_id,
+            data.get('is_active', True),
+            session.get('user_id')
+        ))
+        
+        new_user = cur.fetchone()
+        conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'user_created',
+            f"Created user: {new_user['username']} ({new_user['role']})",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "User created successfully",
+            "user": new_user
+        })
+    except Exception as e:
+        print(f"❌ Error creating user: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@login_required
+def update_user(user_id):
+    """Update a user account"""
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Check permissions
+    current_user_id = session.get('user_id')
+    current_user_role = session.get('user_role')
+    
+    # Users can only update themselves unless they're admin
+    if current_user_role not in ['super_admin', 'college_admin'] and current_user_id != user_id:
+        return jsonify({"error": "Insufficient permissions"}), 403
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Build update query dynamically
+        updates = []
+        values = []
+        
+        if 'full_name' in data:
+            updates.append("full_name = %s")
+            values.append(data['full_name'])
+        
+        if 'email' in data:
+            updates.append("email = %s")
+            values.append(data['email'])
+        
+        # Only admins can update these fields
+        if current_user_role in ['super_admin', 'college_admin']:
+            if 'role' in data:
+                # Validate role changes
+                if current_user_role == 'college_admin' and data['role'] in ['super_admin', 'college_admin']:
+                    return jsonify({"error": "Cannot assign admin roles"}), 403
+                updates.append("role = %s")
+                values.append(data['role'])
+            
+            if 'college_id' in data:
+                updates.append("college_id = %s")
+                values.append(data['college_id'])
+            
+            if 'is_active' in data:
+                updates.append("is_active = %s")
+                values.append(data['is_active'])
+        
+        # Password update
+        if 'password' in data and data['password']:
+            hashed_password = hash_password(data['password'])
+            updates.append("password_hash = %s")
+            values.append(hashed_password)
+        
+        if not updates:
+            return jsonify({"error": "No fields to update"}), 400
+        
+        values.append(user_id)
+        update_query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING *"
+        
+        cur.execute(update_query, values)
+        updated_user = cur.fetchone()
+        conn.commit()
+        
+        if not updated_user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Remove sensitive data
+        if 'password_hash' in updated_user:
+            del updated_user['password_hash']
+        if 'reset_token' in updated_user:
+            del updated_user['reset_token']
+        
+        # Log activity
+        log_user_activity(
+            current_user_id,
+            'user_updated',
+            f"Updated user: {updated_user['username']}",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "User updated successfully",
+            "user": updated_user
+        })
+    except Exception as e:
+        print(f"❌ Error updating user: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@login_required
+@role_required('super_admin', 'college_admin')
+def delete_user(user_id):
+    """Delete a user account (soft delete)"""
+    # Cannot delete yourself
+    if user_id == session.get('user_id'):
+        return jsonify({"error": "Cannot delete your own account"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        # Get user info for logging
+        cur.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Soft delete by setting is_active to false
+        cur.execute("UPDATE users SET is_active = FALSE WHERE id = %s RETURNING id", (user_id,))
+        
+        if cur.rowcount == 0:
+            return jsonify({"error": "User not found"}), 404
+        
+        conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'user_deleted',
+            f"Deleted user: {user[0]}",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "User deactivated successfully"
+        })
+    except Exception as e:
+        print(f"❌ Error deleting user: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/users/<int:user_id>/restore', methods=['POST'])
+@login_required
+@role_required('super_admin', 'college_admin')
+def restore_user(user_id):
+    """Restore a deleted user"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        cur.execute("UPDATE users SET is_active = TRUE WHERE id = %s RETURNING id", (user_id,))
+        
+        if cur.rowcount == 0:
+            return jsonify({"error": "User not found"}), 404
+        
+        conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'user_restored',
+            f"Restored user ID: {user_id}",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "User restored successfully"
+        })
+    except Exception as e:
+        print(f"❌ Error restoring user: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/users/me', methods=['GET'])
+@login_required
+def get_current_user():
+    """Get current logged in user info"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT u.*, c.name as college_name
+            FROM users u
+            LEFT JOIN colleges c ON u.college_id = c.id
+            WHERE u.id = %s
+        """, (session.get('user_id'),))
+        
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Remove sensitive data
+        if 'password_hash' in user:
+            del user['password_hash']
+        if 'reset_token' in user:
+            del user['reset_token']
+        if 'reset_token_expiry' in user:
+            del user['reset_token_expiry']
+        
+        return jsonify(user)
+    except Exception as e:
+        print(f"❌ Error getting current user: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/user-activities', methods=['GET'])
+@login_required
+@role_required('super_admin', 'college_admin')
+def get_user_activities():
+    """Get user activity logs"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        current_user_role = session.get('user_role')
+        current_college_id = session.get('college_id')
+        
+        if current_user_role == 'super_admin':
+            # Super admin can see all activities
+            cur.execute("""
+                SELECT a.*, u.username, u.full_name
+                FROM user_activities a
+                JOIN users u ON a.user_id = u.id
+                ORDER BY a.created_at DESC
+                LIMIT 100
+            """)
+        elif current_user_role == 'college_admin':
+            # College admin can only see activities from their college users
+            cur.execute("""
+                SELECT a.*, u.username, u.full_name
+                FROM user_activities a
+                JOIN users u ON a.user_id = u.id
+                WHERE u.college_id = %s OR u.id = %s
+                ORDER BY a.created_at DESC
+                LIMIT 100
+            """, (current_college_id, session.get('user_id')))
+        
+        activities = cur.fetchall()
+        return jsonify(activities)
+    except Exception as e:
+        print(f"❌ Error getting user activities: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # ================= COLLEGE MANAGEMENT ROUTES =================
 
 @app.route('/api/colleges', methods=['GET'])
+@login_required
+@role_required('super_admin', 'college_admin', 'scanner_operator', 'viewer')
 def get_colleges():
     """Get all colleges with their programs"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -664,11 +1187,10 @@ def get_colleges():
         conn.close()
 
 @app.route('/api/colleges/all', methods=['GET'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def get_all_colleges():
     """Get all colleges (including inactive) for admin management"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -702,11 +1224,10 @@ def get_all_colleges():
         conn.close()
 
 @app.route('/api/colleges', methods=['POST'])
+@login_required
+@role_required('super_admin')
 def create_college():
     """Create a new college"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     data = request.json
     if not data or not data.get('code') or not data.get('name'):
         return jsonify({"error": "College code and name are required"}), 400
@@ -752,11 +1273,10 @@ def create_college():
         conn.close()
 
 @app.route('/api/colleges/<int:college_id>', methods=['PUT'])
+@login_required
+@role_required('super_admin')
 def update_college(college_id):
     """Update a college"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -822,11 +1342,10 @@ def update_college(college_id):
         conn.close()
 
 @app.route('/api/colleges/<int:college_id>', methods=['DELETE'])
+@login_required
+@role_required('super_admin')
 def delete_college(college_id):
     """Delete a college (soft delete)"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -854,11 +1373,10 @@ def delete_college(college_id):
         conn.close()
 
 @app.route('/api/colleges/<int:college_id>/restore', methods=['POST'])
+@login_required
+@role_required('super_admin')
 def restore_college(college_id):
     """Restore a deleted college"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -885,11 +1403,9 @@ def restore_college(college_id):
         conn.close()
 
 @app.route('/api/colleges/<int:college_id>/programs', methods=['GET'])
+@login_required
 def get_college_programs(college_id):
     """Get all programs for a specific college"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -919,11 +1435,10 @@ def get_college_programs(college_id):
         conn.close()
 
 @app.route('/api/programs', methods=['POST'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def create_program():
     """Create a new program"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     data = request.json
     if not data or not data.get('college_id') or not data.get('name'):
         return jsonify({"error": "College ID and program name are required"}), 400
@@ -975,11 +1490,10 @@ def create_program():
         conn.close()
 
 @app.route('/api/programs/<int:program_id>', methods=['PUT'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def update_program(program_id):
     """Update a program"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -1048,11 +1562,10 @@ def update_program(program_id):
         conn.close()
 
 @app.route('/api/programs/<int:program_id>', methods=['DELETE'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def delete_program(program_id):
     """Delete a program"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -1078,44 +1591,240 @@ def delete_program(program_id):
     finally:
         conn.close()
 
-# ================= ROUTES =================
-
-@app.route('/')
-def index():
-    return render_template('index.html')
+# ================= AUTHENTICATION ROUTES =================
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """User login endpoint"""
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        
+        if not username or not password:
+            return render_template('login.html', error="Username and password are required")
+        
+        conn = get_db_connection()
+        if not conn:
+            return render_template('login.html', error="Database connection failed")
+        
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Get user with college info
+            cur.execute("""
+                SELECT u.*, c.name as college_name
+                FROM users u
+                LEFT JOIN colleges c ON u.college_id = c.id
+                WHERE u.username = %s AND u.is_active = TRUE
+            """, (username,))
+            
+            user = cur.fetchone()
+            
+            if not user:
+                return render_template('login.html', error="Invalid username or password")
+            
+            # Check if account is locked
+            if user['locked_until'] and user['locked_until'] > datetime.now():
+                locked_time = user['locked_until'].strftime('%Y-%m-%d %H:%M:%S')
+                return render_template('login.html', error=f"Account locked until {locked_time}")
+            
+            # Verify password
+            if not verify_password(password, user['password_hash']):
+                # Increment failed attempts
+                cur.execute("""
+                    UPDATE users 
+                    SET failed_attempts = failed_attempts + 1 
+                    WHERE id = %s
+                """, (user['id'],))
+                
+                # Lock account after 5 failed attempts
+                if user['failed_attempts'] + 1 >= 5:
+                    lock_until = datetime.now() + timedelta(minutes=30)
+                    cur.execute("""
+                        UPDATE users 
+                        SET locked_until = %s 
+                        WHERE id = %s
+                    """, (lock_until, user['id']))
+                    conn.commit()
+                    return render_template('login.html', error="Account locked for 30 minutes due to too many failed attempts")
+                
+                conn.commit()
+                return render_template('login.html', error="Invalid username or password")
+            
+            # Reset failed attempts on successful login
+            cur.execute("""
+                UPDATE users 
+                SET failed_attempts = 0, 
+                    locked_until = NULL,
+                    last_login = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (user['id'],))
+            
+            conn.commit()
+            
+            # Set session data
             session['logged_in'] = True
-            return redirect('/history.html')
-        else:
-            return render_template('login.html', error="Invalid Credentials")
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['user_role'] = user['role']
+            session['full_name'] = user['full_name']
+            session['college_id'] = user['college_id']
+            session['college_name'] = user['college_name']
+            
+            # Log activity
+            log_user_activity(
+                user['id'],
+                'login',
+                f"User logged in",
+                request.remote_addr,
+                request.user_agent.string
+            )
+            
+            # Redirect based on role
+            if user['role'] in ['super_admin', 'college_admin']:
+                return redirect('/admin/dashboard')
+            elif user['role'] == 'scanner_operator':
+                return redirect('/scanner')
+            else:  # viewer
+                return redirect('/history.html')
+            
+        except Exception as e:
+            print(f"❌ Login error: {e}")
+            return render_template('login.html', error="Login failed")
+        finally:
+            conn.close()
+    
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
+    """User logout"""
+    if session.get('logged_in'):
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'logout',
+            f"User logged out",
+            request.remote_addr,
+            request.user_agent.string
+        )
+    
+    session.clear()
     return redirect('/login')
 
+@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Change current user's password"""
+    data = request.json
+    if not data or not data.get('current_password') or not data.get('new_password'):
+        return jsonify({"error": "Current and new password are required"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get current user's password hash
+        cur.execute("SELECT password_hash FROM users WHERE id = %s", (session.get('user_id'),))
+        result = cur.fetchone()
+        
+        if not result:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Verify current password
+        if not verify_password(data['current_password'], result['password_hash']):
+            return jsonify({"error": "Current password is incorrect"}), 400
+        
+        # Hash new password
+        new_hashed_password = hash_password(data['new_password'])
+        
+        # Update password
+        cur.execute("""
+            UPDATE users 
+            SET password_hash = %s,
+                reset_token = NULL,
+                reset_token_expiry = NULL
+            WHERE id = %s
+        """, (new_hashed_password, session.get('user_id')))
+        
+        conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'password_changed',
+            f"Password changed",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "Password changed successfully"
+        })
+    except Exception as e:
+        print(f"❌ Password change error: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= ROUTES =================
+
+@app.route('/')
+def index():
+    """Redirect to appropriate page based on login status"""
+    if session.get('logged_in'):
+        user_role = session.get('user_role')
+        if user_role in ['super_admin', 'college_admin']:
+            return redirect('/admin/dashboard')
+        elif user_role == 'scanner_operator':
+            return redirect('/scanner')
+        else:  # viewer
+            return redirect('/history.html')
+    return redirect('/login')
+
+@app.route('/scanner')
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
+def scanner_page():
+    """Scanner page for operators"""
+    return render_template('index.html')
+
+@app.route('/admin/dashboard')
+@login_required
+@role_required('super_admin', 'college_admin')
+def admin_dashboard():
+    """Admin dashboard"""
+    return render_template('admin_dashboard.html')
+
+@app.route('/admin/users')
+@login_required
+@role_required('super_admin', 'college_admin')
+def admin_users_page():
+    """User management page"""
+    return render_template('admin_users.html')
+
 @app.route('/history.html')
+@login_required
 def history_page():
-    if not session.get('logged_in'):
-        return redirect('/login') 
+    """History/records page"""
     return render_template('history.html')
 
 @app.route('/admin/colleges')
+@login_required
+@role_required('super_admin', 'college_admin')
 def admin_colleges():
     """Admin page for managing colleges and programs"""
-    if not session.get('logged_in'):
-        return redirect('/login')
     return render_template('admin_colleges.html')
 
 # ================= GOOD MORAL SCANNING ENDPOINT =================
 @app.route('/scan-goodmoral', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def scan_goodmoral():
     """
     Scan and analyze Good Moral Certificate
@@ -1236,6 +1945,8 @@ def scan_goodmoral():
 
 # ================= UPDATED SAVE RECORD ENDPOINT =================
 @app.route('/save-record', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def save_record():
     conn = None
     try:
@@ -1312,7 +2023,9 @@ def save_record():
                 goodmoral_analysis, disciplinary_status, goodmoral_score,
                 has_disciplinary_record, disciplinary_details,
                 -- Other documents
-                other_documents
+                other_documents,
+                -- User tracking
+                created_by
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s,
@@ -1333,6 +2046,8 @@ def save_record():
                 %s, %s, %s,
                 %s, %s,
                 -- Other documents
+                %s,
+                -- User tracking
                 %s
             ) 
             RETURNING id
@@ -1360,7 +2075,9 @@ def save_record():
             has_disciplinary_record,
             disciplinary_details,
             # Other documents
-            other_documents_json
+            other_documents_json,
+            # User tracking
+            session.get('user_id')
         ))
         
         new_id = cur.fetchone()[0]
@@ -1373,6 +2090,15 @@ def save_record():
         
         if has_disciplinary_record:
             print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
+
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'record_created',
+            f"Created student record: {d.get('name')} (ID: {new_id})",
+            request.remote_addr,
+            request.user_agent.string
+        )
 
         return jsonify({
             "status": "success", 
@@ -1396,17 +2122,41 @@ def save_record():
 
 # ================= UPDATED GET RECORDS ENDPOINT =================
 @app.route('/get-records', methods=['GET'])
+@login_required
 def get_records():
-    if not session.get('logged_in'):
-        return jsonify({"records": [], "error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     if not conn: 
         return jsonify({"records": [], "error": "Database connection failed"})
     
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM records ORDER BY id DESC")
+        
+        current_user_role = session.get('user_role')
+        current_user_id = session.get('user_id')
+        current_college_id = session.get('college_id')
+        
+        # Different queries based on role
+        if current_user_role == 'super_admin':
+            # Super admin can see all records
+            cur.execute("SELECT * FROM records ORDER BY id DESC")
+        elif current_user_role == 'college_admin':
+            # College admin can see records from their college
+            cur.execute("""
+                SELECT * FROM records 
+                WHERE college IN (SELECT name FROM colleges WHERE id = %s)
+                ORDER BY id DESC
+            """, (current_college_id,))
+        elif current_user_role == 'scanner_operator':
+            # Scanner operators can only see their own scanned records
+            cur.execute("""
+                SELECT * FROM records 
+                WHERE created_by = %s
+                ORDER BY id DESC
+            """, (current_user_id,))
+        else:  # viewer
+            # Viewers can see all records (read-only)
+            cur.execute("SELECT * FROM records ORDER BY id DESC")
+        
         rows = cur.fetchall()
         
         for r in rows:
@@ -1460,11 +2210,10 @@ def get_records():
 
 # ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
 @app.route('/upload-other-document/<int:record_id>', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def upload_other_document(record_id):
     """Upload other documents with title"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     if 'file' not in request.files or 'title' not in request.form:
         return jsonify({"error": "File and title required"}), 400
     
@@ -1517,6 +2266,15 @@ def upload_other_document(record_id):
                    (new_documents_json, record_id))
         conn.commit()
         
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'document_uploaded',
+            f"Uploaded other document: {title} for record ID: {record_id}",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
         return jsonify({
             "status": "success",
             "message": "Document uploaded successfully",
@@ -1532,11 +2290,10 @@ def upload_other_document(record_id):
 
 # ================= DELETE OTHER DOCUMENT ENDPOINT =================
 @app.route('/delete-other-document/<int:record_id>/<int:doc_id>', methods=['DELETE'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def delete_other_document(record_id, doc_id):
     """Delete an other document"""
-    if not session.get('logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     conn = get_db_connection()
     try:
         cur = conn.cursor()
@@ -1575,6 +2332,15 @@ def delete_other_document(record_id, doc_id):
         cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
                    (updated_documents_json, record_id))
         conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'document_deleted',
+            f"Deleted other document ID: {doc_id} from record ID: {record_id}",
+            request.remote_addr,
+            request.user_agent.string
+        )
         
         return jsonify({
             "status": "success",
@@ -1636,10 +2402,8 @@ def uploaded_file(filename):
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/view-form/<int:record_id>')
+@login_required
 def view_form(record_id):
-    if not session.get('logged_in'):
-        return redirect('/login')
-        
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1684,6 +2448,8 @@ def view_form(record_id):
 
 # ================= EXISTING PSA AND FORM 137 ENDPOINTS =================
 @app.route('/extract', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def extract_data():
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
@@ -1763,6 +2529,8 @@ def extract_data():
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 @app.route('/extract-form137', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def extract_form137():
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
@@ -1831,6 +2599,8 @@ def extract_form137():
 
 # ================= EMAIL ENDPOINTS =================
 @app.route('/send-email/<int:record_id>', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def send_email_only(record_id):
     """Send email for a saved record"""
     conn = None
@@ -1886,6 +2656,15 @@ def send_email_only(record_id):
             """, (record_id,))
             conn.commit()
             
+            # Log activity
+            log_user_activity(
+                session.get('user_id'),
+                'email_sent',
+                f"Sent email for student: {student_name} (Record ID: {record_id})",
+                request.remote_addr,
+                request.user_agent.string
+            )
+            
             print(f"✅ Email sent for ID: {record_id}")
             return jsonify({
                 "status": "success",
@@ -1907,6 +2686,8 @@ def send_email_only(record_id):
             conn.close()
 
 @app.route('/resend-email/<int:record_id>', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def resend_email(record_id):
     """Resend email even if already sent"""
     conn = None
@@ -1958,6 +2739,15 @@ def resend_email(record_id):
             """, (record_id,))
             conn.commit()
             
+            # Log activity
+            log_user_activity(
+                session.get('user_id'),
+                'email_resent',
+                f"Resent email for student: {student_name} (Record ID: {record_id})",
+                request.remote_addr,
+                request.user_agent.string
+            )
+            
             print(f"✅ Email resent for ID: {record_id}")
             return jsonify({
                 "status": "success",
@@ -1980,6 +2770,8 @@ def resend_email(record_id):
 
 # ================= OTHER ENDPOINTS =================
 @app.route('/upload-additional', methods=['POST'])
+@login_required
+@role_required('scanner_operator', 'super_admin', 'college_admin')
 def upload_additional():
     files = request.files.getlist('files')
     rid, dtype = request.form.get('id'), request.form.get('type')
@@ -2027,14 +2819,24 @@ def upload_additional():
         conn.close()
 
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
+@login_required
+@role_required('super_admin', 'college_admin')
 def delete_record(record_id):
-    if not session.get('logged_in'): 
-        return jsonify({"error": "Unauthorized"}), 401
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
         conn.commit()
+        
+        # Log activity
+        log_user_activity(
+            session.get('user_id'),
+            'record_deleted',
+            f"Deleted record ID: {record_id}",
+            request.remote_addr,
+            request.user_agent.string
+        )
+        
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2042,6 +2844,7 @@ def delete_record(record_id):
         conn.close()
 
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
+@login_required
 def check_email_status(record_id):
     """Check if email has been sent for a record"""
     conn = get_db_connection()
@@ -2065,6 +2868,7 @@ def check_email_status(record_id):
 
 # ================= COLLEGE API FOR FRONTEND DROPDOWNS =================
 @app.route('/api/colleges-dropdown', methods=['GET'])
+@login_required
 def get_colleges_dropdown():
     """Get active colleges and their programs for frontend dropdowns"""
     conn = get_db_connection()
@@ -2076,7 +2880,7 @@ def get_colleges_dropdown():
         
         # Get all active colleges ordered by display_order
         cur.execute("""
-            SELECT id, code, name 
+            SELECT id, code, name, description, is_active, display_order
             FROM colleges 
             WHERE is_active = TRUE
             ORDER BY display_order, name
@@ -2085,7 +2889,7 @@ def get_colleges_dropdown():
         
         # Get all active programs
         cur.execute("""
-            SELECT p.id, p.college_id, p.name 
+            SELECT p.id, p.college_id, p.name, p.code, p.is_active, p.display_order
             FROM programs p
             JOIN colleges c ON p.college_id = c.id
             WHERE p.is_active = TRUE AND c.is_active = TRUE
@@ -2101,7 +2905,8 @@ def get_colleges_dropdown():
                 programs_by_college[college_id] = []
             programs_by_college[college_id].append({
                 'id': program['id'],
-                'name': program['name']
+                'name': program['name'],
+                'code': program['code']
             })
         
         # Add programs to colleges
@@ -2123,6 +2928,8 @@ def health_check():
         "service": "AssiScan Backend",
         "goodmoral_scanning": "ENABLED",
         "model": "Gemini 2.5 Flash",
+        "user_management": "ENABLED",
+        "roles": ["super_admin", "college_admin", "scanner_operator", "viewer"],
         "dropdown_support": "ENABLED (College & Program dropdowns)",
         "college_management": "ENABLED",
         "timestamp": datetime.now().isoformat(),
@@ -2159,29 +2966,27 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GEMINI 2.5 FLASH")
+    print("🚀 ASSISCAN WITH USER MANAGEMENT SYSTEM")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print(f"📁 Uploads: {UPLOAD_FOLDER}")
+    print(f"🔐 User Management: ✅ ENABLED")
+    print(f"👥 Roles: super_admin, college_admin, scanner_operator, viewer")
     print("="*60)
     print("📊 FEATURES:")
     print("   • PSA, Form 137, Good Moral scanning")
+    print("   • User Management System")
+    print("   • Role-based access control")
     print("   • College Management System")
     print("   • Dynamic College & Program dropdowns")
     print("   • Disciplinary record detection")
     print("   • Other documents upload with title")
     print("   • Email notifications")
     print("   • Complete student record management")
-    print("="*60)
-    print("🎓 COLLEGE MANAGEMENT SYSTEM:")
-    print("   • College and Program CRUD operations")
-    print("   • Soft delete with restoration")
-    print("   • Display order control")
-    print("   • Active/Inactive toggle")
-    print("   • Admin management interface")
+    print("   • Activity logging")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
