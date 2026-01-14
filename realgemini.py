@@ -166,7 +166,7 @@ def init_db():
         try:
             cur = conn.cursor()
             
-            # Create users table
+            # Create users table with requires_password_reset column
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
@@ -301,6 +301,9 @@ def init_db():
             conn.commit()
             print("✅ Database tables created/verified")
             
+            # Check for missing columns in all tables
+            check_and_add_columns(cur, conn)
+            
             # Check if super admin exists, if not create default
             cur.execute("SELECT COUNT(*) FROM users WHERE role = 'SUPER_ADMIN'")
             if cur.fetchone()[0] == 0:
@@ -388,9 +391,6 @@ def init_db():
                 conn.commit()
                 print("✅ Default colleges and programs inserted")
             
-            # Check for missing columns in records table
-            check_and_add_columns(cur, conn)
-            
         except Exception as e:
             print(f"❌ Database initialization error: {e}")
             traceback.print_exc()
@@ -399,8 +399,29 @@ def init_db():
             conn.close()
 
 def check_and_add_columns(cur, conn):
-    """Check and add missing columns to the records table"""
-    columns_to_add = [
+    """Check and add missing columns to all tables"""
+    print("🔍 Checking for missing columns...")
+    
+    # Check and add columns to users table
+    users_columns = [
+        ("requires_password_reset", "BOOLEAN DEFAULT TRUE"),
+        ("college_id", "INTEGER REFERENCES colleges(id) ON DELETE SET NULL"),
+        ("program_id", "INTEGER REFERENCES programs(id) ON DELETE SET NULL"),
+        ("is_active", "BOOLEAN DEFAULT TRUE"),
+        ("last_login", "TIMESTAMP"),
+        ("created_by", "INTEGER REFERENCES users(id)"),
+        ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    ]
+    
+    for column_name, column_type in users_columns:
+        try:
+            cur.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+            print(f"   ✅ Verified users column: {column_name}")
+        except Exception as e:
+            print(f"   ⚠️ Column {column_name} already exists or error: {e}")
+    
+    # Check and add columns to records table
+    records_columns = [
         ("user_id", "INTEGER REFERENCES users(id) ON DELETE SET NULL"),
         ("status", "VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))"),
         ("email_sent", "BOOLEAN DEFAULT FALSE"),
@@ -444,14 +465,15 @@ def check_and_add_columns(cur, conn):
         ("other_documents", "JSONB")
     ]
     
-    for column_name, column_type in columns_to_add:
+    for column_name, column_type in records_columns:
         try:
             cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
-            print(f"   ✅ Verified column: {column_name}")
+            print(f"   ✅ Verified records column: {column_name}")
         except Exception as e:
             print(f"   ⚠️ Column {column_name} already exists or error: {e}")
     
     conn.commit()
+    print("✅ All columns verified")
 
 # Initialize database
 init_db()
@@ -2309,7 +2331,7 @@ def get_records():
         
         for r in rows:
             if r['created_at']: 
-                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                r['created_at'] = r['created_at'].strftime('%Y-%m-d %H:%M:%S')
             if r['birthdate']: 
                 r['birthdate'] = str(r['birthdate'])
             if r['email_sent_at']: 
