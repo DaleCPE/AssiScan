@@ -126,6 +126,43 @@
             color: white;
         }
 
+        /* Student Access Buttons - Only show for STUDENT role */
+        .student-actions {
+            display: none; /* Hidden by default, shown via JS */
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .student-action-btn {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--border-dim);
+            color: var(--primary-gold);
+            padding: 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .student-action-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Admin Access Buttons - Only show for SUPER_ADMIN role */
+        .admin-actions {
+            display: none; /* Hidden by default, shown via JS */
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
         /* --- MAIN AREA (Middle - Scanners) --- */
         .main-scan { 
             flex: 1; 
@@ -638,7 +675,7 @@
     <div id="accessDenied" class="access-denied" style="display: none;">
         <i class="fas fa-lock"></i>
         <h2>ACCESS RESTRICTED</h2>
-        <p>This scanner requires administrator login. Please login using your admin credentials to access the document scanning system.</p>
+        <p>Please login using your credentials to access the document scanning system.</p>
         <a href="/login" class="btn-login">
             <i class="fas fa-sign-in-alt"></i> GO TO LOGIN PAGE
         </a>
@@ -653,12 +690,20 @@
                 
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">A</div>
-                    <div class="user-name" id="userName">Admin</div>
-                    <div class="user-role" id="userRole">Administrator</div>
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-role" id="userRole">Loading...</div>
                 </div>
             </div>
             
-            <div>
+            <!-- Student Actions (Only for STUDENT role) -->
+            <div id="studentActions" class="student-actions">
+                <button onclick="viewMyRecords()" class="student-action-btn">
+                    <i class="fas fa-history"></i> MY SCANNED RECORDS
+                </button>
+            </div>
+            
+            <!-- Admin Actions (Only for SUPER_ADMIN role) -->
+            <div id="adminActions" class="admin-actions">
                 <a href="history.html" class="btn-access">
                     <i class="fas fa-database"></i> VIEW DATABASE
                 </a>
@@ -667,10 +712,15 @@
                     <i class="fas fa-university"></i> MANAGE COLLEGES
                 </a>
                 
-                <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
-                    <i class="fas fa-sign-out-alt"></i> LOGOUT
-                </button>
+                <a href="/admin/users" class="btn-access" style="margin-top: 10px;">
+                    <i class="fas fa-users-cog"></i> MANAGE USERS
+                </a>
             </div>
+            
+            <!-- Logout Button (For all roles) -->
+            <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
+                <i class="fas fa-sign-out-alt"></i> LOGOUT
+            </button>
         </nav>
 
         <main class="main-scan">
@@ -745,7 +795,7 @@
             <div class="form-header">
                 <span>DATA VERIFICATION</span>
                 <span class="operator-info" id="operatorInfo">
-                    <i class="fas fa-user-check"></i> Operator: <span id="currentOperator">Administrator</span>
+                    <i class="fas fa-user-check"></i> Operator: <span id="currentOperator">Loading...</span>
                 </span>
             </div>
             
@@ -1035,7 +1085,7 @@
 
     <!-- DEBUG BUTTON -->
     <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
-        <button onclick="showRecordInfo()" style="
+        <button onclick="showDebugInfo()" style="
             background: #ff9800;
             color: white;
             padding: 8px 12px;
@@ -1046,7 +1096,7 @@
             display: flex;
             align-items: center;
             gap: 5px;">
-            ℹ️ Show Record Info
+            ℹ️ Debug Info
         </button>
     </div>
 
@@ -1058,6 +1108,7 @@
         let goodmoralAnalysis = null;
         let currentRecordId = null;
         let otherDocuments = [];
+        let currentUser = null;
         
         // Store Good Moral data
         let goodmoralData = {
@@ -1085,65 +1136,96 @@
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
-        // ================= CHECK LOGIN STATUS =================
-        function checkLoginStatus() {
-            // Check if user is logged in by checking session
-            fetch('/check-login', {
-                method: 'GET',
-                credentials: 'same-origin'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.logged_in) {
-                    // User is logged in, show scanner
-                    showScanner();
-                    
-                    // Update user info
-                    if (data.username) {
-                        document.getElementById('userName').textContent = data.username;
-                        document.getElementById('currentOperator').textContent = data.username;
-                        
-                        // Set avatar initials
-                        const initials = data.username.substring(0, 2).toUpperCase();
-                        document.getElementById('userAvatar').textContent = initials;
-                    }
+        // ================= CHECK SESSION STATUS =================
+        async function checkSession() {
+            console.log("🔍 Checking session status...");
+            
+            try {
+                const response = await fetch('/api/check-session', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                console.log("Session check response:", data);
+                
+                if (data.authenticated && data.user) {
+                    // User is logged in
+                    currentUser = data.user;
+                    showScanner(data.user);
+                    return true;
                 } else {
-                    // User is not logged in, show access denied
+                    // User is not logged in
                     showAccessDenied();
+                    return false;
                 }
-            })
-            .catch(error => {
-                console.error('Error checking login status:', error);
+            } catch (error) {
+                console.error('Error checking session:', error);
                 showAccessDenied();
-            });
+                return false;
+            }
         }
 
-        function showScanner() {
+        function showScanner(user) {
+            console.log("👤 Showing scanner for user:", user);
+            
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'flex';
             
-            // Load colleges after showing scanner
+            // Update user info
+            document.getElementById('userName').textContent = user.full_name || user.username;
+            document.getElementById('currentOperator').textContent = user.full_name || user.username;
+            document.getElementById('userRole').textContent = user.role;
+            
+            // Set avatar initials
+            const name = user.full_name || user.username;
+            const initials = name.substring(0, 2).toUpperCase();
+            document.getElementById('userAvatar').textContent = initials;
+            
+            // Show/hide role-specific buttons
+            if (user.role === 'STUDENT') {
+                document.getElementById('studentActions').style.display = 'flex';
+                document.getElementById('adminActions').style.display = 'none';
+            } else if (user.role === 'SUPER_ADMIN') {
+                document.getElementById('studentActions').style.display = 'none';
+                document.getElementById('adminActions').style.display = 'flex';
+            }
+            
+            // Load colleges and populate regions
             loadDynamicColleges();
             populateRegions();
         }
 
         function showAccessDenied() {
+            console.log("🔒 Showing access denied screen");
             document.getElementById('accessDenied').style.display = 'flex';
             document.getElementById('scannerInterface').style.display = 'none';
         }
 
-        function logout() {
-            fetch('/logout', {
-                method: 'GET',
-                credentials: 'same-origin'
-            })
-            .then(() => {
-                window.location.href = '/login';
-            })
-            .catch(error => {
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
                 console.error('Logout error:', error);
                 window.location.href = '/login';
-            });
+            }
+        }
+
+        function viewMyRecords() {
+            // For students to view their own records
+            window.location.href = '/my-records';
         }
 
         // ================= COLLEGE MANAGEMENT FUNCTIONS =================
@@ -1909,8 +1991,9 @@
             }
         }
 
-        function showRecordInfo() {
+        function showDebugInfo() {
             const info = {
+                currentUser: currentUser,
                 currentRecordId: currentRecordId,
                 psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
                 f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
@@ -1926,7 +2009,8 @@
                 otherDocumentsCount: otherDocuments.length
             };
             
-            alert(`Record Information:\n
+            alert(`DEBUG INFORMATION:\n\n
+👤 Current User: ${info.currentUser ? JSON.stringify(info.currentUser) : "Not logged in"}
 📋 Record ID: ${info.currentRecordId || "Not saved yet"}
 📸 PSA Images: ${info.psaImagePath}
 📄 Form 137: ${info.f137ImagePath}
@@ -1939,8 +2023,7 @@
 🎓 College: ${info.college}
 📚 Program: ${info.program}
 📧 Email: ${info.email}
-📎 Other Documents: ${info.otherDocumentsCount}
-\nSave the record first to enable email sending.`);
+📎 Other Documents: ${info.otherDocumentsCount}`);
         }
 
         document.getElementById('fileForm138').addEventListener('change', function(e) {
@@ -1976,8 +2059,8 @@
 
         // ================= INITIALIZATION =================
         window.addEventListener('load', function() {
-            // Check login status when page loads
-            checkLoginStatus();
+            // Check session when page loads
+            checkSession();
         });
     </script>
 </body>
