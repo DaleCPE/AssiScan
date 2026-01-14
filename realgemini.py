@@ -306,8 +306,10 @@ def init_db():
             check_and_add_columns(cur, conn)
             
             # Check if super admin exists, if not create default
-            cur.execute("SELECT COUNT(*) FROM users WHERE role = 'SUPER_ADMIN'")
-            if cur.fetchone()[0] == 0:
+            cur.execute("SELECT id, password_hash FROM users WHERE username = %s", (ADMIN_USERNAME,))
+            admin_user = cur.fetchone()
+            
+            if not admin_user:
                 print("👑 Creating default Super Admin...")
                 default_password = ADMIN_PASSWORD
                 password_hash = hash_password(default_password)
@@ -331,15 +333,12 @@ def init_db():
                 conn.commit()
                 print("✅ Default Super Admin created")
             else:
-                # Check the existing admin password hash
-                cur.execute("SELECT password_hash FROM users WHERE username = %s", (ADMIN_USERNAME,))
-                admin_hash = cur.fetchone()
-                if admin_hash:
-                    print(f"🔑 Existing admin password hash: {admin_hash[0]}")
-                    # Test hash with current password
-                    test_hash = hash_password(ADMIN_PASSWORD)
-                    print(f"🔑 Test hash with password '{ADMIN_PASSWORD}': {test_hash}")
-                    print(f"🔑 Hashes match: {admin_hash[0] == test_hash}")
+                print(f"✅ Super Admin already exists with ID: {admin_user[0]}")
+                print(f"🔑 Existing admin password hash: {admin_user[1]}")
+                # Test hash with current password
+                test_hash = hash_password(ADMIN_PASSWORD)
+                print(f"🔑 Test hash with password '{ADMIN_PASSWORD}': {test_hash}")
+                print(f"🔑 Hashes match: {admin_user[1] == test_hash}")
             
             # Insert default colleges if empty
             cur.execute("SELECT COUNT(*) FROM colleges")
@@ -405,6 +404,8 @@ def init_db():
                 
                 conn.commit()
                 print("✅ Default colleges and programs inserted")
+            else:
+                print("✅ Colleges and programs already exist")
             
         except Exception as e:
             print(f"❌ Database initialization error: {e}")
