@@ -27,6 +27,10 @@
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
             --transition: all 0.3s ease;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
         }
 
         * {
@@ -157,6 +161,44 @@
             color: black;
             font-weight: 600;
             font-family: 'Cinzel', serif;
+        }
+
+        /* ===== TABS ===== */
+        .tabs-container {
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--gold);
+        }
+
+        .tab-btn.active {
+            color: var(--gold);
+            border-bottom-color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
         }
 
         /* ===== STATS CARDS ===== */
@@ -376,6 +418,19 @@
             color: white;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-info {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17a2b8;
+            border: 1px solid #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #17a2b8;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
         }
 
         /* ===== COLLEGE CARDS ===== */
@@ -651,6 +706,122 @@
             padding-top: 20px;
             border-top: 1px solid rgba(212, 175, 55, 0.2);
             flex-wrap: wrap;
+        }
+
+        /* ===== USER MANAGEMENT TABLE ===== */
+        .users-table-container {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            backdrop-filter: blur(5px);
+            margin-bottom: 40px;
+            display: none; /* Hidden by default */
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th {
+            padding: 15px 20px;
+            text-align: left;
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .users-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        .users-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .users-table tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .user-role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .role-super-admin {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+        }
+
+        .role-college-admin {
+            background: rgba(37, 117, 252, 0.2);
+            color: #2575fc;
+            border: 1px solid #2575fc;
+        }
+
+        .role-scanner-operator {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .role-viewer {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+
+        .user-status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .status-inactive {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .status-locked {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .last-login {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 5px;
         }
 
         /* ===== COLLEGE BADGES ===== */
@@ -986,6 +1157,11 @@
                 bottom: 15px;
                 right: 15px;
             }
+
+            .users-table {
+                display: block;
+                overflow-x: auto;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1030,6 +1206,10 @@
             .program-actions {
                 opacity: 1; /* Always show on mobile */
             }
+
+            .user-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -1042,7 +1222,7 @@
                     <i class="fas fa-university"></i>
                 </div>
                 <div class="logo-text">
-                    <h1>College Management</h1>
+                    <h1>Admin Dashboard</h1>
                     <p>AssiScan System Administration</p>
                 </div>
             </div>
@@ -1054,7 +1234,7 @@
                     </a>
                     <a href="/admin/colleges" class="nav-link active">
                         <i class="fas fa-university"></i>
-                        <span>Colleges</span>
+                        <span>Dashboard</span>
                     </a>
                     <a href="/" class="nav-link">
                         <i class="fas fa-qrcode"></i>
@@ -1067,10 +1247,22 @@
                 </div>
                 <div class="user-info">
                     <div class="user-avatar">A</div>
-                    <span>Admin</span>
+                    <span>Super Admin</span>
                 </div>
             </div>
         </header>
+
+        <!-- TABS -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('colleges')">
+                    <i class="fas fa-university"></i> Colleges & Programs
+                </button>
+                <button class="tab-btn" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i> User Accounts
+                </button>
+            </div>
+        </div>
 
         <!-- STATS -->
         <div class="stats-container">
@@ -1079,7 +1271,7 @@
                     <i class="fas fa-university"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalColleges">5</h3>
+                    <h3 id="totalColleges">0</h3>
                     <p>Total Colleges</p>
                 </div>
             </div>
@@ -1088,7 +1280,7 @@
                     <i class="fas fa-book-open"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalPrograms">8</h3>
+                    <h3 id="totalPrograms">0</h3>
                     <p>Total Programs</p>
                 </div>
             </div>
@@ -1097,7 +1289,7 @@
                     <i class="fas fa-user-check"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="activeColleges">5</h3>
+                    <h3 id="activeColleges">0</h3>
                     <p>Active Colleges</p>
                 </div>
             </div>
@@ -1106,50 +1298,107 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="studentsCount">0</h3>
-                    <p>Total Students</p>
+                    <h3 id="totalUsers">0</h3>
+                    <p>System Users</p>
                 </div>
             </div>
         </div>
 
-        <!-- SEARCH AND FILTER -->
-        <div class="search-filter-container">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search colleges or programs...">
+        <!-- COLLEGES SECTION -->
+        <div id="collegesSection">
+            <!-- SEARCH AND FILTER -->
+            <div class="search-filter-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search colleges or programs...">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterColleges('all')">All</button>
+                    <button class="filter-btn" onclick="filterColleges('active')">Active</button>
+                    <button class="filter-btn" onclick="filterColleges('inactive')">Inactive</button>
+                    <button class="filter-btn" onclick="sortByOrder()">Sort by Order</button>
+                </div>
             </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" onclick="filterColleges('all')">All</button>
-                <button class="filter-btn" onclick="filterColleges('active')">Active</button>
-                <button class="filter-btn" onclick="filterColleges('inactive')">Inactive</button>
-                <button class="filter-btn" onclick="sortByOrder()">Sort by Order</button>
+
+            <!-- MAIN CONTENT -->
+            <div class="content-header">
+                <h2>
+                    <i class="fas fa-graduation-cap"></i>
+                    Colleges & Programs
+                </h2>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="openAddCollegeModal()">
+                        <i class="fas fa-plus"></i>
+                        Add New College
+                    </button>
+                </div>
+            </div>
+
+            <!-- COLLEGES GRID -->
+            <div id="collegesContainer" class="colleges-grid">
+                <!-- College cards will be dynamically loaded here -->
             </div>
         </div>
 
-        <!-- MAIN CONTENT -->
-        <div class="content-header">
-            <h2>
-                <i class="fas fa-graduation-cap"></i>
-                Colleges & Programs
-            </h2>
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i>
-                    Refresh
-                </button>
-                <button class="btn btn-primary" onclick="openAddCollegeModal()">
-                    <i class="fas fa-plus"></i>
-                    Add New College
-                </button>
+        <!-- USERS SECTION (Hidden by default) -->
+        <div id="usersSection" style="display: none;">
+            <!-- SEARCH AND FILTER -->
+            <div class="search-filter-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="userSearchInput" placeholder="Search users by name or username...">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterUsers('all')">All Users</button>
+                    <button class="filter-btn" onclick="filterUsers('active')">Active</button>
+                    <button class="filter-btn" onclick="filterUsers('inactive')">Inactive</button>
+                    <button class="filter-btn" onclick="filterUsers('locked')">Locked</button>
+                </div>
+            </div>
+
+            <!-- MAIN CONTENT -->
+            <div class="content-header">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    User Account Management
+                </h2>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="refreshUsers()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="openAddUserModal()">
+                        <i class="fas fa-user-plus"></i>
+                        Add New User
+                    </button>
+                </div>
+            </div>
+
+            <!-- USERS TABLE -->
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>College</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- COLLEGES GRID -->
-        <div id="collegesContainer" class="colleges-grid">
-            <!-- College cards will be dynamically loaded here -->
-        </div>
-
-        <!-- MODALS (same as before) -->
+        <!-- MODALS FOR COLLEGES -->
         <div id="addCollegeModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
@@ -1315,6 +1564,161 @@
             </div>
         </div>
 
+        <!-- MODALS FOR USERS -->
+        <div id="addUserModal" class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Create User Account</h3>
+                    <button class="close-modal" onclick="closeModal('addUserModal')">&times;</button>
+                </div>
+                <form id="addUserForm">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="userUsername"><i class="fas fa-user"></i> Username *</label>
+                            <input type="text" id="userUsername" placeholder="e.g., jdelacruz" required>
+                            <small style="color: var(--text-muted); font-size: 11px;">For login purposes</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="userPassword"><i class="fas fa-lock"></i> Password *</label>
+                            <input type="password" id="userPassword" placeholder="Minimum 8 characters" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userConfirmPassword"><i class="fas fa-lock"></i> Confirm Password *</label>
+                            <input type="password" id="userConfirmPassword" placeholder="Re-enter password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userFullName"><i class="fas fa-id-card"></i> Full Name *</label>
+                            <input type="text" id="userFullName" placeholder="e.g., Juan Dela Cruz" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userEmail"><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="userEmail" placeholder="e.g., juan@example.com">
+                        </div>
+                        <div class="row" style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="userRole"><i class="fas fa-user-tag"></i> Role *</label>
+                                <select id="userRole" required onchange="toggleCollegeField()">
+                                    <option value="scanner_operator">Scanner Operator</option>
+                                    <option value="college_admin">College Admin</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-toggle-on"></i> Status</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="userIsActive" checked>
+                                    <label for="userIsActive">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="collegeFieldContainer" style="display: none;">
+                            <label for="userCollege"><i class="fas fa-university"></i> Assigned College</label>
+                            <select id="userCollege">
+                                <option value="">Select College</option>
+                            </select>
+                            <small style="color: var(--text-muted); font-size: 11px;">Required for College Admin role</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="userNotes"><i class="fas fa-sticky-note"></i> Notes (Optional)</label>
+                            <textarea id="userNotes" placeholder="Any additional information about this user..." rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="editUserModal" class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-edit"></i> Edit User Account</h3>
+                    <button class="close-modal" onclick="closeModal('editUserModal')">&times;</button>
+                </div>
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="editUserUsername"><i class="fas fa-user"></i> Username *</label>
+                            <input type="text" id="editUserUsername" required readonly>
+                            <small style="color: var(--text-muted); font-size: 11px;">Username cannot be changed</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserFullName"><i class="fas fa-id-card"></i> Full Name *</label>
+                            <input type="text" id="editUserFullName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserEmail"><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="editUserEmail">
+                        </div>
+                        <div class="row" style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="editUserRole"><i class="fas fa-user-tag"></i> Role *</label>
+                                <select id="editUserRole" required onchange="toggleEditCollegeField()">
+                                    <option value="scanner_operator">Scanner Operator</option>
+                                    <option value="college_admin">College Admin</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-toggle-on"></i> Status</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="editUserIsActive">
+                                    <label for="editUserIsActive">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="editCollegeFieldContainer" style="display: none;">
+                            <label for="editUserCollege"><i class="fas fa-university"></i> Assigned College</label>
+                            <select id="editUserCollege">
+                                <option value="">Select College</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserNotes"><i class="fas fa-sticky-note"></i> Notes</label>
+                            <textarea id="editUserNotes" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserPassword"><i class="fas fa-lock"></i> New Password (Leave blank to keep current)</label>
+                            <input type="password" id="editUserPassword" placeholder="Enter new password">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="resetPasswordModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-key"></i> Reset Password</h3>
+                    <button class="close-modal" onclick="closeModal('resetPasswordModal')">&times;</button>
+                </div>
+                <form id="resetPasswordForm">
+                    <input type="hidden" id="resetPasswordUserId">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="resetPasswordNew"><i class="fas fa-lock"></i> New Password *</label>
+                            <input type="password" id="resetPasswordNew" placeholder="Enter new password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resetPasswordConfirm"><i class="fas fa-lock"></i> Confirm Password *</label>
+                            <input type="password" id="resetPasswordConfirm" placeholder="Confirm new password" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Reset Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div id="confirmModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 400px;">
                 <div class="modal-header">
@@ -1339,151 +1743,133 @@
     </div>
 
     <script>
-        // Sample data based on your image
-        const sampleColleges = [
-            {
-                id: 1,
-                code: "CCJE",
-                name: "College of Criminal Justice Education",
-                description: "College of Criminal Justice Education",
-                display_order: 1,
-                is_active: true,
-                programs: [
-                    {
-                        id: 1,
-                        name: "Bachelor of Science in Criminology",
-                        code: "BSC",
-                        display_order: 1,
-                        is_active: true
-                    }
-                ]
-            },
-            {
-                id: 2,
-                code: "CEAS",
-                name: "College of Education, Arts and Sciences",
-                description: "College of Education, Arts and Sciences",
-                display_order: 2,
-                is_active: true,
-                programs: [
-                    {
-                        id: 2,
-                        name: "Bachelor of Elementary Education",
-                        code: "BEE",
-                        display_order: 1,
-                        is_active: true
-                    },
-                    {
-                        id: 3,
-                        name: "Bachelor of Secondary Education",
-                        code: "BSE",
-                        display_order: 2,
-                        is_active: true
-                    },
-                    {
-                        id: 4,
-                        name: "Bachelor of Science in Psychology",
-                        code: "BSP",
-                        display_order: 3,
-                        is_active: true
-                    },
-                    {
-                        id: 5,
-                        name: "Bachelor of Science in Legal Management",
-                        code: "BSLM",
-                        display_order: 4,
-                        is_active: true
-                    },
-                    {
-                        id: 6,
-                        name: "Bachelor of Social Work",
-                        code: "BSW",
-                        display_order: 5,
-                        is_active: true
-                    }
-                ]
-            },
-            {
-                id: 3,
-                code: "CENAR",
-                name: "College of Engineering and Architecture",
-                description: "College of Engineering and Architecture",
-                display_order: 3,
-                is_active: true,
-                programs: []
-            },
-            {
-                id: 4,
-                code: "CBAA",
-                name: "College of Business, Accountancy and Auditing",
-                description: "College of Business, Accountancy & Auditing",
-                display_order: 4,
-                is_active: true,
-                programs: []
-            },
-            {
-                id: 5,
-                code: "CITEC",
-                name: "College of Information Technology, Entertainment and Communication",
-                description: "College of IT, Entertainment & Communication",
-                display_order: 5,
-                is_active: true,
-                programs: [
-                    {
-                        id: 7,
-                        name: "Bachelor of Science in Information Technology",
-                        code: "BSIT",
-                        display_order: 1,
-                        is_active: true
-                    },
-                    {
-                        id: 8,
-                        name: "Bachelor of Arts in Multimedia Arts",
-                        code: "BMMA",
-                        display_order: 2,
-                        is_active: true
-                    }
-                ]
-            }
-        ];
-
         // Global variables
-        let collegesData = sampleColleges;
+        let collegesData = [];
+        let usersData = [];
         let currentAction = {};
         let currentFilter = 'all';
+        let currentUserFilter = 'all';
+        let collegesList = [];
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadColleges();
             setupFormEvents();
             setupSearch();
+            loadCollegesForDropdown();
         });
 
-        // Load colleges from API
-        async function loadColleges() {
-            const container = document.getElementById('collegesContainer');
+        // Tab switching
+        function switchTab(tabName) {
+            // Update active tab button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
             
-            // In real app, you would fetch from API:
-            // const response = await fetch('/api/colleges/all');
-            // collegesData = await response.json();
-            
-            // For demo, using sample data
-            updateStats();
-            renderColleges(collegesData);
+            // Show/hide sections
+            if (tabName === 'colleges') {
+                document.getElementById('collegesSection').style.display = 'block';
+                document.getElementById('usersSection').style.display = 'none';
+            } else if (tabName === 'users') {
+                document.getElementById('collegesSection').style.display = 'none';
+                document.getElementById('usersSection').style.display = 'block';
+                loadUsers();
+            }
         }
 
-        // Update statistics
+        // Load colleges for dropdowns
+        async function loadCollegesForDropdown() {
+            try {
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    collegesList = await response.json();
+                    
+                    // Populate college dropdowns
+                    const userCollegeSelect = document.getElementById('userCollege');
+                    const editUserCollegeSelect = document.getElementById('editUserCollege');
+                    
+                    if (userCollegeSelect) {
+                        userCollegeSelect.innerHTML = '<option value="">Select College</option>';
+                        collegesList.forEach(college => {
+                            const option = document.createElement('option');
+                            option.value = college.id;
+                            option.textContent = `${college.code} - ${college.name}`;
+                            userCollegeSelect.appendChild(option);
+                        });
+                    }
+                    
+                    if (editUserCollegeSelect) {
+                        editUserCollegeSelect.innerHTML = '<option value="">Select College</option>';
+                        collegesList.forEach(college => {
+                            const option = document.createElement('option');
+                            option.value = college.id;
+                            option.textContent = `${college.code} - ${college.name}`;
+                            editUserCollegeSelect.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading colleges for dropdown:', error);
+            }
+        }
+
+        // Toggle college field based on role
+        function toggleCollegeField() {
+            const role = document.getElementById('userRole').value;
+            const container = document.getElementById('collegeFieldContainer');
+            
+            if (role === 'college_admin') {
+                container.style.display = 'block';
+                document.getElementById('userCollege').required = true;
+            } else {
+                container.style.display = 'none';
+                document.getElementById('userCollege').required = false;
+            }
+        }
+
+        function toggleEditCollegeField() {
+            const role = document.getElementById('editUserRole').value;
+            const container = document.getElementById('editCollegeFieldContainer');
+            
+            if (role === 'college_admin') {
+                container.style.display = 'block';
+                document.getElementById('editUserCollege').required = true;
+            } else {
+                container.style.display = 'none';
+                document.getElementById('editUserCollege').required = false;
+            }
+        }
+
+        // ========== COLLEGE FUNCTIONS ==========
+        async function loadColleges() {
+            try {
+                const response = await fetch('/api/colleges/all');
+                if (response.ok) {
+                    collegesData = await response.json();
+                    updateStats();
+                    renderColleges(collegesData);
+                } else {
+                    showNotification('Failed to load colleges', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading colleges:', error);
+                showNotification('Error loading colleges', 'error');
+            }
+        }
+
         function updateStats() {
             const totalColleges = collegesData.length;
             const activeColleges = collegesData.filter(c => c.is_active).length;
             const totalPrograms = collegesData.reduce((sum, college) => sum + (college.programs?.length || 0), 0);
+            const totalUsers = usersData.length;
             
             document.getElementById('totalColleges').textContent = totalColleges;
             document.getElementById('activeColleges').textContent = activeColleges;
             document.getElementById('totalPrograms').textContent = totalPrograms;
+            document.getElementById('totalUsers').textContent = totalUsers;
         }
 
-        // Render colleges grid
         function renderColleges(colleges) {
             const container = document.getElementById('collegesContainer');
             
@@ -1581,7 +1967,6 @@
             `).join('');
         }
 
-        // Get badge class based on college code
         function getCollegeBadgeClass(code) {
             const codeLower = code.toLowerCase();
             if (codeLower.includes('ccje')) return 'ccje';
@@ -1592,12 +1977,11 @@
             return '';
         }
 
-        // Filter colleges
         function filterColleges(filter) {
             currentFilter = filter;
             
             // Update filter buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
+            document.querySelectorAll('.filter-buttons .filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
@@ -1619,41 +2003,238 @@
             renderColleges(filteredColleges);
         }
 
-        // Sort by display order
         function sortByOrder() {
             const sortedColleges = [...collegesData].sort((a, b) => a.display_order - b.display_order);
             renderColleges(sortedColleges);
         }
 
-        // Search functionality
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase().trim();
-                
-                if (searchTerm === '') {
-                    filterColleges(currentFilter);
-                    return;
-                }
-                
-                const filteredColleges = collegesData.filter(college => {
-                    const nameMatch = college.name.toLowerCase().includes(searchTerm);
-                    const codeMatch = college.code.toLowerCase().includes(searchTerm);
-                    const descMatch = college.description?.toLowerCase().includes(searchTerm) || false;
+            const userSearchInput = document.getElementById('userSearchInput');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
                     
-                    const programMatch = (college.programs || []).some(program => 
-                        program.name.toLowerCase().includes(searchTerm) ||
-                        program.code?.toLowerCase().includes(searchTerm)
-                    );
+                    if (searchTerm === '') {
+                        filterColleges(currentFilter);
+                        return;
+                    }
                     
-                    return nameMatch || codeMatch || descMatch || programMatch;
+                    const filteredColleges = collegesData.filter(college => {
+                        const nameMatch = college.name.toLowerCase().includes(searchTerm);
+                        const codeMatch = college.code.toLowerCase().includes(searchTerm);
+                        const descMatch = college.description?.toLowerCase().includes(searchTerm) || false;
+                        
+                        const programMatch = (college.programs || []).some(program => 
+                            program.name.toLowerCase().includes(searchTerm) ||
+                            program.code?.toLowerCase().includes(searchTerm)
+                        );
+                        
+                        return nameMatch || codeMatch || descMatch || programMatch;
+                    });
+                    
+                    renderColleges(filteredColleges);
                 });
-                
-                renderColleges(filteredColleges);
-            });
+            }
+            
+            if (userSearchInput) {
+                userSearchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    
+                    if (searchTerm === '') {
+                        filterUsers(currentUserFilter);
+                        return;
+                    }
+                    
+                    const filteredUsers = usersData.filter(user => {
+                        const usernameMatch = user.username.toLowerCase().includes(searchTerm);
+                        const nameMatch = user.full_name?.toLowerCase().includes(searchTerm) || false;
+                        const emailMatch = user.email?.toLowerCase().includes(searchTerm) || false;
+                        
+                        return usernameMatch || nameMatch || emailMatch;
+                    });
+                    
+                    renderUsers(filteredUsers);
+                });
+            }
         }
 
-        // Modal functions
+        // ========== USER FUNCTIONS ==========
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                if (response.ok) {
+                    usersData = await response.json();
+                    updateStats();
+                    renderUsers(usersData);
+                } else {
+                    showNotification('Failed to load users', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showNotification('Error loading users', 'error');
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px;">
+                            <div class="empty-state" style="padding: 0;">
+                                <i class="fas fa-users" style="font-size: 36px; margin-bottom: 10px;"></i>
+                                <h3 style="color: var(--text-muted); font-size: 14px;">No Users Found</h3>
+                                <p style="font-size: 12px;">Add your first user account</p>
+                                <button class="btn btn-primary" onclick="openAddUserModal()" style="margin-top: 10px;">
+                                    <i class="fas fa-user-plus"></i> Add First User
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                // Get role badge class
+                let roleClass = '';
+                let roleText = '';
+                switch(user.role) {
+                    case 'super_admin':
+                        roleClass = 'role-super-admin';
+                        roleText = 'Super Admin';
+                        break;
+                    case 'college_admin':
+                        roleClass = 'role-college-admin';
+                        roleText = 'College Admin';
+                        break;
+                    case 'scanner_operator':
+                        roleClass = 'role-scanner-operator';
+                        roleText = 'Scanner Operator';
+                        break;
+                    case 'viewer':
+                        roleClass = 'role-viewer';
+                        roleText = 'Viewer';
+                        break;
+                    default:
+                        roleClass = 'role-scanner-operator';
+                        roleText = user.role;
+                }
+                
+                // Get status badge
+                let statusClass = 'status-active';
+                let statusText = 'Active';
+                if (!user.is_active) {
+                    statusClass = 'status-inactive';
+                    statusText = 'Inactive';
+                } else if (user.locked_until && new Date(user.locked_until) > new Date()) {
+                    statusClass = 'status-locked';
+                    statusText = 'Locked';
+                }
+                
+                // Get college name
+                let collegeName = '-';
+                if (user.college_id) {
+                    const college = collegesList.find(c => c.id === user.college_id);
+                    if (college) {
+                        collegeName = college.code;
+                    }
+                }
+                
+                // Format last login
+                let lastLogin = 'Never';
+                if (user.last_login) {
+                    const date = new Date(user.last_login);
+                    lastLogin = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+                
+                return `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="user-avatar" style="width: 32px; height: 32px;">${user.full_name ? user.full_name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <div style="font-weight: 500;">${user.full_name || user.username}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">@${user.username}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="user-role-badge ${roleClass}">${roleText}</span>
+                    </td>
+                    <td>${collegeName}</td>
+                    <td>
+                        <span class="user-status-badge ${statusClass}">${statusText}</span>
+                    </td>
+                    <td>
+                        <div class="last-login">${lastLogin}</div>
+                    </td>
+                    <td>
+                        <div class="user-actions">
+                            <button class="icon-btn edit" onclick="openEditUserModal(${user.id})" title="Edit User">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn" onclick="openResetPasswordModal(${user.id})" title="Reset Password" style="color: var(--info); border-color: var(--info);">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            ${user.role !== 'super_admin' ? `
+                                ${user.is_active ? `
+                                    <button class="icon-btn delete" onclick="confirmDeactivateUser(${user.id})" title="Deactivate User">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                ` : `
+                                    <button class="icon-btn" onclick="confirmActivateUser(${user.id})" title="Activate User" style="color: var(--success); border-color: var(--success);">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                `}
+                                <button class="icon-btn delete" onclick="confirmDeleteUser(${user.id})" title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function filterUsers(filter) {
+            currentUserFilter = filter;
+            
+            // Update filter buttons
+            document.querySelectorAll('#usersSection .filter-buttons .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            let filteredUsers = usersData;
+            
+            switch(filter) {
+                case 'active':
+                    filteredUsers = usersData.filter(u => u.is_active);
+                    break;
+                case 'inactive':
+                    filteredUsers = usersData.filter(u => !u.is_active);
+                    break;
+                case 'locked':
+                    filteredUsers = usersData.filter(u => u.locked_until && new Date(u.locked_until) > new Date());
+                    break;
+                case 'all':
+                default:
+                    filteredUsers = usersData;
+            }
+            
+            renderUsers(filteredUsers);
+        }
+
+        function refreshUsers() {
+            loadUsers();
+            showNotification('Users refreshed successfully!', 'info');
+        }
+
+        // ========== MODAL FUNCTIONS ==========
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'flex';
             document.body.style.overflow = 'hidden';
@@ -1664,6 +2245,7 @@
             document.body.style.overflow = 'auto';
         }
 
+        // College modals
         function openAddCollegeModal() {
             document.getElementById('addCollegeForm').reset();
             document.getElementById('displayOrder').value = collegesData.length + 1;
@@ -1708,12 +2290,52 @@
             openModal('editProgramModal');
         }
 
-        // Confirmation functions
+        // User modals
+        function openAddUserModal() {
+            document.getElementById('addUserForm').reset();
+            document.getElementById('userIsActive').checked = true;
+            toggleCollegeField();
+            openModal('addUserModal');
+        }
+
+        async function openEditUserModal(userId) {
+            const user = usersData.find(u => u.id === userId);
+            if (!user) return;
+            
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUserUsername').value = user.username;
+            document.getElementById('editUserFullName').value = user.full_name || '';
+            document.getElementById('editUserEmail').value = user.email || '';
+            document.getElementById('editUserRole').value = user.role;
+            document.getElementById('editUserIsActive').checked = user.is_active;
+            document.getElementById('editUserNotes').value = user.notes || '';
+            
+            // Set college if exists
+            if (user.college_id) {
+                document.getElementById('editUserCollege').value = user.college_id;
+            }
+            
+            toggleEditCollegeField();
+            openModal('editUserModal');
+        }
+
+        function openResetPasswordModal(userId) {
+            const user = usersData.find(u => u.id === userId);
+            if (!user) return;
+            
+            document.getElementById('resetPasswordUserId').value = userId;
+            document.getElementById('resetPasswordNew').value = '';
+            document.getElementById('resetPasswordConfirm').value = '';
+            openModal('resetPasswordModal');
+        }
+
+        // ========== CONFIRMATION FUNCTIONS ==========
         function confirmDeleteCollege(collegeId) {
+            const college = collegesData.find(c => c.id === collegeId);
             currentAction = {
                 type: 'deleteCollege',
                 collegeId: collegeId,
-                collegeName: collegesData.find(c => c.id === collegeId)?.name || 'Unknown College'
+                collegeName: college?.name || 'Unknown College'
             };
             
             document.getElementById('confirmMessage').textContent = 
@@ -1748,6 +2370,45 @@
             openModal('confirmModal');
         }
 
+        function confirmDeactivateUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'deactivateUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown User'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to deactivate "${currentAction.userName}"? They will no longer be able to login.`;
+            openModal('confirmModal');
+        }
+
+        function confirmActivateUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'activateUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown User'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to activate "${currentAction.userName}"?`;
+            openModal('confirmModal');
+        }
+
+        function confirmDeleteUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'deleteUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown User'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to permanently delete "${currentAction.userName}"? This action cannot be undone.`;
+            openModal('confirmModal');
+        }
+
         function confirmAction() {
             switch(currentAction.type) {
                 case 'deleteCollege':
@@ -1759,12 +2420,22 @@
                 case 'deleteProgram':
                     deleteProgram(currentAction.programId, currentAction.collegeId);
                     break;
+                case 'deactivateUser':
+                    deactivateUser(currentAction.userId);
+                    break;
+                case 'activateUser':
+                    activateUser(currentAction.userId);
+                    break;
+                case 'deleteUser':
+                    deleteUser(currentAction.userId);
+                    break;
             }
             closeModal('confirmModal');
         }
 
-        // Setup form events
+        // ========== SETUP FORM EVENTS ==========
         function setupFormEvents() {
+            // College forms
             document.getElementById('addCollegeForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 await addCollege();
@@ -1784,56 +2455,405 @@
                 e.preventDefault();
                 await updateProgram();
             });
+            
+            // User forms
+            document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await addUser();
+            });
+            
+            document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await updateUser();
+            });
+            
+            document.getElementById('resetPasswordForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await resetPassword();
+            });
         }
 
-        // API Functions (demo versions)
+        // ========== API FUNCTIONS ==========
+        // College API functions
         async function addCollege() {
-            // Demo implementation
-            showNotification('College added successfully!', 'success');
-            closeModal('addCollegeModal');
-            // In real app: await loadColleges();
+            const formData = {
+                code: document.getElementById('collegeCode').value.trim(),
+                name: document.getElementById('collegeName').value.trim(),
+                description: document.getElementById('collegeDescription').value.trim(),
+                is_active: document.getElementById('isActive').checked,
+                display_order: parseInt(document.getElementById('displayOrder').value) || 0
+            };
+            
+            try {
+                const response = await fetch('/api/colleges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('College added successfully!', 'success');
+                    closeModal('addCollegeModal');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to add college', 'error');
+                }
+            } catch (error) {
+                showNotification('Error adding college', 'error');
+            }
         }
 
         async function updateCollege() {
-            // Demo implementation
-            showNotification('College updated successfully!', 'success');
-            closeModal('editCollegeModal');
+            const collegeId = document.getElementById('editCollegeId').value;
+            const formData = {
+                code: document.getElementById('editCollegeCode').value.trim(),
+                name: document.getElementById('editCollegeName').value.trim(),
+                description: document.getElementById('editCollegeDescription').value.trim(),
+                is_active: document.getElementById('editIsActive').checked,
+                display_order: parseInt(document.getElementById('editDisplayOrder').value) || 0
+            };
+            
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('College updated successfully!', 'success');
+                    closeModal('editCollegeModal');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update college', 'error');
+                }
+            } catch (error) {
+                showNotification('Error updating college', 'error');
+            }
         }
 
         async function deleteCollege(collegeId) {
-            // Demo implementation
-            showNotification('College deleted successfully!', 'success');
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('College deactivated successfully!', 'success');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete college', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting college', 'error');
+            }
         }
 
         async function restoreCollege(collegeId) {
-            // Demo implementation
-            showNotification('College restored successfully!', 'success');
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}/restore`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification('College restored successfully!', 'success');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to restore college', 'error');
+                }
+            } catch (error) {
+                showNotification('Error restoring college', 'error');
+            }
         }
 
         async function addProgram() {
-            // Demo implementation
-            showNotification('Program added successfully!', 'success');
-            closeModal('addProgramModal');
+            const collegeId = document.getElementById('programCollegeId').value;
+            const formData = {
+                college_id: parseInt(collegeId),
+                name: document.getElementById('programName').value.trim(),
+                code: document.getElementById('programCode').value.trim(),
+                is_active: document.getElementById('programIsActive').checked,
+                display_order: parseInt(document.getElementById('programDisplayOrder').value) || 0
+            };
+            
+            try {
+                const response = await fetch('/api/programs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('Program added successfully!', 'success');
+                    closeModal('addProgramModal');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to add program', 'error');
+                }
+            } catch (error) {
+                showNotification('Error adding program', 'error');
+            }
         }
 
         async function updateProgram() {
-            // Demo implementation
-            showNotification('Program updated successfully!', 'success');
-            closeModal('editProgramModal');
+            const programId = document.getElementById('editProgramId').value;
+            const formData = {
+                name: document.getElementById('editProgramName').value.trim(),
+                code: document.getElementById('editProgramCode').value.trim(),
+                is_active: document.getElementById('editProgramIsActive').checked,
+                display_order: parseInt(document.getElementById('editProgramDisplayOrder').value) || 0
+            };
+            
+            try {
+                const response = await fetch(`/api/programs/${programId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('Program updated successfully!', 'success');
+                    closeModal('editProgramModal');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update program', 'error');
+                }
+            } catch (error) {
+                showNotification('Error updating program', 'error');
+            }
         }
 
         async function deleteProgram(programId, collegeId) {
-            // Demo implementation
-            showNotification('Program deleted successfully!', 'success');
+            try {
+                const response = await fetch(`/api/programs/${programId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('Program deleted successfully!', 'success');
+                    await loadColleges();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete program', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting program', 'error');
+            }
         }
 
-        // Refresh data
-        async function refreshData() {
-            await loadColleges();
+        // User API functions
+        async function addUser() {
+            const password = document.getElementById('userPassword').value;
+            const confirmPassword = document.getElementById('userConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showNotification('Password must be at least 8 characters!', 'error');
+                return;
+            }
+            
+            const formData = {
+                username: document.getElementById('userUsername').value.trim(),
+                password: password,
+                full_name: document.getElementById('userFullName').value.trim(),
+                email: document.getElementById('userEmail').value.trim(),
+                role: document.getElementById('userRole').value,
+                is_active: document.getElementById('userIsActive').checked,
+                notes: document.getElementById('userNotes').value.trim()
+            };
+            
+            // Add college_id if role is college_admin
+            if (formData.role === 'college_admin') {
+                const collegeId = document.getElementById('userCollege').value;
+                if (!collegeId) {
+                    showNotification('Please select a college for College Admin role', 'error');
+                    return;
+                }
+                formData.college_id = parseInt(collegeId);
+            }
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('User created successfully!', 'success');
+                    closeModal('addUserModal');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to create user', 'error');
+                }
+            } catch (error) {
+                showNotification('Error creating user', 'error');
+            }
+        }
+
+        async function updateUser() {
+            const userId = document.getElementById('editUserId').value;
+            const formData = {
+                full_name: document.getElementById('editUserFullName').value.trim(),
+                email: document.getElementById('editUserEmail').value.trim(),
+                role: document.getElementById('editUserRole').value,
+                is_active: document.getElementById('editUserIsActive').checked,
+                notes: document.getElementById('editUserNotes').value.trim()
+            };
+            
+            // Add college_id if role is college_admin
+            if (formData.role === 'college_admin') {
+                const collegeId = document.getElementById('editUserCollege').value;
+                if (!collegeId) {
+                    showNotification('Please select a college for College Admin role', 'error');
+                    return;
+                }
+                formData.college_id = parseInt(collegeId);
+            } else {
+                formData.college_id = null;
+            }
+            
+            // Add new password if provided
+            const newPassword = document.getElementById('editUserPassword').value;
+            if (newPassword) {
+                if (newPassword.length < 8) {
+                    showNotification('Password must be at least 8 characters!', 'error');
+                    return;
+                }
+                formData.password = newPassword;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('User updated successfully!', 'success');
+                    closeModal('editUserModal');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update user', 'error');
+                }
+            } catch (error) {
+                showNotification('Error updating user', 'error');
+            }
+        }
+
+        async function resetPassword() {
+            const userId = document.getElementById('resetPasswordUserId').value;
+            const newPassword = document.getElementById('resetPasswordNew').value;
+            const confirmPassword = document.getElementById('resetPasswordConfirm').value;
+            
+            if (newPassword !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showNotification('Password must be at least 8 characters!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPassword })
+                });
+                
+                if (response.ok) {
+                    showNotification('Password reset successfully!', 'success');
+                    closeModal('resetPasswordModal');
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to reset password', 'error');
+                }
+            } catch (error) {
+                showNotification('Error resetting password', 'error');
+            }
+        }
+
+        async function deactivateUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/deactivate`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification('User deactivated successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to deactivate user', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deactivating user', 'error');
+            }
+        }
+
+        async function activateUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/activate`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification('User activated successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to activate user', 'error');
+                }
+            } catch (error) {
+                showNotification('Error activating user', 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('User deleted successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete user', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting user', 'error');
+            }
+        }
+
+        // ========== UTILITY FUNCTIONS ==========
+        function refreshData() {
+            loadColleges();
             showNotification('Data refreshed successfully!', 'info');
         }
 
-        // Notification function
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             const messageEl = document.getElementById('notificationMessage');
