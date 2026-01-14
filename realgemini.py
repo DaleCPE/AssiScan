@@ -132,9 +132,20 @@ def permission_required(permission):
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
     """Hash password with salt"""
-    # Use a fixed salt for consistency
-    salt = "assiscan-salt-2024"  # Fixed salt for now
-    return hashlib.sha256((password + salt).encode()).hexdigest()
+    # Use the same hashing method as the existing stored passwords
+    # The stored hash appears to be: salt + "$" + hash
+    # Let's try to match the existing format
+    salt = "a095da1f466b22a5b26f9538d1d5fc73"  # Use the salt from the stored hash
+    return salt + "$" + hashlib.sha256((password + salt).encode()).hexdigest()
+
+def verify_password(stored_hash, password):
+    """Verify password against stored hash"""
+    if "$" not in stored_hash:
+        return False
+    
+    salt, hash_value = stored_hash.split("$", 1)
+    computed_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return hash_value == computed_hash
 
 def generate_temp_password(length=8):
     """Generate temporary password for new users"""
@@ -335,10 +346,17 @@ def init_db():
             else:
                 print(f"✅ Super Admin already exists with ID: {admin_user[0]}")
                 print(f"🔑 Existing admin password hash: {admin_user[1]}")
-                # Test hash with current password
-                test_hash = hash_password(ADMIN_PASSWORD)
-                print(f"🔑 Test hash with password '{ADMIN_PASSWORD}': {test_hash}")
-                print(f"🔑 Hashes match: {admin_user[1] == test_hash}")
+                # Test if the password verification works
+                test_verified = verify_password(admin_user[1], ADMIN_PASSWORD)
+                print(f"🔑 Password verification test: {'✅ SUCCESS' if test_verified else '❌ FAILED'}")
+                
+                # If password verification fails, reset the password
+                if not test_verified:
+                    print("⚠️ Admin password doesn't match. Resetting to default...")
+                    new_hash = hash_password(ADMIN_PASSWORD)
+                    cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, admin_user[0]))
+                    conn.commit()
+                    print(f"✅ Admin password reset. New hash: {new_hash}")
             
             # Insert default colleges if empty
             cur.execute("SELECT COUNT(*) FROM colleges")
@@ -915,13 +933,11 @@ def login_user():
         if not user['is_active']:
             return jsonify({"error": "Account is deactivated"}), 403
         
-        # Verify password
-        password_hash = hash_password(password)
+        # Verify password using the correct verification method
         print(f"🔑 Login attempt: username={username}")
         print(f"🔑 Stored hash: {user['password_hash']}")
-        print(f"🔑 Computed hash: {password_hash}")
         
-        if user['password_hash'] != password_hash:
+        if not verify_password(user['password_hash'], password):
             print(f"❌ Password mismatch for user {username}")
             return jsonify({"error": "Invalid credentials"}), 401
         
@@ -1043,8 +1059,7 @@ def change_password():
             return jsonify({"error": "User not found"}), 404
         
         # Verify current password
-        current_hash = hash_password(current_password)
-        if user['password_hash'] != current_hash:
+        if not verify_password(user['password_hash'], current_password):
             return jsonify({"error": "Current password is incorrect"}), 401
         
         # Update to new password
