@@ -107,7 +107,9 @@ def role_required(required_role):
             if 'user_id' not in session:
                 return jsonify({"error": "Authentication required"}), 401
             
-            if session.get('role') != required_role:
+            # Convert to uppercase for comparison
+            user_role = session.get('role', '').upper()
+            if user_role != required_role:
                 return jsonify({"error": f"{required_role} access required"}), 403
             
             return f(*args, **kwargs)
@@ -121,7 +123,7 @@ def permission_required(permission):
             if 'user_id' not in session:
                 return jsonify({"error": "Authentication required"}), 401
             
-            user_role = session.get('role')
+            user_role = session.get('role', '').upper()
             if user_role not in PERMISSIONS or permission not in PERMISSIONS[user_role]:
                 return jsonify({"error": "Permission denied"}), 403
             
@@ -964,11 +966,11 @@ def login_user():
         cur.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s", (user['id'],))
         conn.commit()
         
-        # Set session data
+        # Set session data - ENSURE role is stored in UPPERCASE
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['full_name'] = user['full_name']
-        session['role'] = user['role']
+        session['role'] = user['role'].upper()  # ENSURE UPPERCASE
         session['email'] = user['email']
         session['session_token'] = session_token
         session['requires_password_reset'] = user['requires_password_reset']
@@ -979,7 +981,7 @@ def login_user():
             'username': user['username'],
             'full_name': user['full_name'],
             'email': user['email'],
-            'role': user['role'],
+            'role': user['role'].upper(),  # ENSURE UPPERCASE in response
             'requires_password_reset': user['requires_password_reset'],
             'college_id': user['college_id'],
             'program_id': user['program_id']
@@ -990,7 +992,7 @@ def login_user():
             "message": "Login successful",
             "user": user_response,
             "session_token": session_token,
-            "permissions": PERMISSIONS.get(user['role'], [])
+            "permissions": PERMISSIONS.get(user['role'].upper(), [])
         })
         
     except Exception as e:
@@ -1037,9 +1039,9 @@ def check_session():
                 'username': user['username'],
                 'full_name': user['full_name'],
                 'email': user['email'],
-                'role': user['role']
+                'role': user['role'].upper()  # ENSURE UPPERCASE
             },
-            "permissions": PERMISSIONS.get(user['role'], [])
+            "permissions": PERMISSIONS.get(user['role'].upper(), [])
         })
     else:
         return jsonify({"authenticated": False}), 200
@@ -1432,7 +1434,7 @@ def get_profile():
             profile['created_at'] = profile['created_at'].isoformat()
         
         # Add permissions
-        profile['permissions'] = PERMISSIONS.get(profile['role'], [])
+        profile['permissions'] = PERMISSIONS.get(profile['role'].upper(), [])
         
         return jsonify(profile)
         
@@ -2019,12 +2021,18 @@ def index():
         print("🔍 No user_id in session, redirecting to login")
         return redirect('/login')
     
-    if session.get('role') == 'STUDENT':
+    # Convert role to uppercase for comparison
+    user_role = session.get('role', '').upper()
+    
+    if user_role == 'STUDENT':
         print("🔍 User is STUDENT, serving index.html")
         return render_template('index.html')
-    else:
+    elif user_role == 'SUPER_ADMIN':
         print("🔍 User is SUPER_ADMIN, redirecting to admin dashboard")
         return redirect('/admin/dashboard')
+    else:
+        print(f"🔍 Unknown role: {user_role}, redirecting to login")
+        return redirect('/login')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -2042,12 +2050,16 @@ def login():
                 user = validate_session(session_token)
                 if user:
                     # Valid session, redirect based on role
-                    if session['role'] == 'STUDENT':
+                    user_role = session['role'].upper()
+                    if user_role == 'STUDENT':
                         print("🔍 Valid STUDENT session, redirecting to /")
                         return redirect('/')
-                    else:
+                    elif user_role == 'SUPER_ADMIN':
                         print("🔍 Valid SUPER_ADMIN session, redirecting to /admin/dashboard")
                         return redirect('/admin/dashboard')
+                    else:
+                        print(f"🔍 Unknown role: {user_role}, clearing session")
+                        session.clear()
                 else:
                     print("🔍 Invalid session token, clearing session")
                     session.clear()
@@ -2089,7 +2101,10 @@ def admin_dashboard():
     if 'user_id' not in session:
         return redirect('/login')
     
-    if session.get('role') != 'SUPER_ADMIN':
+    # Convert role to uppercase for comparison
+    user_role = session.get('role', '').upper()
+    if user_role != 'SUPER_ADMIN':
+        print(f"❌ Access denied: User role is {user_role}, expected SUPER_ADMIN")
         return redirect('/')
     
     return render_template('admin_dashboard.html')
@@ -2100,7 +2115,10 @@ def admin_users():
     if 'user_id' not in session:
         return redirect('/login')
     
-    if session.get('role') != 'SUPER_ADMIN':
+    # Convert role to uppercase for comparison
+    user_role = session.get('role', '').upper()
+    if user_role != 'SUPER_ADMIN':
+        print(f"❌ Access denied: User role is {user_role}, expected SUPER_ADMIN")
         return redirect('/')
     
     return render_template('admin_users.html')
@@ -2111,8 +2129,11 @@ def history_page():
     if 'user_id' not in session:
         return redirect('/login')
     
+    # Convert role to uppercase for comparison
+    user_role = session.get('role', '').upper()
     # Only Super Admin can access history
-    if session.get('role') != 'SUPER_ADMIN':
+    if user_role != 'SUPER_ADMIN':
+        print(f"❌ Access denied: User role is {user_role}, expected SUPER_ADMIN")
         return redirect('/')
     
     return render_template('history.html')
@@ -2123,7 +2144,10 @@ def admin_colleges():
     if 'user_id' not in session:
         return redirect('/login')
     
-    if session.get('role') != 'SUPER_ADMIN':
+    # Convert role to uppercase for comparison
+    user_role = session.get('role', '').upper()
+    if user_role != 'SUPER_ADMIN':
+        print(f"❌ Access denied: User role is {user_role}, expected SUPER_ADMIN")
         return redirect('/')
     
     return render_template('admin_colleges.html')
@@ -2427,15 +2451,18 @@ def get_records():
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Students see only their own records
-        if session.get('role') == 'STUDENT':
+        user_role = session.get('role', '').upper()
+        if user_role == 'STUDENT':
             cur.execute("""
                 SELECT * FROM records 
                 WHERE user_id = %s 
                 ORDER BY id DESC
             """, (session['user_id'],))
         # Super Admin sees all records
-        else:
+        elif user_role == 'SUPER_ADMIN':
             cur.execute("SELECT * FROM records ORDER BY id DESC")
+        else:
+            return jsonify({"records": [], "error": "Unknown user role"})
         
         rows = cur.fetchall()
         
@@ -2481,7 +2508,7 @@ def get_records():
         return jsonify({
             "records": rows,
             "server_url": request.host_url.rstrip('/'),
-            "user_role": session.get('role')
+            "user_role": user_role
         })
     except Exception as e:
         print(f"❌ Error in get-records: {e}")
@@ -2508,7 +2535,8 @@ def upload_other_document(record_id):
         return jsonify({"error": "Document title required"}), 400
     
     # Check if record belongs to user (for students)
-    if session.get('role') == 'STUDENT':
+    user_role = session.get('role', '').upper()
+    if user_role == 'STUDENT':
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
@@ -2578,7 +2606,8 @@ def upload_other_document(record_id):
 def delete_other_document(record_id, doc_id):
     """Delete an other document"""
     # Check if record belongs to user (for students)
-    if session.get('role') == 'STUDENT':
+    user_role = session.get('role', '').upper()
+    if user_role == 'STUDENT':
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
@@ -2996,7 +3025,8 @@ def uploaded_file(filename):
 def view_form(record_id):
     """View printable form"""
     # Check if record belongs to user (for students)
-    if session.get('role') == 'STUDENT':
+    user_role = session.get('role', '').upper()
+    if user_role == 'STUDENT':
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
@@ -3059,7 +3089,8 @@ def upload_additional():
         return jsonify({"error": "Data Missing"}), 400
     
     # Check if record belongs to user (for students)
-    if session.get('role') == 'STUDENT':
+    user_role = session.get('role', '').upper()
+    if user_role == 'STUDENT':
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT user_id FROM records WHERE id = %s", (rid,))
@@ -3129,7 +3160,8 @@ def delete_record(record_id):
 def check_email_status(record_id):
     """Check if email has been sent for a record"""
     # Check if record belongs to user (for students)
-    if session.get('role') == 'STUDENT':
+    user_role = session.get('role', '').upper()
+    if user_role == 'STUDENT':
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
