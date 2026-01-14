@@ -1,0 +1,1266 @@
+<!-- templates/admin_colleges.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 College Management - AssiScan</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .nav-bar {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #495057;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-links a:hover {
+            background: #e9ecef;
+            color: #6a11cb;
+        }
+
+        .nav-links a.active {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        /* College Management Styles */
+        .college-management {
+            display: grid;
+            gap: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            color: #343a40;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.3s;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .college-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .college-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .college-card:hover {
+            border-color: #6a11cb;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(106, 17, 203, 0.15);
+        }
+
+        .college-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f8f9fa;
+        }
+
+        .college-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .college-info h3 {
+            font-size: 1.5rem;
+            color: #343a40;
+            margin-bottom: 5px;
+        }
+
+        .college-code {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .college-status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .college-description {
+            color: #6c757d;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .programs-section {
+            margin-top: 20px;
+        }
+
+        .programs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .programs-header h4 {
+            color: #495057;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-program-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .programs-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .program-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .program-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .program-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .edit-btn {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .edit-btn:hover, .delete-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .college-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f8f9fa;
+        }
+
+        .college-action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .edit-college-btn {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .delete-college-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .restore-college-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #6a11cb;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-out;
+            z-index: 1001;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #6a11cb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #adb5bd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .college-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .college-status {
+                margin-left: 0;
+                align-self: flex-start;
+            }
+            
+            .college-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-university"></i> College Management System</h1>
+            <p>Manage colleges and programs for the AssiScan System</p>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-bar">
+            <div class="nav-links">
+                <a href="/history.html"><i class="fas fa-history"></i> Records History</a>
+                <a href="/admin/colleges" class="active"><i class="fas fa-university"></i> College Management</a>
+                <a href="/"><i class="fas fa-qrcode"></i> Scanner</a>
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+            <div class="user-info">
+                <span><i class="fas fa-user-shield"></i> Admin</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="college-management">
+                <!-- Action Header -->
+                <div class="section-header">
+                    <h2><i class="fas fa-graduation-cap"></i> Colleges & Programs</h2>
+                    <button class="add-btn" onclick="openAddCollegeModal()">
+                        <i class="fas fa-plus"></i> Add New College
+                    </button>
+                </div>
+
+                <!-- Colleges List -->
+                <div id="collegeList" class="college-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addCollegeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add New College</h3>
+                <button class="close-modal" onclick="closeModal('addCollegeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addCollegeForm">
+                    <div class="form-group">
+                        <label for="collegeCode"><i class="fas fa-code"></i> College Code</label>
+                        <input type="text" id="collegeCode" class="form-control" placeholder="e.g., CCJE" required>
+                        <small class="form-text">Unique short code (e.g., CCJE, CEAS, CITEC)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="collegeName"><i class="fas fa-university"></i> College Name</label>
+                        <input type="text" id="collegeName" class="form-control" placeholder="e.g., College of Criminal Justice Education" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="collegeDescription"><i class="fas fa-align-left"></i> Description</label>
+                        <textarea id="collegeDescription" class="form-control" rows="3" placeholder="Description of the college"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="displayOrder"><i class="fas fa-sort-numeric-down"></i> Display Order</label>
+                        <input type="number" id="displayOrder" class="form-control" value="0" min="0">
+                        <small class="form-text">Lower numbers appear first</small>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="isActive" checked>
+                        <label for="isActive">Active</label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addCollegeModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save College</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="editCollegeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit College</h3>
+                <button class="close-modal" onclick="closeModal('editCollegeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editCollegeForm">
+                    <input type="hidden" id="editCollegeId">
+                    <div class="form-group">
+                        <label for="editCollegeCode"><i class="fas fa-code"></i> College Code</label>
+                        <input type="text" id="editCollegeCode" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCollegeName"><i class="fas fa-university"></i> College Name</label>
+                        <input type="text" id="editCollegeName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCollegeDescription"><i class="fas fa-align-left"></i> Description</label>
+                        <textarea id="editCollegeDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDisplayOrder"><i class="fas fa-sort-numeric-down"></i> Display Order</label>
+                        <input type="number" id="editDisplayOrder" class="form-control">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="editIsActive">
+                        <label for="editIsActive">Active</label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editCollegeModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update College</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="addProgramModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-book"></i> Add Program</h3>
+                <button class="close-modal" onclick="closeModal('addProgramModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addProgramForm">
+                    <input type="hidden" id="programCollegeId">
+                    <div class="form-group">
+                        <label for="programCode"><i class="fas fa-code"></i> Program Code (Optional)</label>
+                        <input type="text" id="programCode" class="form-control" placeholder="e.g., BSC">
+                    </div>
+                    <div class="form-group">
+                        <label for="programName"><i class="fas fa-book"></i> Program Name</label>
+                        <input type="text" id="programName" class="form-control" placeholder="e.g., Bachelor of Science in Criminology" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="programDisplayOrder"><i class="fas fa-sort-numeric-down"></i> Display Order</label>
+                        <input type="number" id="programDisplayOrder" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="programIsActive" checked>
+                        <label for="programIsActive">Active</label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addProgramModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Program</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="editProgramModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Program</h3>
+                <button class="close-modal" onclick="closeModal('editProgramModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProgramForm">
+                    <input type="hidden" id="editProgramId">
+                    <input type="hidden" id="editProgramCollegeId">
+                    <div class="form-group">
+                        <label for="editProgramCode"><i class="fas fa-code"></i> Program Code</label>
+                        <input type="text" id="editProgramCode" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="editProgramName"><i class="fas fa-book"></i> Program Name</label>
+                        <input type="text" id="editProgramName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editProgramDisplayOrder"><i class="fas fa-sort-numeric-down"></i> Display Order</label>
+                        <input type="number" id="editProgramDisplayOrder" class="form-control">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="editProgramIsActive">
+                        <label for="editProgramIsActive">Active</label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editProgramModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Program</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmTitle"><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+                <button class="close-modal" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure you want to perform this action?</p>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmAction()">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationMessage">Operation successful!</span>
+    </div>
+
+    <script>
+        // Global variables
+        let collegesData = [];
+        let currentAction = {};
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadColleges();
+            setupFormEvents();
+        });
+        
+        // Load colleges from API
+        async function loadColleges() {
+            const collegeList = document.getElementById('collegeList');
+            collegeList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                const response = await fetch('/api/colleges/all');
+                if (!response.ok) throw new Error('Failed to load colleges');
+                
+                collegesData = await response.json();
+                renderColleges(collegesData);
+            } catch (error) {
+                collegeList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Loading Data</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadColleges()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Render colleges to the page
+        function renderColleges(colleges) {
+            const collegeList = document.getElementById('collegeList');
+            
+            if (colleges.length === 0) {
+                collegeList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-university"></i>
+                        <h3>No Colleges Found</h3>
+                        <p>Add your first college to get started!</p>
+                        <button class="btn btn-primary" onclick="openAddCollegeModal()">
+                            <i class="fas fa-plus"></i> Add First College
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            collegeList.innerHTML = colleges.map(college => `
+                <div class="college-card" id="college-${college.id}">
+                    <div class="college-header">
+                        <div class="college-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="college-info">
+                            <h3>${college.name}</h3>
+                            <span class="college-code">${college.code}</span>
+                        </div>
+                        <div class="college-status">
+                            <span class="status-badge ${college.is_active ? 'status-active' : 'status-inactive'}">
+                                ${college.is_active ? 'ACTIVE' : 'INACTIVE'}
+                            </span>
+                            <span class="display-order">Order: ${college.display_order}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="college-description">
+                        ${college.description || 'No description provided.'}
+                    </div>
+                    
+                    <div class="programs-section">
+                        <div class="programs-header">
+                            <h4><i class="fas fa-book-open"></i> Programs (${college.programs.length})</h4>
+                            <button class="add-program-btn" onclick="openAddProgramModal(${college.id})">
+                                <i class="fas fa-plus"></i> Add Program
+                            </button>
+                        </div>
+                        
+                        ${college.programs.length > 0 ? `
+                            <div class="programs-list">
+                                ${college.programs.map(program => `
+                                    <div class="program-item">
+                                        <div class="program-info">
+                                            <i class="fas fa-book"></i>
+                                            <span>${program.name} ${program.code ? `(${program.code})` : ''}</span>
+                                            <small class="program-order">Order: ${program.display_order}</small>
+                                        </div>
+                                        <div class="program-actions">
+                                            <button class="action-btn edit-btn" onclick="openEditProgramModal(${program.id}, ${college.id})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="action-btn delete-btn" onclick="confirmDeleteProgram(${program.id}, ${college.id})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="empty-state" style="padding: 20px;">
+                                <i class="fas fa-book"></i>
+                                <p>No programs added yet.</p>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="college-actions">
+                        <button class="college-action-btn edit-college-btn" onclick="openEditCollegeModal(${college.id})">
+                            <i class="fas fa-edit"></i> Edit College
+                        </button>
+                        ${college.is_active ? `
+                            <button class="college-action-btn delete-college-btn" onclick="confirmDeleteCollege(${college.id})">
+                                <i class="fas fa-trash"></i> Delete College
+                            </button>
+                        ` : `
+                            <button class="college-action-btn restore-college-btn" onclick="confirmRestoreCollege(${college.id})">
+                                <i class="fas fa-undo"></i> Restore College
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        function openAddCollegeModal() {
+            document.getElementById('addCollegeForm').reset();
+            openModal('addCollegeModal');
+        }
+        
+        function openEditCollegeModal(collegeId) {
+            const college = collegesData.find(c => c.id === collegeId);
+            if (!college) return;
+            
+            document.getElementById('editCollegeId').value = college.id;
+            document.getElementById('editCollegeCode').value = college.code;
+            document.getElementById('editCollegeName').value = college.name;
+            document.getElementById('editCollegeDescription').value = college.description || '';
+            document.getElementById('editDisplayOrder').value = college.display_order;
+            document.getElementById('editIsActive').checked = college.is_active;
+            
+            openModal('editCollegeModal');
+        }
+        
+        function openAddProgramModal(collegeId) {
+            document.getElementById('programCollegeId').value = collegeId;
+            document.getElementById('addProgramForm').reset();
+            openModal('addProgramModal');
+        }
+        
+        function openEditProgramModal(programId, collegeId) {
+            const college = collegesData.find(c => c.id === collegeId);
+            if (!college) return;
+            
+            const program = college.programs.find(p => p.id === programId);
+            if (!program) return;
+            
+            document.getElementById('editProgramId').value = program.id;
+            document.getElementById('editProgramCollegeId').value = collegeId;
+            document.getElementById('editProgramCode').value = program.code || '';
+            document.getElementById('editProgramName').value = program.name;
+            document.getElementById('editProgramDisplayOrder').value = program.display_order;
+            document.getElementById('editProgramIsActive').checked = program.is_active;
+            
+            openModal('editProgramModal');
+        }
+        
+        // Confirmation functions
+        function confirmDeleteCollege(collegeId) {
+            currentAction = {
+                type: 'deleteCollege',
+                collegeId: collegeId
+            };
+            
+            document.getElementById('confirmTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Delete College';
+            document.getElementById('confirmMessage').textContent = 
+                'Are you sure you want to delete this college? This will also delete all its programs.';
+            openModal('confirmModal');
+        }
+        
+        function confirmRestoreCollege(collegeId) {
+            currentAction = {
+                type: 'restoreCollege',
+                collegeId: collegeId
+            };
+            
+            document.getElementById('confirmTitle').innerHTML = '<i class="fas fa-undo"></i> Restore College';
+            document.getElementById('confirmMessage').textContent = 
+                'Are you sure you want to restore this college?';
+            openModal('confirmModal');
+        }
+        
+        function confirmDeleteProgram(programId, collegeId) {
+            currentAction = {
+                type: 'deleteProgram',
+                programId: programId,
+                collegeId: collegeId
+            };
+            
+            document.getElementById('confirmTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Delete Program';
+            document.getElementById('confirmMessage').textContent = 
+                'Are you sure you want to delete this program?';
+            openModal('confirmModal');
+        }
+        
+        function confirmAction() {
+            switch(currentAction.type) {
+                case 'deleteCollege':
+                    deleteCollege(currentAction.collegeId);
+                    break;
+                case 'restoreCollege':
+                    restoreCollege(currentAction.collegeId);
+                    break;
+                case 'deleteProgram':
+                    deleteProgram(currentAction.programId, currentAction.collegeId);
+                    break;
+            }
+            closeModal('confirmModal');
+        }
+        
+        // Setup form event listeners
+        function setupFormEvents() {
+            // Add College Form
+            document.getElementById('addCollegeForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await addCollege();
+            });
+            
+            // Edit College Form
+            document.getElementById('editCollegeForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await updateCollege();
+            });
+            
+            // Add Program Form
+            document.getElementById('addProgramForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await addProgram();
+            });
+            
+            // Edit Program Form
+            document.getElementById('editProgramForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await updateProgram();
+            });
+        }
+        
+        // API Functions
+        async function addCollege() {
+            const collegeData = {
+                code: document.getElementById('collegeCode').value.trim(),
+                name: document.getElementById('collegeName').value.trim(),
+                description: document.getElementById('collegeDescription').value.trim(),
+                display_order: parseInt(document.getElementById('displayOrder').value) || 0,
+                is_active: document.getElementById('isActive').checked
+            };
+            
+            try {
+                const response = await fetch('/api/colleges', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(collegeData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to add college');
+                }
+                
+                showNotification('College added successfully!', 'success');
+                closeModal('addCollegeModal');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function updateCollege() {
+            const collegeId = document.getElementById('editCollegeId').value;
+            const collegeData = {
+                code: document.getElementById('editCollegeCode').value.trim(),
+                name: document.getElementById('editCollegeName').value.trim(),
+                description: document.getElementById('editCollegeDescription').value.trim(),
+                display_order: parseInt(document.getElementById('editDisplayOrder').value) || 0,
+                is_active: document.getElementById('editIsActive').checked
+            };
+            
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(collegeData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to update college');
+                }
+                
+                showNotification('College updated successfully!', 'success');
+                closeModal('editCollegeModal');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function deleteCollege(collegeId) {
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete college');
+                }
+                
+                showNotification('College deleted successfully!', 'success');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function restoreCollege(collegeId) {
+            try {
+                const response = await fetch(`/api/colleges/${collegeId}/restore`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to restore college');
+                }
+                
+                showNotification('College restored successfully!', 'success');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function addProgram() {
+            const collegeId = document.getElementById('programCollegeId').value;
+            const programData = {
+                college_id: parseInt(collegeId),
+                code: document.getElementById('programCode').value.trim(),
+                name: document.getElementById('programName').value.trim(),
+                display_order: parseInt(document.getElementById('programDisplayOrder').value) || 0,
+                is_active: document.getElementById('programIsActive').checked
+            };
+            
+            try {
+                const response = await fetch('/api/programs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(programData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to add program');
+                }
+                
+                showNotification('Program added successfully!', 'success');
+                closeModal('addProgramModal');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function updateProgram() {
+            const programId = document.getElementById('editProgramId').value;
+            const programData = {
+                code: document.getElementById('editProgramCode').value.trim(),
+                name: document.getElementById('editProgramName').value.trim(),
+                display_order: parseInt(document.getElementById('editProgramDisplayOrder').value) || 0,
+                is_active: document.getElementById('editProgramIsActive').checked
+            };
+            
+            try {
+                const response = await fetch(`/api/programs/${programId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(programData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to update program');
+                }
+                
+                showNotification('Program updated successfully!', 'success');
+                closeModal('editProgramModal');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        async function deleteProgram(programId, collegeId) {
+            try {
+                const response = await fetch(`/api/programs/${programId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete program');
+                }
+                
+                showNotification('Program deleted successfully!', 'success');
+                await loadColleges();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            notification.className = `notification ${type}`;
+            messageEl.textContent = message;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
