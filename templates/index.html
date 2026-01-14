@@ -327,6 +327,37 @@
         }
 
         .status-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: right; }
+        
+        /* College Loading Indicator */
+        .college-loading {
+            font-size: 10px;
+            color: var(--primary-gold);
+            padding: 8px;
+            text-align: center;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        /* College Badge in Dropdown */
+        .college-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+        }
+        
+        .college-code {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--primary-gold);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
 
         @media (max-width: 1024px) {
             body { flex-direction: column; overflow-y: auto; height: auto; }
@@ -449,22 +480,17 @@
             </div>
         </div>
         
-        <!-- College and Program Dropdowns -->
+        <!-- College and Program Dropdowns - Dynamic from Database -->
         <div class="row">
             <div class="col-half">
                 <label>College / Department</label>
                 <select id="collegeSelect" onchange="updatePrograms()">
-                    <option value="">-- Select College --</option>
-                    <option value="College of Criminal Justice Education (CCJE)">College of Criminal Justice Education (CCJE)</option>
-                    <option value="College of Education, Arts and Sciences (CEAS)">College of Education, Arts and Sciences (CEAS)</option>
-                    <option value="College of Information Technology, Entertainment and Communication (CITEC)">College of Information Technology, Entertainment and Communication (CITEC)</option>
-                    <option value="College of Engineering and Architecture (CENAR)">College of Engineering and Architecture (CENAR)</option>
-                    <option value="College of Business, Accountancy and Auditing (CBAA)">College of Business, Accountancy and Auditing (CBAA)</option>
+                    <option value="">-- Loading Colleges... --</option>
                 </select>
             </div>
             <div class="col-half">
                 <label>Program / Course</label>
-                <select id="programSelect">
+                <select id="programSelect" disabled>
                     <option value="">-- Select College First --</option>
                 </select>
             </div>
@@ -732,6 +758,10 @@
             disciplinaryDetails: ""
         };
 
+        // Store dynamic colleges and programs from database
+        let dynamicColleges = [];
+        let dynamicPrograms = [];
+
         const philippineLocations = {
             "NCR": ["Metro Manila"],
             "Region IV-A (CALABARZON)": ["Batangas", "Cavite", "Laguna", "Quezon", "Rizal"],
@@ -746,78 +776,128 @@
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
-        // College and Programs Data
-        const collegePrograms = {
-            "College of Criminal Justice Education (CCJE)": [
-                "Bachelor of Science in Criminology"
-            ],
-            "College of Education, Arts and Sciences (CEAS)": [
-                "Bachelor of Elementary Education",
-                "Bachelor of Secondary Education",
-                "Bachelor of Science in Psychology",
-                "Bachelor of Science in Legal Management",
-                "Bachelor of Science in Social Work"
-            ],
-            "College of Information Technology, Entertainment and Communication (CITEC)": [
-                "Bachelor of Science in Information Technology",
-                "Bachelor of Arts in Multimedia Arts"
-            ],
-            "College of Engineering and Architecture (CENAR)": [
-                "Bachelor of Science in Industrial Engineering",
-                "Bachelor of Science in Computer Engineering",
-                "Bachelor of Science in Architecture"
-            ],
-            "College of Business, Accountancy and Auditing (CBAA)": [
-                "Bachelor of Science in Business Administration",
-                "Bachelor of Science in Accountancy",
-                "Bachelor of Science in Internal Auditing"
-            ]
-        };
-
-        function populateRegions() {
-            const regionSelect = document.getElementById("addressRegion");
-            for (const region in philippineLocations) {
-                const option = document.createElement("option");
-                option.value = region;
-                option.textContent = region;
-                regionSelect.appendChild(option);
+        // ================= COLLEGE MANAGEMENT FUNCTIONS =================
+        async function loadDynamicColleges() {
+            const collegeSelect = document.getElementById('collegeSelect');
+            collegeSelect.innerHTML = '<option value="">Loading colleges from database...</option>';
+            
+            try {
+                // Try to load from database API
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    const colleges = await response.json();
+                    dynamicColleges = colleges;
+                    
+                    // Populate college dropdown
+                    collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                    
+                    colleges.forEach(college => {
+                        const option = document.createElement('option');
+                        option.value = college.name;
+                        option.textContent = `${college.code} - ${college.name}`;
+                        option.dataset.collegeId = college.id;
+                        collegeSelect.appendChild(option);
+                    });
+                    
+                    console.log(`✅ Loaded ${colleges.length} colleges from database`);
+                    
+                } else {
+                    // Fallback to hardcoded colleges
+                    console.log('⚠️ Using fallback hardcoded colleges');
+                    loadFallbackColleges();
+                }
+                
+            } catch (error) {
+                console.error('Error loading colleges:', error);
+                loadFallbackColleges();
             }
         }
-
-        function updateProvinces() {
-            const regionSelect = document.getElementById("addressRegion");
-            const provinceSelect = document.getElementById("addressProvince");
-            const selectedRegion = regionSelect.value;
-            provinceSelect.innerHTML = '<option value="">Select Province</option>';
-            if (selectedRegion && philippineLocations[selectedRegion]) {
-                philippineLocations[selectedRegion].forEach(province => {
-                    const option = document.createElement("option");
-                    option.value = province;
-                    option.textContent = province;
-                    provinceSelect.appendChild(option);
-                });
+        
+        function loadFallbackColleges() {
+            const collegeSelect = document.getElementById('collegeSelect');
+            const hardcodedColleges = [
+                { id: 1, code: 'CCJE', name: 'College of Criminal Justice Education (CCJE)' },
+                { id: 2, code: 'CEAS', name: 'College of Education, Arts and Sciences (CEAS)' },
+                { id: 3, code: 'CITEC', name: 'College of Information Technology, Entertainment and Communication (CITEC)' },
+                { id: 4, code: 'CENAR', name: 'College of Engineering and Architecture (CENAR)' },
+                { id: 5, code: 'CBAA', name: 'College of Business, Accountancy and Auditing (CBAA)' }
+            ];
+            
+            collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+            
+            hardcodedColleges.forEach(college => {
+                const option = document.createElement('option');
+                option.value = college.name;
+                option.textContent = `${college.code} - ${college.name}`;
+                option.dataset.collegeId = college.id;
+                collegeSelect.appendChild(option);
+            });
+            
+            dynamicColleges = hardcodedColleges.map(college => ({
+                id: college.id,
+                code: college.code,
+                name: college.name,
+                programs: getFallbackPrograms(college.code)
+            }));
+        }
+        
+        function getFallbackPrograms(collegeCode) {
+            switch(collegeCode) {
+                case 'CCJE':
+                    return [{ name: 'Bachelor of Science in Criminology' }];
+                case 'CEAS':
+                    return [
+                        { name: 'Bachelor of Elementary Education' },
+                        { name: 'Bachelor of Secondary Education' },
+                        { name: 'Bachelor of Science in Psychology' },
+                        { name: 'Bachelor of Science in Legal Management' },
+                        { name: 'Bachelor of Science in Social Work' }
+                    ];
+                case 'CITEC':
+                    return [
+                        { name: 'Bachelor of Science in Information Technology' },
+                        { name: 'Bachelor of Arts in Multimedia Arts' }
+                    ];
+                case 'CENAR':
+                    return [
+                        { name: 'Bachelor of Science in Industrial Engineering' },
+                        { name: 'Bachelor of Science in Computer Engineering' },
+                        { name: 'Bachelor of Science in Architecture' }
+                    ];
+                case 'CBAA':
+                    return [
+                        { name: 'Bachelor of Science in Business Administration' },
+                        { name: 'Bachelor of Science in Accountancy' },
+                        { name: 'Bachelor of Science in Internal Auditing' }
+                    ];
+                default:
+                    return [];
             }
         }
-
-        // Function to update programs based on selected college
+        
         function updatePrograms() {
-            const collegeSelect = document.getElementById("collegeSelect");
-            const programSelect = document.getElementById("programSelect");
-            const selectedCollege = collegeSelect.value;
+            const collegeSelect = document.getElementById('collegeSelect');
+            const programSelect = document.getElementById('programSelect');
+            const selectedCollege = dynamicColleges.find(c => c.name === collegeSelect.value);
             
             programSelect.innerHTML = '<option value="">-- Select Program --</option>';
+            programSelect.disabled = !selectedCollege;
             
-            if (selectedCollege && collegePrograms[selectedCollege]) {
-                collegePrograms[selectedCollege].forEach(program => {
-                    const option = document.createElement("option");
-                    option.value = program;
-                    option.textContent = program;
+            if (selectedCollege && selectedCollege.programs) {
+                selectedCollege.programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.name;
+                    option.textContent = program.name;
                     programSelect.appendChild(option);
                 });
             }
         }
 
-        window.addEventListener('load', populateRegions);
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            populateRegions();
+            loadDynamicColleges();
+        });
 
         function calculateAge() {
             const birthDate = new Date(document.getElementById('childBirthdate').value);
@@ -1538,6 +1618,31 @@
                 console.log("Form 138 selected, will be uploaded on save");
             }
         });
+        
+        function populateRegions() {
+            const regionSelect = document.getElementById("addressRegion");
+            for (const region in philippineLocations) {
+                const option = document.createElement("option");
+                option.value = region;
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            }
+        }
+
+        function updateProvinces() {
+            const regionSelect = document.getElementById("addressRegion");
+            const provinceSelect = document.getElementById("addressProvince");
+            const selectedRegion = regionSelect.value;
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            if (selectedRegion && philippineLocations[selectedRegion]) {
+                philippineLocations[selectedRegion].forEach(province => {
+                    const option = document.createElement("option");
+                    option.value = province;
+                    option.textContent = province;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        }
     </script>
 </body>
 </html>
