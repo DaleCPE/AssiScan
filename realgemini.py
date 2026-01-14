@@ -901,6 +901,17 @@ def calculate_goodmoral_score(analysis_data):
     
     return score, status
 
+# ================= DEBUG MIDDLEWARE =================
+@app.before_request
+def log_request_info():
+    """Log all requests for debugging"""
+    if request.path not in ['/static/', '/favicon.ico']:
+        print(f"\n{'='*60}")
+        print(f"🌐 {request.method} {request.path}")
+        print(f"🔍 Session: user_id={session.get('user_id')}, role={session.get('role')}")
+        print(f"📱 IP: {request.remote_addr}")
+        print(f"{'='*60}")
+
 # ================= USER AUTHENTICATION ROUTES =================
 
 @app.route('/api/login', methods=['POST'])
@@ -2002,29 +2013,65 @@ def get_colleges_dropdown():
 @app.route('/')
 def index():
     """Main page - redirect based on role"""
+    print(f"🔍 Root route accessed. Session: user_id={session.get('user_id')}, role={session.get('role')}")
+    
     if 'user_id' not in session:
+        print("🔍 No user_id in session, redirecting to login")
         return redirect('/login')
     
     if session.get('role') == 'STUDENT':
+        print("🔍 User is STUDENT, serving index.html")
         return render_template('index.html')
     else:
+        print("🔍 User is SUPER_ADMIN, redirecting to admin dashboard")
         return redirect('/admin/dashboard')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
+    print(f"🔍 Login route accessed. Session: user_id={session.get('user_id')}, role={session.get('role')}")
+    
     if request.method == 'GET':
-        if 'user_id' in session:
-            # Redirect based on role
-            if session.get('role') == 'STUDENT':
-                return redirect('/')
+        # Kung may session na, i-check kung valid
+        if 'user_id' in session and 'role' in session:
+            print(f"🔍 User already has session: user_id={session['user_id']}, role={session['role']}")
+            
+            # Validate session token
+            session_token = session.get('session_token')
+            if session_token:
+                user = validate_session(session_token)
+                if user:
+                    # Valid session, redirect based on role
+                    if session['role'] == 'STUDENT':
+                        print("🔍 Valid STUDENT session, redirecting to /")
+                        return redirect('/')
+                    else:
+                        print("🔍 Valid SUPER_ADMIN session, redirecting to /admin/dashboard")
+                        return redirect('/admin/dashboard')
+                else:
+                    print("🔍 Invalid session token, clearing session")
+                    session.clear()
             else:
-                return redirect('/admin/dashboard')
+                print("🔍 No session token, clearing session")
+                session.clear()
+        
+        print("🔍 Showing login page")
         return render_template('login.html')
     
     elif request.method == 'POST':
-        # Use the new login endpoint
+        print("🔍 POST to login form, redirecting to API")
         return redirect('/api/login')
+
+@app.route('/force-logout')
+def force_logout():
+    """Force logout for debugging"""
+    session.clear()
+    return """
+    <h1>✅ Session Cleared</h1>
+    <p>All session data has been cleared.</p>
+    <p><a href='/login'>Go to Login</a></p>
+    <p><a href='/'>Go to Home</a></p>
+    """
 
 @app.route('/logout')
 def logout():
