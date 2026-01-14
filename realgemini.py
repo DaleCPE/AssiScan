@@ -134,10 +134,7 @@ def permission_required(permission):
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
     """Hash password with salt"""
-    # Use the same hashing method as the existing stored passwords
-    # The stored hash appears to be: salt + "$" + hash
-    # Let's try to match the existing format
-    salt = "a095da1f466b22a5b26f9538d1d5fc73"  # Use the salt from the stored hash
+    salt = secrets.token_hex(16)
     return salt + "$" + hashlib.sha256((password + salt).encode()).hexdigest()
 
 def verify_password(stored_hash, password):
@@ -327,7 +324,6 @@ def init_db():
                 default_password = ADMIN_PASSWORD
                 password_hash = hash_password(default_password)
                 
-                # Debug: Print password and hash
                 print(f"🔑 Creating admin with password: {default_password}")
                 print(f"🔑 Password hash: {password_hash}")
                 
@@ -910,7 +906,7 @@ def log_request_info():
     if request.path not in ['/static/', '/favicon.ico']:
         print(f"\n{'='*60}")
         print(f"🌐 {request.method} {request.path}")
-        print(f"🔍 Session: user_id={session.get('user_id')}, role={session.get('role')}")
+        print(f"🔍 Session: {dict(session)}")
         print(f"📱 IP: {request.remote_addr}")
         print(f"{'='*60}")
 
@@ -1024,14 +1020,24 @@ def logout_user():
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
     """Check if user session is valid"""
-    session_token = request.headers.get('Authorization')
+    print(f"🔍 Checking session: {dict(session)}")
     
-    if not session_token:
+    if 'user_id' not in session:
+        print("❌ No user_id in session")
         return jsonify({"authenticated": False}), 200
     
+    # Get session token from session
+    session_token = session.get('session_token')
+    
+    if not session_token:
+        print("❌ No session token in session")
+        return jsonify({"authenticated": False}), 200
+    
+    # Validate the session
     user = validate_session(session_token)
     
     if user:
+        print(f"✅ Valid session for user: {user['username']}, role: {user['role']}")
         return jsonify({
             "authenticated": True,
             "user": {
@@ -1044,6 +1050,7 @@ def check_session():
             "permissions": PERMISSIONS.get(user['role'].upper(), [])
         })
     else:
+        print("❌ Invalid session token")
         return jsonify({"authenticated": False}), 200
 
 @app.route('/api/change-password', methods=['POST'])
@@ -2010,61 +2017,61 @@ def get_colleges_dropdown():
     finally:
         conn.close()
 
-# ================= ROUTES WITH ROLE-BASED ACCESS =================
+# ================= FIXED ROUTES WITH ROLE-BASED ACCESS =================
 
 @app.route('/')
 def index():
     """Main page - redirect based on role"""
-    print(f"🔍 Root route accessed. Session: user_id={session.get('user_id')}, role={session.get('role')}")
+    print(f"🔍 Root route accessed. Session: {dict(session)}")
     
+    # Check kung authenticated ang user
     if 'user_id' not in session:
         print("🔍 No user_id in session, redirecting to login")
         return redirect('/login')
     
+    # Get user role from session
+    user_role = session.get('role')
+    print(f"🔍 User role from session: {user_role}")
+    
+    if not user_role:
+        print("🔍 No role in session, redirecting to login")
+        session.clear()
+        return redirect('/login')
+    
     # Convert role to uppercase for comparison
-    user_role = session.get('role', '').upper()
+    user_role = user_role.upper()
     
     if user_role == 'STUDENT':
         print("🔍 User is STUDENT, serving index.html")
+        # Serve the scanner interface for students
         return render_template('index.html')
     elif user_role == 'SUPER_ADMIN':
         print("🔍 User is SUPER_ADMIN, redirecting to admin dashboard")
         return redirect('/admin/dashboard')
     else:
         print(f"🔍 Unknown role: {user_role}, redirecting to login")
+        session.clear()
         return redirect('/login')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
-    print(f"🔍 Login route accessed. Session: user_id={session.get('user_id')}, role={session.get('role')}")
+    print(f"🔍 Login route accessed. Session: {dict(session)}")
     
     if request.method == 'GET':
-        # Kung may session na, i-check kung valid
+        # Kung may session na, i-check kung valid at redirect based on role
         if 'user_id' in session and 'role' in session:
             print(f"🔍 User already has session: user_id={session['user_id']}, role={session['role']}")
             
-            # Validate session token
-            session_token = session.get('session_token')
-            if session_token:
-                user = validate_session(session_token)
-                if user:
-                    # Valid session, redirect based on role
-                    user_role = session['role'].upper()
-                    if user_role == 'STUDENT':
-                        print("🔍 Valid STUDENT session, redirecting to /")
-                        return redirect('/')
-                    elif user_role == 'SUPER_ADMIN':
-                        print("🔍 Valid SUPER_ADMIN session, redirecting to /admin/dashboard")
-                        return redirect('/admin/dashboard')
-                    else:
-                        print(f"🔍 Unknown role: {user_role}, clearing session")
-                        session.clear()
-                else:
-                    print("🔍 Invalid session token, clearing session")
-                    session.clear()
+            user_role = session['role'].upper()
+            if user_role == 'STUDENT':
+                print("🔍 Redirecting STUDENT to /")
+                return redirect('/')
+            elif user_role == 'SUPER_ADMIN':
+                print("🔍 Redirecting SUPER_ADMIN to /admin/dashboard")
+                return redirect('/admin/dashboard')
             else:
-                print("🔍 No session token, clearing session")
+                print(f"🔍 Unknown role: {user_role}, clearing session")
                 session.clear()
         
         print("🔍 Showing login page")
@@ -2073,17 +2080,6 @@ def login():
     elif request.method == 'POST':
         print("🔍 POST to login form, redirecting to API")
         return redirect('/api/login')
-
-@app.route('/force-logout')
-def force_logout():
-    """Force logout for debugging"""
-    session.clear()
-    return """
-    <h1>✅ Session Cleared</h1>
-    <p>All session data has been cleared.</p>
-    <p><a href='/login'>Go to Login</a></p>
-    <p><a href='/'>Go to Home</a></p>
-    """
 
 @app.route('/logout')
 def logout():
@@ -2151,6 +2147,18 @@ def admin_colleges():
         return redirect('/')
     
     return render_template('admin_colleges.html')
+
+# ================= ADDED ROUTES FOR STUDENTS =================
+
+@app.route('/my-records')
+@login_required
+def my_records():
+    """Page for students to view their own records"""
+    user_role = session.get('role', '').upper()
+    if user_role != 'STUDENT':
+        return redirect('/')
+    
+    return render_template('student_records.html')
 
 # ================= GOOD MORAL SCANNING ENDPOINT =================
 @app.route('/scan-goodmoral', methods=['POST'])
@@ -3229,6 +3237,22 @@ def list_uploads():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ================= SIMPLE SESSION CHECK =================
+@app.route('/check-login', methods=['GET'])
+def check_login():
+    """Simple endpoint to check if user is logged in"""
+    print(f"🔍 /check-login accessed. Session: {dict(session)}")
+    
+    if 'user_id' in session and 'role' in session:
+        return jsonify({
+            "logged_in": True,
+            "username": session.get('username'),
+            "role": session.get('role'),
+            "full_name": session.get('full_name')
+        })
+    else:
+        return jsonify({"logged_in": False})
 
 # ================= APPLICATION START =================
 if __name__ == '__main__':
