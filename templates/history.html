@@ -52,7 +52,11 @@
             gap: 15px;
         }
 
-        .btn-group { display: flex; gap: 10px; }
+        .btn-group { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center;
+        }
 
         .btn-action {
             text-decoration: none;
@@ -76,6 +80,13 @@
         }
         .btn-back:hover { background: var(--gold); color: #000; }
 
+        .btn-admin {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+        .btn-admin:hover { background: #3b82f6; color: white; }
+
         .btn-logout {
             background: rgba(50, 0, 0, 0.5);
             border: 1px solid #ff6b6b;
@@ -83,11 +94,89 @@
         }
         .btn-logout:hover { background: #ff6b6b; color: #000; }
 
-        /* SEARCH BAR */
-        .search-container {
+        /* COLLEGE BADGES */
+        .college-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 5px;
+            margin-bottom: 3px;
+            border-left: 3px solid;
+        }
+
+        .badge-ccje {
+            background: rgba(106, 17, 203, 0.2);
+            border-color: #6a11cb;
+            color: #c29cff;
+        }
+
+        .badge-ceas {
+            background: rgba(37, 117, 252, 0.2);
+            border-color: #2575fc;
+            color: #a0c8ff;
+        }
+
+        .badge-citec {
+            background: rgba(0, 176, 155, 0.2);
+            border-color: #00b09b;
+            color: #80ffea;
+        }
+
+        .badge-cenar {
+            background: rgba(150, 201, 61, 0.2);
+            border-color: #96c93d;
+            color: #e2ffb2;
+        }
+
+        .badge-cbaa {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: #dc3545;
+            color: #ffb3b9;
+        }
+
+        .badge-default {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--gold);
+            color: #f3d576;
+        }
+
+        /* PROGRAM INFO */
+        .program-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+
+        .program-icon {
+            color: #96c93d;
+            font-size: 10px;
+        }
+
+        .program-name {
+            font-size: 11px;
+            color: #aaa;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* SEARCH & FILTER BAR */
+        .filter-container {
+            display: flex;
+            gap: 15px;
             margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
             position: relative;
-            max-width: 400px;
+            flex: 1;
+            min-width: 300px;
         }
 
         .search-input {
@@ -119,6 +208,29 @@
             pointer-events: none;
         }
 
+        .filter-select {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: #fff;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            min-width: 180px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .filter-select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .filter-select option {
+            background: #121212;
+            color: white;
+        }
+
         /* TABLE */
         .table-wrapper {
             width: 100%;
@@ -130,9 +242,15 @@
             backdrop-filter: blur(5px);
         }
 
-        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 1500px; 
+        }
 
-        thead { background: rgba(212, 175, 55, 0.1); }
+        thead { 
+            background: rgba(212, 175, 55, 0.1); 
+        }
 
         th {
             padding: 18px;
@@ -157,31 +275,69 @@
         tr:hover { background-color: rgba(212, 175, 55, 0.05); }
 
         /* Data Styling */
-        .sub-text { display: block; font-size: 11px; color: #888; margin-top: 2px; }
-        .highlight-text { color: #fff; font-weight: 600; }
-        
-        /* College & Program Styling */
-        .college-info {
-            font-size: 13px;
-            color: #f3d576;
-            font-weight: 500;
-            margin-bottom: 3px;
+        .sub-text { 
+            display: block; 
+            font-size: 11px; 
+            color: #888; 
+            margin-top: 2px; 
         }
         
-        .program-info {
+        .highlight-text { 
+            color: #fff; 
+            font-weight: 600; 
+        }
+        
+        /* Student Info Cell */
+        .student-cell {
+            min-width: 200px;
+        }
+        
+        .student-name {
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .student-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 12px;
-            color: #aaa;
+            color: white;
+            flex-shrink: 0;
         }
         
-        .program-badge {
+        .student-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .student-gender {
             display: inline-block;
-            background: rgba(212, 175, 55, 0.15);
-            color: var(--gold);
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 1px 6px;
+            border-radius: 10px;
             font-size: 10px;
-            margin-top: 3px;
-            border-left: 3px solid var(--gold);
+            margin-right: 5px;
+        }
+        
+        .gender-male {
+            background: rgba(66, 153, 225, 0.2);
+            color: #4299e1;
+            border: 1px solid #4299e1;
+        }
+        
+        .gender-female {
+            background: rgba(237, 100, 166, 0.2);
+            color: #ed64a6;
+            border: 1px solid #ed64a6;
         }
         
         /* Document Links */
@@ -200,13 +356,17 @@
             margin-bottom: 4px;
             cursor: pointer;
         }
+        
         .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
         .doc-link.f137 { border-color: var(--gold); color: #f3d576; }
         .doc-link.gm { border-color: #55a630; color: #80b918; }
         .doc-link.f138 { border-color: #9C27B0; color: #e1bee7; }
         .doc-link.other { border-color: #FF9800; color: #FFCC80; }
         
-        .doc-link:hover { transform: translateY(-2px); filter: brightness(1.2); }
+        .doc-link:hover { 
+            transform: translateY(-2px); 
+            filter: brightness(1.2); 
+        }
         
         /* Record Status Badges */
         .record-badge {
@@ -226,7 +386,13 @@
             border: 1px solid #28a745;
         }
         
-        .badge-bad {
+        .badge-fair {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+        
+        .badge-poor {
             background: rgba(220, 53, 69, 0.2);
             color: #dc3545;
             border: 1px solid #dc3545;
@@ -259,6 +425,12 @@
         }
         
         /* ACTION BUTTONS */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
         .action-btn {
             background: transparent;
             border: 1px solid #555;
@@ -267,29 +439,67 @@
             border-radius: 4px;
             cursor: pointer;
             transition: 0.2s;
-            margin: 0 2px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             text-decoration: none;
             font-size: 11px;
+            min-width: 36px;
         }
-        .action-btn:hover { transform: scale(1.1); }
+        
+        .action-btn:hover { 
+            transform: scale(1.1); 
+        }
 
-        .btn-print { border-color: var(--gold); color: var(--gold); }
-        .btn-print:hover { background: var(--gold); color: #000; }
+        .btn-print { 
+            border-color: var(--gold); 
+            color: var(--gold); 
+        }
+        
+        .btn-print:hover { 
+            background: var(--gold); 
+            color: #000; 
+        }
 
-        .btn-view { border-color: #4a6fa5; color: #4a6fa5; }
-        .btn-view:hover { background: #4a6fa5; color: white; }
+        .btn-view { 
+            border-color: #4a6fa5; 
+            color: #4a6fa5; 
+        }
+        
+        .btn-view:hover { 
+            background: #4a6fa5; 
+            color: white; 
+        }
 
-        .btn-images { border-color: #9C27B0; color: #9C27B0; }
-        .btn-images:hover { background: #9C27B0; color: white; }
+        .btn-email { 
+            border-color: #17a2b8; 
+            color: #17a2b8; 
+        }
+        
+        .btn-email:hover { 
+            background: #17a2b8; 
+            color: white; 
+        }
 
-        .btn-delete { border-color: #ff4444; color: #ff4444; }
-        .btn-delete:hover { background: #ff4444; color: white; }
+        .btn-delete { 
+            border-color: #ff4444; 
+            color: #ff4444; 
+        }
+        
+        .btn-delete:hover { 
+            background: #ff4444; 
+            color: white; 
+        }
 
         /* School Info */
-        .lrn-info { font-size: 11px; color: var(--gold); font-family: monospace; letter-spacing: 0.5px; }
+        .lrn-info { 
+            font-size: 11px; 
+            color: var(--gold); 
+            font-family: monospace; 
+            letter-spacing: 0.5px; 
+            margin-bottom: 5px;
+        }
+        
         .grade-badge { 
             background: rgba(212, 175, 55, 0.15); 
             color: var(--gold); 
@@ -297,13 +507,88 @@
             border-radius: 3px; 
             font-size: 11px; 
             font-weight: bold;
+            display: inline-block;
+        }
+
+        /* Email Status */
+        .email-status {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 3px;
+        }
+        
+        .email-sent { 
+            background: rgba(40, 167, 69, 0.2); 
+            color: #28a745; 
+            border: 1px solid #28a745; 
+        }
+        
+        .email-not-sent { 
+            background: rgba(108, 117, 125, 0.2); 
+            color: #6c757d; 
+            border: 1px solid #6c757d; 
         }
 
         /* Loading & No Data */
-        #loading { text-align: center; color: var(--gold); margin-top: 50px; font-family: 'Cinzel', serif; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        #loading { 
+            text-align: center; 
+            color: var(--gold); 
+            margin-top: 50px; 
+            font-family: 'Cinzel', serif; 
+            animation: pulse 1.5s infinite; 
+        }
         
-        #no-match-msg { display: none; text-align: center; padding: 20px; color: #888; font-style: italic; }
+        @keyframes pulse { 
+            0% { opacity: 0.5; } 
+            50% { opacity: 1; } 
+            100% { opacity: 0.5; } 
+        }
+        
+        #no-match-msg { 
+            display: none; 
+            text-align: center; 
+            padding: 20px; 
+            color: #888; 
+            font-style: italic; 
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(20, 5, 5, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            min-width: 100px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
         /* ================= MODAL STYLES ================= */
         .modal-overlay {
@@ -332,7 +617,10 @@
             flex-direction: column;
         }
 
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideDown { 
+            from { transform: translateY(-20px); opacity: 0; } 
+            to { transform: translateY(0); opacity: 1; } 
+        }
 
         .modal-header {
             background: rgba(212, 175, 55, 0.1);
@@ -344,9 +632,23 @@
             flex-shrink: 0;
         }
 
-        .modal-title { font-family: 'Cinzel', serif; color: var(--gold); margin: 0; font-size: 18px; }
-        .modal-close { color: #888; cursor: pointer; font-size: 20px; transition: 0.2s; }
-        .modal-close:hover { color: #fff; }
+        .modal-title { 
+            font-family: 'Cinzel', serif; 
+            color: var(--gold); 
+            margin: 0; 
+            font-size: 18px; 
+        }
+        
+        .modal-close { 
+            color: #888; 
+            cursor: pointer; 
+            font-size: 20px; 
+            transition: 0.2s; 
+        }
+        
+        .modal-close:hover { 
+            color: #fff; 
+        }
 
         .modal-body { 
             padding: 20px; 
@@ -355,155 +657,7 @@
             flex-grow: 1;
         }
 
-        /* Images Grid */
-        .images-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .image-card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 6px;
-            overflow: hidden;
-            transition: 0.3s;
-        }
-        
-        .image-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
-            border-color: var(--gold);
-        }
-        
-        .image-preview {
-            width: 100%;
-            height: 200px;
-            object-fit: contain;
-            background: #000;
-            cursor: pointer;
-            padding: 10px;
-        }
-        
-        .image-info {
-            padding: 10px;
-            border-top: 1px solid #333;
-            background: rgba(0, 0, 0, 0.3);
-        }
-        
-        .image-type {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: bold;
-            margin-right: 5px;
-        }
-        
-        .type-psa { background: #4a6fa5; color: white; }
-        .type-f137 { background: var(--gold); color: black; }
-        .type-f138 { background: #9C27B0; color: white; }
-        .type-goodmoral { background: #28a745; color: white; }
-        .type-other { background: #FF9800; color: black; }
-        
-        /* Good Moral Analysis Box */
-        .analysis-box {
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(212, 175, 55, 0.1);
-        }
-        
-        .analysis-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .analysis-title {
-            font-family: 'Cinzel', serif;
-            color: var(--gold);
-            font-size: 16px;
-        }
-        
-        .analysis-status {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-good { background: #28a745; color: white; }
-        .status-bad { background: #dc3545; color: white; }
-        .status-unknown { background: #6c757d; color: white; }
-        
-        .analysis-details {
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        
-        .analysis-item {
-            margin-bottom: 8px;
-            padding-left: 15px;
-            border-left: 2px solid #444;
-        }
-        
-        /* Fullscreen Image Viewer */
-        .image-viewer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 2000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        
-        .image-viewer img {
-            max-width: 90%;
-            max-height: 80vh;
-            object-fit: contain;
-            border: 2px solid var(--gold);
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
-        }
-        
-        .image-viewer-info {
-            margin-top: 15px;
-            color: white;
-            text-align: center;
-            font-size: 14px;
-        }
-        
-        .close-viewer {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 30px;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.5);
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.3s;
-        }
-        
-        .close-viewer:hover {
-            background: rgba(212, 175, 55, 0.5);
-        }
-
-        /* Student Info */
+        /* Student Details in Modal */
         .student-info-header {
             display: flex;
             justify-content: space-between;
@@ -520,7 +674,7 @@
             margin: 0;
         }
         
-        .student-details {
+        .student-details-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
@@ -535,6 +689,8 @@
             color: #888;
             font-size: 11px;
             margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .detail-value {
@@ -542,32 +698,60 @@
             font-weight: 500;
         }
 
-        /* Email Status */
-        .email-status {
-            font-size: 9px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            display: inline-block;
-            margin-top: 3px;
+        /* College Info in Modal */
+        .college-section {
+            padding: 15px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            border-left: 4px solid var(--gold);
         }
-        
-        .email-sent { 
-            background: rgba(40, 167, 69, 0.2); 
-            color: #28a745; 
-            border: 1px solid #28a745; 
+
+        .college-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
         }
-        
-        .email-not-sent { 
-            background: rgba(108, 117, 125, 0.2); 
-            color: #6c757d; 
-            border: 1px solid #6c757d; 
+
+        .college-title {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 16px;
         }
 
         /* Responsive */
         @media (max-width: 1200px) {
             table { min-width: 1300px; }
-            .student-details {
+            .student-details-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-container {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            .btn-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .stats-bar {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .stat-item {
+                min-width: 80px;
+                padding: 8px 12px;
             }
         }
 
@@ -579,13 +763,56 @@
         <h2><i class="fas fa-database"></i> STUDENT RECORDS</h2>
         <div class="btn-group">
             <a href="/" class="btn-action btn-back"><i class="fas fa-qrcode"></i> Scan New</a>
+            <a href="/admin/colleges" class="btn-action btn-admin"><i class="fas fa-university"></i> Manage Colleges</a>
             <a href="/logout" class="btn-action btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, College, or Program...">
-        <i class="fas fa-search search-icon"></i>
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number" id="totalRecords">0</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="goodRecords">0</div>
+            <div class="stat-label">Good Records</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="collegeCount">0</div>
+            <div class="stat-label">Colleges</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="emailSent">0</div>
+            <div class="stat-label">Emails Sent</div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="filter-container">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search Name, LRN, College, or Program...">
+            <i class="fas fa-search search-icon"></i>
+        </div>
+        
+        <select id="collegeFilter" class="filter-select">
+            <option value="">All Colleges</option>
+        </select>
+        
+        <select id="programFilter" class="filter-select">
+            <option value="">All Programs</option>
+        </select>
+        
+        <select id="statusFilter" class="filter-select">
+            <option value="">All Status</option>
+            <option value="GOOD">Good Record</option>
+            <option value="FAIR">Fair Record</option>
+            <option value="POOR">Poor Record</option>
+        </select>
+        
+        <button onclick="clearFilters()" class="btn-action" style="background: #333; color: #fff; border: 1px solid #555;">
+            <i class="fas fa-times"></i> Clear Filters
+        </button>
     </div>
 
     <div id="loading">LOADING STUDENT RECORDS...</div>
@@ -599,7 +826,7 @@
                     <th>College & Program</th>
                     <th>Documents</th>
                     <th>Moral Record Status</th>
-                    <th style="text-align: center;">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -607,7 +834,7 @@
         <div id="no-match-msg">No records found matching your search.</div>
     </div>
 
-    <!-- Student Documents & Analysis Modal -->
+    <!-- Student Details Modal -->
     <div id="studentModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -633,18 +860,60 @@
         </div>
     </div>
 
-    <!-- Fullscreen Image Viewer -->
-    <div id="imageViewer" class="image-viewer">
-        <div class="close-viewer" onclick="closeImageViewer()">
-            <i class="fas fa-times"></i>
+    <!-- Email Modal -->
+    <div id="emailModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-envelope"></i> Send Email</h3>
+                <i class="fas fa-times modal-close" onclick="closeModal('emailModal')"></i>
+            </div>
+            <div class="modal-body">
+                <div id="emailModalContent">
+                    <p id="emailMessage">Are you sure you want to send an email notification to this student?</p>
+                    <div class="student-email-info">
+                        <p><strong>Student:</strong> <span id="emailStudentName"></span></p>
+                        <p><strong>Email:</strong> <span id="emailAddress"></span></p>
+                        <p><strong>College:</strong> <span id="emailCollege"></span></p>
+                        <p><strong>Program:</strong> <span id="emailProgram"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button onclick="closeModal('emailModal')" style="
+                    background: #6c757d;
+                    color: #fff;
+                    border: none;
+                    padding: 8px 20px;
+                    border-radius: 4px;
+                    cursor: pointer;">
+                    Cancel
+                </button>
+                <button onclick="confirmSendEmail()" style="
+                    background: #28a745;
+                    color: #fff;
+                    border: none;
+                    padding: 8px 20px;
+                    border-radius: 4px;
+                    cursor: pointer;">
+                    Send Email
+                </button>
+            </div>
         </div>
-        <img id="fullscreenImage" src="" alt="Fullscreen Image">
-        <div class="image-viewer-info" id="imageInfo"></div>
     </div>
 
     <script>
         let allRecords = [];
         let serverBaseUrl = window.location.origin;
+        let currentEmailRecordId = null;
+        
+        // College mapping for badges
+        const collegeBadgeMap = {
+            'CCJE': 'badge-ccje',
+            'CEAS': 'badge-ceas', 
+            'CITEC': 'badge-citec',
+            'CENAR': 'badge-cenar',
+            'CBAA': 'badge-cbaa'
+        };
 
         async function loadData() {
             try {
@@ -655,192 +924,262 @@
                 }
 
                 const data = await res.json();
-                allRecords = data.records; 
-
+                allRecords = data.records || [];
+                
+                // Load colleges for filter dropdown
+                await loadCollegesForFilter();
+                
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('recordsTable').style.display = 'table';
-                const tbody = document.getElementById('tableBody');
+                
+                updateStats();
+                renderTable(allRecords);
 
-                if(data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No records found.</td></tr>';
-                    return;
+            } catch (err) { 
+                console.error('Error loading data:', err);
+                document.getElementById('loading').innerText = "ERROR LOADING DATABASE";
+                document.getElementById('loading').style.color = "#ff6b6b";
+            }
+        }
+        
+        async function loadCollegesForFilter() {
+            try {
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    const colleges = await response.json();
+                    
+                    const collegeFilter = document.getElementById('collegeFilter');
+                    const programFilter = document.getElementById('programFilter');
+                    
+                    // Clear existing options
+                    collegeFilter.innerHTML = '<option value="">All Colleges</option>';
+                    programFilter.innerHTML = '<option value="">All Programs</option>';
+                    
+                    // Add college options
+                    colleges.forEach(college => {
+                        const option = document.createElement('option');
+                        option.value = college.name;
+                        option.textContent = `${college.code} - ${college.name}`;
+                        collegeFilter.appendChild(option);
+                    });
+                    
+                    // Update program filter when college changes
+                    collegeFilter.addEventListener('change', function() {
+                        const selectedCollege = colleges.find(c => c.name === this.value);
+                        updateProgramFilter(selectedCollege);
+                    });
                 }
+            } catch (error) {
+                console.error('Error loading colleges for filter:', error);
+            }
+        }
+        
+        function updateProgramFilter(college) {
+            const programFilter = document.getElementById('programFilter');
+            programFilter.innerHTML = '<option value="">All Programs</option>';
+            
+            if (college && college.programs) {
+                college.programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.name;
+                    option.textContent = program.name;
+                    programFilter.appendChild(option);
+                });
+            }
+        }
 
-                tbody.innerHTML = data.records.map(r => {
-                    const psaPath = r.image_path || r.psa_image_path;
-                    const f137Path = r.form137_path || r.f137_image_path;
-                    const f138Path = r.form138_path;
-                    const goodmoralPath = r.goodmoral_path;
-                    const otherDocs = r.other_documents || [];
-                    
-                    const sexColor = (r.sex && r.sex.toLowerCase().includes('fe')) ? '#ffb7b2' : '#b2d8ff';
-                    
-                    // Determine Good Moral Status
-                    let recordStatus = 'UNKNOWN';
-                    let reasonText = '';
-                    let badgeClass = 'badge-unknown';
-                    
-                    if (r.disciplinary_status) {
-                        const status = r.disciplinary_status.toUpperCase();
-                        if (status === 'EXCELLENT' || status === 'GOOD') {
-                            recordStatus = 'GOOD RECORD';
-                            reasonText = 'No past incidents in previous school';
-                            badgeClass = 'badge-good';
-                        } else if (status === 'FAIR' || status === 'POOR') {
-                            recordStatus = 'BAD RECORD';
-                            badgeClass = 'badge-bad';
-                            
-                            // Get reason from analysis
-                            if (r.goodmoral_analysis) {
-                                try {
-                                    const analysis = typeof r.goodmoral_analysis === 'string' 
-                                        ? JSON.parse(r.goodmoral_analysis) 
-                                        : r.goodmoral_analysis;
-                                    
-                                    if (analysis.disciplinary_details && analysis.disciplinary_details.trim() !== '') {
-                                        reasonText = analysis.disciplinary_details;
-                                    } else if (analysis.remarks && analysis.remarks.trim() !== '') {
-                                        reasonText = analysis.remarks;
-                                    } else {
-                                        reasonText = 'Reason not specified in certificate';
-                                    }
-                                } catch (e) {
-                                    reasonText = 'Could not parse analysis data';
-                                }
-                            } else if (r.disciplinary_details && r.disciplinary_details.trim() !== '') {
-                                reasonText = r.disciplinary_details;
-                            } else {
-                                reasonText = 'Reason not specified';
-                            }
-                        }
-                    } else if (r.goodmoral_score !== null && r.goodmoral_score !== undefined) {
-                        if (r.goodmoral_score >= 70) {
-                            recordStatus = 'GOOD RECORD';
-                            reasonText = 'No past incidents in previous school';
-                            badgeClass = 'badge-good';
-                        } else {
-                            recordStatus = 'BAD RECORD';
-                            badgeClass = 'badge-bad';
-                            reasonText = r.disciplinary_details || 'Reason not specified';
+        function renderTable(records) {
+            const tbody = document.getElementById('tableBody');
+            
+            if(records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No records found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = records.map(r => {
+                const psaPath = r.image_path || r.psa_image_path;
+                const f137Path = r.form137_path || r.f137_image_path;
+                const f138Path = r.form138_path;
+                const goodmoralPath = r.goodmoral_path;
+                const otherDocs = r.other_documents || [];
+                
+                // Get college badge class
+                let collegeBadgeClass = 'badge-default';
+                if (r.college) {
+                    for (const [code, badgeClass] of Object.entries(collegeBadgeMap)) {
+                        if (r.college.includes(code)) {
+                            collegeBadgeClass = badgeClass;
+                            break;
                         }
                     }
+                }
+                
+                // Determine Good Moral Status
+                let recordStatus = 'UNKNOWN';
+                let badgeClass = 'badge-unknown';
+                let reasonText = '';
+                
+                if (r.disciplinary_status) {
+                    const status = r.disciplinary_status.toUpperCase();
+                    if (status === 'EXCELLENT' || status === 'GOOD') {
+                        recordStatus = 'GOOD RECORD';
+                        badgeClass = 'badge-good';
+                        reasonText = 'No past incidents in previous school';
+                    } else if (status === 'FAIR') {
+                        recordStatus = 'FAIR RECORD';
+                        badgeClass = 'badge-fair';
+                        reasonText = 'Some concerns noted';
+                    } else if (status === 'POOR') {
+                        recordStatus = 'POOR RECORD';
+                        badgeClass = 'badge-poor';
+                        reasonText = r.disciplinary_details || 'Disciplinary issues detected';
+                    }
+                } else if (r.goodmoral_score !== null && r.goodmoral_score !== undefined) {
+                    if (r.goodmoral_score >= 80) {
+                        recordStatus = 'GOOD RECORD';
+                        badgeClass = 'badge-good';
+                        reasonText = 'No past incidents in previous school';
+                    } else if (r.goodmoral_score >= 60) {
+                        recordStatus = 'FAIR RECORD';
+                        badgeClass = 'badge-fair';
+                        reasonText = 'Some concerns noted';
+                    } else {
+                        recordStatus = 'POOR RECORD';
+                        badgeClass = 'badge-poor';
+                        reasonText = r.disciplinary_details || 'Disciplinary issues detected';
+                    }
+                }
 
-                    // Helper function to get image URL
-                    const getImageUrl = (filename) => {
-                        if (!filename) return null;
-                        const firstFilename = filename.split(',')[0].trim();
-                        const cleanFilename = firstFilename.split('/').pop();
-                        return `${serverBaseUrl}/uploads/${cleanFilename}`;
-                    };
-                    
-                    // Count total documents
-                    const docCount = [
-                        psaPath ? 1 : 0,
-                        f137Path ? 1 : 0,
-                        f138Path ? 1 : 0,
-                        goodmoralPath ? 1 : 0,
-                        otherDocs.length
-                    ].reduce((a, b) => a + b, 0);
+                // Helper function to get image URL
+                const getImageUrl = (filename) => {
+                    if (!filename) return null;
+                    const firstFilename = filename.split(',')[0].trim();
+                    const cleanFilename = firstFilename.split('/').pop();
+                    return `${serverBaseUrl}/uploads/${cleanFilename}`;
+                };
+                
+                // Count total documents
+                const docCount = [
+                    psaPath ? 1 : 0,
+                    f137Path ? 1 : 0,
+                    f138Path ? 1 : 0,
+                    goodmoralPath ? 1 : 0,
+                    otherDocs.length
+                ].reduce((a, b) => a + b, 0);
 
-                    // Email status
-                    const emailStatus = r.email_sent ? 
-                        '<span class="email-status email-sent"><i class="fas fa-check"></i> Email Sent</span>' : 
-                        '<span class="email-status email-not-sent"><i class="fas fa-envelope"></i> Not Sent</span>';
+                // Email status
+                const emailStatus = r.email_sent ? 
+                    '<span class="email-status email-sent"><i class="fas fa-check"></i> Email Sent</span>' : 
+                    '<span class="email-status email-not-sent"><i class="fas fa-envelope"></i> Not Sent</span>';
 
-                    return `
-                    <tr id="row-${r.id}">
-                        <td>
-                            <div class="highlight-text student-name" style="font-size:14px;">${r.name || 'Unknown'}</div>
-                            <div class="sub-text">
-                                <span style="color:${sexColor}">${r.sex || '-'}</span> 
-                                • ${r.age || '?'} yrs
+                // Get student initials for avatar
+                const initials = r.name ? r.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '??';
+                
+                // Get gender class
+                const genderClass = r.sex ? (r.sex.toLowerCase().includes('fe') ? 'gender-female' : 'gender-male') : '';
+
+                return `
+                <tr id="row-${r.id}">
+                    <td class="student-cell">
+                        <div class="student-details">
+                            <div class="student-name">
+                                <div class="student-avatar">${initials}</div>
+                                <div>
+                                    <span class="highlight-text">${r.name || 'Unknown Student'}</span>
+                                    ${r.sex ? `<span class="student-gender ${genderClass}">${r.sex}</span>` : ''}
+                                </div>
                             </div>
-                            <div class="sub-text" style="margin-top:4px;">
-                                ${r.birthdate || ''}
+                            <div class="sub-text">
+                                ${r.age || '?'} years old • ${r.birthdate || 'N/A'}
                             </div>
                             ${emailStatus}
-                        </td>
+                        </div>
+                    </td>
 
-                        <td>
-                            <div class="highlight-text">${r.school_name || '-'}</div>
-                            <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
-                            ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">Average: ${r.final_general_average}</span></div>` : ''}
-                            <div class="sub-text" style="margin-top:5px;">
-                                School Year: ${r.school_year || ''}
-                            </div>
-                        </td>
+                    <td>
+                        <div class="highlight-text">${r.school_name || '-'}</div>
+                        <div class="lrn-info">LRN: ${r.lrn || 'N/A'}</div>
+                        ${r.final_general_average ? `<div style="margin-top:5px;"><span class="grade-badge">Average: ${r.final_general_average}</span></div>` : ''}
+                        <div class="sub-text" style="margin-top:5px;">
+                            ${r.school_year || ''}
+                        </div>
+                    </td>
 
-                        <td>
-                            ${r.college ? `
-                                <div class="college-info">
+                    <td>
+                        ${r.college ? `
+                            <div>
+                                <span class="college-badge ${collegeBadgeClass}">
                                     <i class="fas fa-university"></i> ${r.college}
-                                </div>
-                            ` : ''}
-                            
-                            ${r.program ? `
-                                <div class="program-info">
-                                    <i class="fas fa-graduation-cap"></i> ${r.program}
-                                </div>
-                            ` : ''}
-                            
-                            ${r.student_type ? `
-                                <div class="program-badge">
-                                    ${r.student_type}
-                                </div>
-                            ` : ''}
-                        </td>
-
-                        <td>
-                            <div style="margin-bottom: 5px; font-size: 11px; color: #888;">
-                                <i class="fas fa-paperclip"></i> ${docCount} document(s)
+                                </span>
                             </div>
-                            ${psaPath ? `
-                                <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="PSA Birth Certificate">
-                                    <i class="fas fa-id-card"></i> PSA
-                                </a>
-                            ` : ''}
-                            
-                            ${f137Path ? `
-                                <a href="${getImageUrl(f137Path)}" target="_blank" class="doc-link f137" title="Form 137 / SF10">
-                                    <i class="fas fa-file-contract"></i> F137
-                                </a>
-                            ` : ''}
-                            
-                            ${f138Path ? `
-                                <a href="${getImageUrl(f138Path)}" target="_blank" class="doc-link f138" title="Form 138 (Report Card)">
-                                    <i class="fas fa-file-invoice"></i> F138
-                                </a>
-                            ` : ''}
-                            
-                            ${goodmoralPath ? `
-                                <a href="${getImageUrl(goodmoralPath)}" target="_blank" class="doc-link gm" title="Good Moral Certificate">
-                                    <i class="fas fa-certificate"></i> Good Moral
-                                </a>
-                            ` : ''}
-                            
-                            ${otherDocs.length > 0 ? `
-                                <a href="#" onclick="viewOtherDocuments(${r.id}); return false;" class="doc-link other" title="View ${otherDocs.length} other document(s)">
-                                    <i class="fas fa-folder-open"></i> +${otherDocs.length}
-                                </a>
-                            ` : ''}
-                        </td>
-
-                        <td>
-                            <div class="record-badge ${badgeClass}">
-                                <i class="fas ${badgeClass === 'badge-good' ? 'fa-check-circle' : badgeClass === 'badge-bad' ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
-                                ${recordStatus}
+                        ` : ''}
+                        
+                        ${r.program ? `
+                            <div class="program-info">
+                                <i class="fas fa-book program-icon"></i>
+                                <span class="program-name" title="${r.program}">${r.program}</span>
                             </div>
-                            <div class="reason-text ${badgeClass === 'badge-bad' ? 'reason-bad' : 'reason-good'}">
-                                ${reasonText}
+                        ` : ''}
+                        
+                        ${r.student_type ? `
+                            <div class="sub-text" style="margin-top:3px;">
+                                <i class="fas fa-user-tag"></i> ${r.student_type}
                             </div>
-                            ${r.goodmoral_score ? `
-                                <div style="font-size:10px; color:#888; margin-top:5px;">
-                                    Score: ${r.goodmoral_score}/100
-                                </div>
-                            ` : ''}
-                        </td>
+                        ` : ''}
+                    </td>
 
-                        <td style="text-align: center; white-space: nowrap;">
+                    <td>
+                        <div style="margin-bottom: 5px; font-size: 11px; color: #888;">
+                            <i class="fas fa-paperclip"></i> ${docCount} document(s)
+                        </div>
+                        ${psaPath ? `
+                            <a href="${getImageUrl(psaPath)}" target="_blank" class="doc-link psa" title="PSA Birth Certificate">
+                                <i class="fas fa-id-card"></i> PSA
+                            </a>
+                        ` : ''}
+                        
+                        ${f137Path ? `
+                            <a href="${getImageUrl(f137Path)}" target="_blank" class="doc-link f137" title="Form 137 / SF10">
+                                <i class="fas fa-file-contract"></i> F137
+                            </a>
+                        ` : ''}
+                        
+                        ${f138Path ? `
+                            <a href="${getImageUrl(f138Path)}" target="_blank" class="doc-link f138" title="Form 138 (Report Card)">
+                                <i class="fas fa-file-invoice"></i> F138
+                            </a>
+                        ` : ''}
+                        
+                        ${goodmoralPath ? `
+                            <a href="${getImageUrl(goodmoralPath)}" target="_blank" class="doc-link gm" title="Good Moral Certificate">
+                                <i class="fas fa-certificate"></i> Good Moral
+                            </a>
+                        ` : ''}
+                        
+                        ${otherDocs.length > 0 ? `
+                            <a href="#" onclick="viewOtherDocuments(${r.id}); return false;" class="doc-link other" title="View ${otherDocs.length} other document(s)">
+                                <i class="fas fa-folder-open"></i> +${otherDocs.length}
+                            </a>
+                        ` : ''}
+                    </td>
+
+                    <td>
+                        <div class="record-badge ${badgeClass}">
+                            <i class="fas ${badgeClass === 'badge-good' ? 'fa-check-circle' : badgeClass === 'badge-fair' ? 'fa-exclamation-circle' : badgeClass === 'badge-poor' ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
+                            ${recordStatus}
+                        </div>
+                        <div class="reason-text ${badgeClass.includes('badge-poor') ? 'reason-bad' : 'reason-good'}">
+                            ${reasonText}
+                        </div>
+                        ${r.goodmoral_score ? `
+                            <div style="font-size:10px; color:#888; margin-top:5px;">
+                                Score: ${r.goodmoral_score}/100
+                            </div>
+                        ` : ''}
+                    </td>
+
+                    <td>
+                        <div class="action-buttons">
                             <button onclick="viewStudentDetails(${r.id})" class="action-btn btn-view" title="View Complete Record">
                                 <i class="fas fa-eye"></i>
                             </button>
@@ -849,18 +1188,38 @@
                                 <i class="fas fa-print"></i>
                             </a>
                             
+                            ${r.email && !r.email_sent ? `
+                                <button onclick="openEmailModal(${r.id})" class="action-btn btn-email" title="Send Email">
+                                    <i class="fas fa-envelope"></i>
+                                </button>
+                            ` : ''}
+                            
                             <button onclick="deleteRecord(${r.id})" class="action-btn btn-delete" title="Delete Record">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        </td>
-                    </tr>
-                `}).join('');
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
 
-            } catch (err) { 
-                console.error('Error loading data:', err);
-                document.getElementById('loading').innerText = "ERROR LOADING DATABASE";
-                document.getElementById('loading').style.color = "#ff6b6b";
-            }
+        function updateStats() {
+            const totalRecords = allRecords.length;
+            const goodRecords = allRecords.filter(r => {
+                if (r.disciplinary_status) {
+                    const status = r.disciplinary_status.toUpperCase();
+                    return status === 'EXCELLENT' || status === 'GOOD';
+                }
+                return r.goodmoral_score >= 80;
+            }).length;
+            
+            const colleges = new Set(allRecords.map(r => r.college).filter(c => c));
+            const emailSent = allRecords.filter(r => r.email_sent).length;
+            
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('goodRecords').textContent = goodRecords;
+            document.getElementById('collegeCount').textContent = colleges.size;
+            document.getElementById('emailSent').textContent = emailSent;
         }
 
         // ================= VIEW STUDENT DETAILS =================
@@ -871,20 +1230,16 @@
                 return;
             }
 
-            // Get image paths
-            const psaPath = r.image_path || r.psa_image_path;
-            const f137Path = r.form137_path || r.f137_image_path;
-            const f138Path = r.form138_path;
-            const goodmoralPath = r.goodmoral_path;
-            const otherDocs = r.other_documents || [];
-            
-            // Helper function to get image URL
-            const getImageUrl = (filename) => {
-                if (!filename) return null;
-                const firstFilename = filename.split(',')[0].trim();
-                const cleanFilename = firstFilename.split('/').pop();
-                return `${serverBaseUrl}/uploads/${cleanFilename}`;
-            };
+            // Get college badge class
+            let collegeBadgeClass = 'badge-default';
+            if (r.college) {
+                for (const [code, badgeClass] of Object.entries(collegeBadgeMap)) {
+                    if (r.college.includes(code)) {
+                        collegeBadgeClass = badgeClass;
+                        break;
+                    }
+                }
+            }
 
             // Parse Good Moral analysis
             let goodmoralAnalysis = null;
@@ -900,93 +1255,39 @@
 
             // Determine Good Moral Status
             let recordStatus = 'UNKNOWN';
-            let statusClass = 'status-unknown';
+            let statusClass = 'badge-unknown';
             let reasonText = '';
             
             if (r.disciplinary_status) {
                 const status = r.disciplinary_status.toUpperCase();
                 if (status === 'EXCELLENT' || status === 'GOOD') {
                     recordStatus = 'GOOD RECORD';
-                    statusClass = 'status-good';
+                    statusClass = 'badge-good';
                     reasonText = 'No past incidents in previous school';
-                } else if (status === 'FAIR' || status === 'POOR') {
-                    recordStatus = 'BAD RECORD';
-                    statusClass = 'status-bad';
+                } else if (status === 'FAIR') {
+                    recordStatus = 'FAIR RECORD';
+                    statusClass = 'badge-fair';
+                    reasonText = 'Some concerns noted';
+                } else if (status === 'POOR') {
+                    recordStatus = 'POOR RECORD';
+                    statusClass = 'badge-poor';
                     reasonText = r.disciplinary_details || 'Reason not specified';
                 }
             } else if (r.goodmoral_score !== null && r.goodmoral_score !== undefined) {
-                if (r.goodmoral_score >= 70) {
+                if (r.goodmoral_score >= 80) {
                     recordStatus = 'GOOD RECORD';
-                    statusClass = 'status-good';
+                    statusClass = 'badge-good';
                     reasonText = 'No past incidents in previous school';
+                } else if (r.goodmoral_score >= 60) {
+                    recordStatus = 'FAIR RECORD';
+                    statusClass = 'badge-fair';
+                    reasonText = 'Some concerns noted';
                 } else {
-                    recordStatus = 'BAD RECORD';
-                    statusClass = 'status-bad';
+                    recordStatus = 'POOR RECORD';
+                    statusClass = 'badge-poor';
                     reasonText = r.disciplinary_details || 'Reason not specified';
                 }
             }
-
-            // Prepare images array
-            const images = [];
-            
-            if (psaPath) {
-                const psaUrls = psaPath.split(',').map(p => p.trim()).filter(p => p);
-                psaUrls.forEach((url, index) => {
-                    images.push({
-                        url: getImageUrl(url),
-                        type: 'PSA',
-                        title: `PSA Birth Certificate ${psaUrls.length > 1 ? `(${index + 1}/${psaUrls.length})` : ''}`,
-                        className: 'type-psa'
-                    });
-                });
-            }
-            
-            if (f137Path) {
-                const f137Urls = f137Path.split(',').map(p => p.trim()).filter(p => p);
-                f137Urls.forEach((url, index) => {
-                    images.push({
-                        url: getImageUrl(url),
-                        type: 'Form 137',
-                        title: `Form 137 / SF10 ${f137Urls.length > 1 ? `(${index + 1}/${f137Urls.length})` : ''}`,
-                        className: 'type-f137'
-                    });
-                });
-            }
-            
-            if (f138Path) {
-                const f138Urls = f138Path.split(',').map(p => p.trim()).filter(p => p);
-                f138Urls.forEach((url, index) => {
-                    images.push({
-                        url: getImageUrl(url),
-                        type: 'Form 138',
-                        title: `Form 138 (Report Card) ${f138Urls.length > 1 ? `(${index + 1}/${f138Urls.length})` : ''}`,
-                        className: 'type-f138'
-                    });
-                });
-            }
-            
-            if (goodmoralPath) {
-                const gmUrls = goodmoralPath.split(',').map(p => p.trim()).filter(p => p);
-                gmUrls.forEach((url, index) => {
-                    images.push({
-                        url: getImageUrl(url),
-                        type: 'Good Moral',
-                        title: `Good Moral Certificate ${gmUrls.length > 1 ? `(${index + 1}/${gmUrls.length})` : ''}`,
-                        className: 'type-goodmoral'
-                    });
-                });
-            }
-            
-            // Add other documents
-            otherDocs.forEach(doc => {
-                images.push({
-                    url: `${serverBaseUrl}/uploads/${doc.filename}`,
-                    type: 'Other',
-                    title: doc.title || 'Other Document',
-                    className: 'type-other',
-                    uploadedAt: doc.uploaded_at
-                });
-            });
 
             // Build HTML content
             let html = `
@@ -999,57 +1300,140 @@
                             <span>${r.school_name || ''}</span>
                         </div>
                     </div>
-                    <div class="analysis-status ${statusClass}">${recordStatus}</div>
+                    <div class="record-badge ${statusClass}">${recordStatus}</div>
                 </div>
 
-                <div class="student-details">
-                    <div class="detail-item">
-                        <div class="detail-label">Date of Birth</div>
-                        <div class="detail-value">${r.birthdate || 'N/A'}</div>
+                <!-- College Section -->
+                <div class="college-section">
+                    <div class="college-header">
+                        <i class="fas fa-university" style="color: var(--gold);"></i>
+                        <h4 class="college-title">College & Program Information</h4>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Age</div>
-                        <div class="detail-value">${r.age || 'N/A'} years old</div>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">College/Department</div>
+                            <div class="detail-value">
+                                <span class="college-badge ${collegeBadgeClass}">
+                                    <i class="fas fa-university"></i> ${r.college || 'Not Specified'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Program/Course</div>
+                            <div class="detail-value" style="color: #96c93d;">${r.program || 'Not Specified'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Student Type</div>
+                            <div class="detail-value">${r.student_type || 'N/A'}</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Sex</div>
-                        <div class="detail-value">${r.sex || 'N/A'}</div>
+                </div>
+
+                <!-- Personal Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-user-circle"></i> Personal Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Date of Birth</div>
+                            <div class="detail-value">${r.birthdate || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Age</div>
+                            <div class="detail-value">${r.age || 'N/A'} years old</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Sex</div>
+                            <div class="detail-value">${r.sex || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Birthplace</div>
+                            <div class="detail-value">${r.birthplace || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Civil Status</div>
+                            <div class="detail-value">${r.civil_status || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Nationality</div>
+                            <div class="detail-value">${r.nationality || 'N/A'}</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Address</div>
-                        <div class="detail-value">${r.specific_address || ''} ${r.province || ''}</div>
+                </div>
+
+                <!-- Contact Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-address-book"></i> Contact Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Email Address</div>
+                            <div class="detail-value">${r.email || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mobile Number</div>
+                            <div class="detail-value">${r.mobile_no || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Address</div>
+                            <div class="detail-value">${r.specific_address || ''} ${r.province || ''}</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">School Year</div>
-                        <div class="detail-value">${r.school_year || 'N/A'}</div>
+                </div>
+
+                <!-- Academic Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-graduation-cap"></i> Academic Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">School Year</div>
+                            <div class="detail-value">${r.school_year || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Final Average</div>
+                            <div class="detail-value">${r.final_general_average || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Last Level Attended</div>
+                            <div class="detail-value">${r.last_level_attended || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">School Type</div>
+                            <div class="detail-value">${r.school_type || 'N/A'}</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Student Type</div>
-                        <div class="detail-value">${r.student_type || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">College/Department</div>
-                        <div class="detail-value" style="color: #f3d576;">${r.college || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Program/Course</div>
-                        <div class="detail-value" style="color: #f3d576;">${r.program || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Final Average</div>
-                        <div class="detail-value">${r.final_general_average || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Mother's Name</div>
-                        <div class="detail-value">${r.mother_name || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Father's Name</div>
-                        <div class="detail-value">${r.father_name || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Mobile Number</div>
-                        <div class="detail-value">${r.mobile_no || 'N/A'}</div>
+                </div>
+
+                <!-- Parent Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Parent Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Name</div>
+                            <div class="detail-value">${r.mother_name || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Contact</div>
+                            <div class="detail-value">${r.mother_contact || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Name</div>
+                            <div class="detail-value">${r.father_name || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Contact</div>
+                            <div class="detail-value">${r.father_contact || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Guardian</div>
+                            <div class="detail-value">${r.guardian_name || 'N/A'}</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1057,188 +1441,199 @@
             // Add Good Moral Analysis section
             if (goodmoralAnalysis || r.goodmoral_score) {
                 html += `
-                    <div class="analysis-box">
-                        <div class="analysis-header">
-                            <div class="analysis-title">
-                                <i class="fas fa-shield-alt"></i> GOOD MORAL ANALYSIS
-                            </div>
-                            <div class="analysis-status ${statusClass}">
-                                ${recordStatus}
-                            </div>
-                        </div>
-                        <div class="analysis-details">
+                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${statusClass === 'badge-good' ? '#28a745' : statusClass === 'badge-fair' ? '#ffc107' : '#dc3545'}">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-shield-alt"></i> Good Moral Analysis
+                        </h4>
+                        <div style="font-size: 13px; line-height: 1.5;">
                             ${goodmoralAnalysis ? `
-                                <div class="analysis-item">
+                                <div style="margin-bottom: 8px;">
                                     <strong>Issuing School:</strong> ${goodmoralAnalysis.issuing_school || 'N/A'}
                                 </div>
-                                <div class="analysis-item">
+                                <div style="margin-bottom: 8px;">
                                     <strong>Issuing Officer:</strong> ${goodmoralAnalysis.issuing_officer || 'N/A'}
                                 </div>
-                                <div class="analysis-item">
+                                <div style="margin-bottom: 8px;">
                                     <strong>Issued Date:</strong> ${goodmoralAnalysis.issued_date || 'N/A'}
-                                </div>
-                                <div class="analysis-item">
-                                    <strong>Status:</strong> ${r.disciplinary_status || 'N/A'}
                                 </div>
                             ` : ''}
                             
                             ${r.goodmoral_score ? `
-                                <div class="analysis-item">
+                                <div style="margin-bottom: 8px;">
                                     <strong>Score:</strong> ${r.goodmoral_score}/100
                                 </div>
                             ` : ''}
                             
-                            <div class="analysis-item">
-                                <strong>Record Assessment:</strong> 
-                                ${reasonText}
+                            <div style="margin-bottom: 8px;">
+                                <strong>Status:</strong> ${recordStatus}
+                            </div>
+                            
+                            <div style="margin-bottom: 8px;">
+                                <strong>Assessment:</strong> ${reasonText}
                             </div>
                             
                             ${goodmoralAnalysis && goodmoralAnalysis.disciplinary_details ? `
-                                <div class="analysis-item">
-                                    <strong>Details from Certificate:</strong><br>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Details:</strong><br>
                                     ${goodmoralAnalysis.disciplinary_details}
-                                </div>
-                            ` : ''}
-                            
-                            ${goodmoralAnalysis && goodmoralAnalysis.remarks ? `
-                                <div class="analysis-item">
-                                    <strong>Remarks:</strong><br>
-                                    ${goodmoralAnalysis.remarks}
                                 </div>
                             ` : ''}
                         </div>
                     </div>
                 `;
             }
-
-            // Add Documents section
-            html += `
-                <div style="margin-top: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px;">
-                        <i class="fas fa-paperclip"></i> SUBMITTED DOCUMENTS (${images.length})
-                    </h4>
-            `;
-
-            if (images.length > 0) {
-                html += `
-                    <div class="images-grid">
-                        ${images.map(img => `
-                            <div class="image-card">
-                                <img src="${img.url}" 
-                                     alt="${img.title}" 
-                                     class="image-preview" 
-                                     onclick="openFullscreenImage('${img.url}', '${img.title}')"
-                                     onerror="this.src='https://via.placeholder.com/250x200/1a1a1a/888888?text=Image+Not+Found'">
-                                <div class="image-info">
-                                    <span class="image-type ${img.className}">${img.type}</span>
-                                    <span style="color: #aaa; font-size: 10px; display: block;">${img.title}</span>
-                                    ${img.uploadedAt ? `
-                                        <span style="color: #666; font-size: 9px; display: block; margin-top: 2px;">
-                                            Uploaded: ${new Date(img.uploadedAt).toLocaleDateString()}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div style="text-align: center; padding: 40px; color: #888; font-style: italic;">
-                        <i class="fas fa-image fa-3x" style="margin-bottom: 10px;"></i>
-                        <p>No documents uploaded for this student</p>
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
 
             // Set content and show modal
             document.getElementById('studentModalContent').innerHTML = html;
             document.getElementById('studentModal').style.display = 'flex';
         }
 
-        // ================= VIEW OTHER DOCUMENTS =================
-        function viewOtherDocuments(recordId) {
-            const r = allRecords.find(item => item.id === recordId);
-            if (!r || !r.other_documents || r.other_documents.length === 0) {
-                alert("No other documents found for this student.");
+        // ================= EMAIL FUNCTIONS =================
+        function openEmailModal(recordId) {
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) {
+                alert("Record not found!");
                 return;
             }
+
+            currentEmailRecordId = recordId;
             
-            let html = `<h3 style="color: var(--gold); margin-top: 0;">Other Documents (${r.other_documents.length})</h3>`;
-            html += `<div class="images-grid">`;
+            document.getElementById('emailStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('emailAddress').textContent = record.email || 'No email';
+            document.getElementById('emailCollege').textContent = record.college || 'Not specified';
+            document.getElementById('emailProgram').textContent = record.program || 'Not specified';
             
-            r.other_documents.forEach(doc => {
-                const imageUrl = `${serverBaseUrl}/uploads/${doc.filename}`;
-                html += `
-                    <div class="image-card">
-                        <img src="${imageUrl}" 
-                             alt="${doc.title}" 
-                             class="image-preview" 
-                             onclick="openFullscreenImage('${imageUrl}', '${doc.title}')"
-                             onerror="this.src='https://via.placeholder.com/250x200/1a1a1a/888888?text=Document'">
-                        <div class="image-info">
-                            <span class="image-type type-other">Other</span>
-                            <span style="color: #aaa; font-size: 10px; display: block;">${doc.title}</span>
-                            <span style="color: #666; font-size: 9px;">Uploaded: ${new Date(doc.uploaded_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += `</div>`;
-            
-            // Create modal for other documents
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.style.display = 'flex';
-            modal.innerHTML = `
-                <div class="modal-box" style="max-width: 800px;">
-                    <div class="modal-header">
-                        <h3 class="modal-title"><i class="fas fa-folder-open"></i> Other Documents - ${r.name}</h3>
-                        <i class="fas fa-times modal-close" onclick="this.parentElement.parentElement.style.display='none'"></i>
-                    </div>
-                    <div class="modal-body">
-                        ${html}
-                    </div>
-                    <div class="modal-footer">
-                        <button onclick="this.parentElement.parentElement.parentElement.style.display='none'" style="
-                            background: #333;
-                            color: #fff;
-                            border: none;
-                            padding: 8px 20px;
-                            border-radius: 4px;
-                            cursor: pointer;">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
+            document.getElementById('emailModal').style.display = 'flex';
         }
 
-        // ================= FULLSCREEN IMAGE VIEWER =================
-        function openFullscreenImage(imageUrl, imageTitle) {
-            const viewer = document.getElementById('imageViewer');
-            const imageElement = document.getElementById('fullscreenImage');
-            const infoElement = document.getElementById('imageInfo');
+        async function confirmSendEmail() {
+            if (!currentEmailRecordId) return;
             
-            imageElement.src = imageUrl;
-            infoElement.textContent = imageTitle;
-            
-            viewer.style.display = 'flex';
+            try {
+                const response = await fetch(`/send-email/${currentEmailRecordId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message || 'Email sent successfully!');
+                    
+                    // Update the record in our local data
+                    const recordIndex = allRecords.findIndex(r => r.id === currentEmailRecordId);
+                    if (recordIndex !== -1) {
+                        allRecords[recordIndex].email_sent = true;
+                        allRecords[recordIndex].email_sent_at = new Date().toISOString();
+                        
+                        // Update the UI
+                        updateStats();
+                        renderTable(allRecords);
+                    }
+                    
+                    closeModal('emailModal');
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to send email');
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                alert('Error sending email. Please try again.');
+            }
         }
 
-        function closeImageViewer() {
-            document.getElementById('imageViewer').style.display = 'none';
-            document.getElementById('fullscreenImage').src = '';
+        // ================= FILTER FUNCTIONS =================
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const collegeFilter = document.getElementById('collegeFilter').value;
+            const programFilter = document.getElementById('programFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filteredRecords = allRecords;
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredRecords = filteredRecords.filter(r => {
+                    const name = (r.name || '').toLowerCase();
+                    const lrn = (r.lrn || '').toLowerCase();
+                    const college = (r.college || '').toLowerCase();
+                    const program = (r.program || '').toLowerCase();
+                    
+                    return name.includes(searchTerm) || 
+                           lrn.includes(searchTerm) || 
+                           college.includes(searchTerm) || 
+                           program.includes(searchTerm);
+                });
+            }
+            
+            // Apply college filter
+            if (collegeFilter) {
+                filteredRecords = filteredRecords.filter(r => 
+                    (r.college || '').toLowerCase() === collegeFilter.toLowerCase()
+                );
+            }
+            
+            // Apply program filter
+            if (programFilter) {
+                filteredRecords = filteredRecords.filter(r => 
+                    (r.program || '').toLowerCase() === programFilter.toLowerCase()
+                );
+            }
+            
+            // Apply status filter
+            if (statusFilter) {
+                filteredRecords = filteredRecords.filter(r => {
+                    if (!r.disciplinary_status && r.goodmoral_score === undefined) {
+                        return statusFilter === ''; // Unknown status
+                    }
+                    
+                    if (r.disciplinary_status) {
+                        const status = r.disciplinary_status.toUpperCase();
+                        if (statusFilter === 'GOOD') {
+                            return status === 'EXCELLENT' || status === 'GOOD';
+                        } else if (statusFilter === 'FAIR') {
+                            return status === 'FAIR';
+                        } else if (statusFilter === 'POOR') {
+                            return status === 'POOR';
+                        }
+                    }
+                    
+                    if (r.goodmoral_score !== undefined) {
+                        if (statusFilter === 'GOOD') {
+                            return r.goodmoral_score >= 80;
+                        } else if (statusFilter === 'FAIR') {
+                            return r.goodmoral_score >= 60 && r.goodmoral_score < 80;
+                        } else if (statusFilter === 'POOR') {
+                            return r.goodmoral_score < 60;
+                        }
+                    }
+                    
+                    return false;
+                });
+            }
+            
+            renderTable(filteredRecords);
+            
+            // Show no match message if no results
+            document.getElementById('no-match-msg').style.display = 
+                filteredRecords.length === 0 ? 'block' : 'none';
         }
 
-        // ================= UTILITIES =================
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('collegeFilter').value = '';
+            document.getElementById('programFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('programFilter').innerHTML = '<option value="">All Programs</option>';
+            
+            renderTable(allRecords);
+            document.getElementById('no-match-msg').style.display = 'none';
+        }
+
+        // ================= UTILITY FUNCTIONS =================
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
+            if (modalId === 'emailModal') {
+                currentEmailRecordId = null;
+            }
         }
 
         async function deleteRecord(id) {
@@ -1260,6 +1655,7 @@
                         setTimeout(() => {
                             row.remove();
                             allRecords = allRecords.filter(r => r.id !== id);
+                            updateStats();
                         }, 300);
                     }
                     alert('Record deleted successfully!');
@@ -1272,54 +1668,38 @@
             }
         }
 
-        // ================= SEARCH FUNCTIONALITY =================
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#tableBody tr');
-            let hasMatch = false;
+        function viewOtherDocuments(recordId) {
+            const r = allRecords.find(item => item.id === recordId);
+            if (!r || !r.other_documents || r.other_documents.length === 0) {
+                alert("No other documents found for this student.");
+                return;
+            }
+            
+            alert(`${r.other_documents.length} other document(s) found. Open student details to view them.`);
+            viewStudentDetails(recordId);
+        }
 
-            rows.forEach(row => {
-                let nameText = row.querySelector('.student-name')?.textContent.toLowerCase() || "";
-                let lrnText = row.querySelector('.lrn-info')?.textContent.toLowerCase() || "";
-                let collegeText = row.querySelector('.college-info')?.textContent.toLowerCase() || "";
-                let programText = row.querySelector('.program-info')?.textContent.toLowerCase() || "";
-                let statusText = row.querySelector('.record-badge')?.textContent.toLowerCase() || "";
-                
-                if (nameText.includes(filter) || lrnText.includes(filter) || 
-                    collegeText.includes(filter) || programText.includes(filter) || 
-                    statusText.includes(filter)) {
-                    row.style.display = ''; 
-                    hasMatch = true;
-                } else {
-                    row.style.display = 'none';
+        // ================= EVENT LISTENERS =================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load data
+            loadData();
+            
+            // Add event listeners for filters
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('collegeFilter').addEventListener('change', applyFilters);
+            document.getElementById('programFilter').addEventListener('change', applyFilters);
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+            
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                if (event.target.classList.contains('modal-overlay')) {
+                    event.target.style.display = "none";
                 }
-            });
-
-            document.getElementById('no-match-msg').style.display = hasMatch ? 'none' : 'block';
+            };
+            
+            console.log('AssiScan History Page Loaded with College System');
         });
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal-overlay')) {
-                event.target.style.display = "none";
-            }
-            if (event.target.id === 'imageViewer') {
-                closeImageViewer();
-            }
-        };
-
-        // Close fullscreen image viewer with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeImageViewer();
-            }
-        });
-
-        // Load data when page loads
-        loadData();
-        
-        console.log('AssiScan History Page Loaded');
-        console.log('Server URL:', serverBaseUrl);
     </script>
 </body>
 </html>
