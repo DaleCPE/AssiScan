@@ -132,7 +132,8 @@ def permission_required(permission):
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
     """Hash password with salt"""
-    salt = os.getenv("PASSWORD_SALT", "assiscan-salt-2024")
+    # Use a fixed salt for consistency
+    salt = "assiscan-salt-2024"  # Fixed salt for now
     return hashlib.sha256((password + salt).encode()).hexdigest()
 
 def generate_temp_password(length=8):
@@ -311,6 +312,10 @@ def init_db():
                 default_password = ADMIN_PASSWORD
                 password_hash = hash_password(default_password)
                 
+                # Debug: Print password and hash
+                print(f"🔑 Creating admin with password: {default_password}")
+                print(f"🔑 Password hash: {password_hash}")
+                
                 cur.execute("""
                     INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -325,6 +330,16 @@ def init_db():
                 ))
                 conn.commit()
                 print("✅ Default Super Admin created")
+            else:
+                # Check the existing admin password hash
+                cur.execute("SELECT password_hash FROM users WHERE username = %s", (ADMIN_USERNAME,))
+                admin_hash = cur.fetchone()
+                if admin_hash:
+                    print(f"🔑 Existing admin password hash: {admin_hash[0]}")
+                    # Test hash with current password
+                    test_hash = hash_password(ADMIN_PASSWORD)
+                    print(f"🔑 Test hash with password '{ADMIN_PASSWORD}': {test_hash}")
+                    print(f"🔑 Hashes match: {admin_hash[0] == test_hash}")
             
             # Insert default colleges if empty
             cur.execute("SELECT COUNT(*) FROM colleges")
@@ -901,7 +916,12 @@ def login_user():
         
         # Verify password
         password_hash = hash_password(password)
+        print(f"🔑 Login attempt: username={username}")
+        print(f"🔑 Stored hash: {user['password_hash']}")
+        print(f"🔑 Computed hash: {password_hash}")
+        
         if user['password_hash'] != password_hash:
+            print(f"❌ Password mismatch for user {username}")
             return jsonify({"error": "Invalid credentials"}), 401
         
         # Create session
@@ -947,6 +967,7 @@ def login_user():
         
     except Exception as e:
         print(f"❌ Login error: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
