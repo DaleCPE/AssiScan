@@ -305,26 +305,34 @@ def init_db():
             check_and_add_columns(cur, conn)
             
             # Check if super admin exists, if not create default
-            cur.execute("SELECT COUNT(*) FROM users WHERE role = 'SUPER_ADMIN'")
-            if cur.fetchone()[0] == 0:
+            cur.execute("SELECT COUNT(*) FROM users WHERE username = %s", (ADMIN_USERNAME,))
+            admin_exists = cur.fetchone()[0] > 0
+            
+            if not admin_exists:
                 print("👑 Creating default Super Admin...")
                 default_password = ADMIN_PASSWORD
                 password_hash = hash_password(default_password)
                 
-                cur.execute("""
-                    INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    ADMIN_USERNAME,
-                    password_hash,
-                    'System Administrator',
-                    'admin@assiscan.com',
-                    'SUPER_ADMIN',
-                    True,
-                    False
-                ))
-                conn.commit()
-                print("✅ Default Super Admin created")
+                try:
+                    cur.execute("""
+                        INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        ADMIN_USERNAME,
+                        password_hash,
+                        'System Administrator',
+                        'admin@assiscan.com',
+                        'SUPER_ADMIN',
+                        True,
+                        False
+                    ))
+                    conn.commit()
+                    print("✅ Default Super Admin created")
+                except psycopg2.IntegrityError as e:
+                    print(f"⚠️ Admin user already exists: {e}")
+                    conn.rollback()
+            else:
+                print("✅ Admin user already exists")
             
             # Insert default colleges if empty
             cur.execute("SELECT COUNT(*) FROM colleges")
@@ -339,61 +347,67 @@ def init_db():
                 ]
                 
                 for code, name, desc, order in default_colleges:
-                    cur.execute("""
-                        INSERT INTO colleges (code, name, description, display_order, created_by) 
-                        VALUES (%s, %s, %s, %s, 1) 
-                        RETURNING id
-                    """, (code, name, desc, order))
-                    college_id = cur.fetchone()[0]
-                    
-                    # Insert default programs based on college
-                    if code == "CCJE":
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                   (college_id, "Bachelor of Science in Criminology", 1))
-                    elif code == "CEAS":
-                        programs = [
-                            "Bachelor of Elementary Education",
-                            "Bachelor of Secondary Education", 
-                            "Bachelor of Science in Psychology",
-                            "Bachelor of Science in Legal Management",
-                            "Bachelor of Science in Social Work"
-                        ]
-                        for i, program in enumerate(programs):
+                    # Check if college already exists
+                    cur.execute("SELECT id FROM colleges WHERE code = %s", (code,))
+                    if not cur.fetchone():
+                        cur.execute("""
+                            INSERT INTO colleges (code, name, description, display_order, created_by) 
+                            VALUES (%s, %s, %s, %s, 1) 
+                            RETURNING id
+                        """, (code, name, desc, order))
+                        college_id = cur.fetchone()[0]
+                        
+                        # Insert default programs based on college
+                        if code == "CCJE":
                             cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CITEC":
-                        programs = [
-                            "Bachelor of Science in Information Technology",
-                            "Bachelor of Arts in Multimedia Arts"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CENAR":
-                        programs = [
-                            "Bachelor of Science in Industrial Engineering",
-                            "Bachelor of Science in Computer Engineering",
-                            "Bachelor of Science in Architecture"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CBAA":
-                        programs = [
-                            "Bachelor of Science in Business Administration",
-                            "Bachelor of Science in Accountancy",
-                            "Bachelor of Science in Internal Auditing"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
+                                       (college_id, "Bachelor of Science in Criminology", 1))
+                        elif code == "CEAS":
+                            programs = [
+                                "Bachelor of Elementary Education",
+                                "Bachelor of Secondary Education", 
+                                "Bachelor of Science in Psychology",
+                                "Bachelor of Science in Legal Management",
+                                "Bachelor of Science in Social Work"
+                            ]
+                            for i, program in enumerate(programs):
+                                cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
+                                           (college_id, program, i+1))
+                        elif code == "CITEC":
+                            programs = [
+                                "Bachelor of Science in Information Technology",
+                                "Bachelor of Arts in Multimedia Arts"
+                            ]
+                            for i, program in enumerate(programs):
+                                cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
+                                           (college_id, program, i+1))
+                        elif code == "CENAR":
+                            programs = [
+                                "Bachelor of Science in Industrial Engineering",
+                                "Bachelor of Science in Computer Engineering",
+                                "Bachelor of Science in Architecture"
+                            ]
+                            for i, program in enumerate(programs):
+                                cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
+                                           (college_id, program, i+1))
+                        elif code == "CBAA":
+                            programs = [
+                                "Bachelor of Science in Business Administration",
+                                "Bachelor of Science in Accountancy",
+                                "Bachelor of Science in Internal Auditing"
+                            ]
+                            for i, program in enumerate(programs):
+                                cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
+                                           (college_id, program, i+1))
                 
                 conn.commit()
                 print("✅ Default colleges and programs inserted")
+            else:
+                print("✅ Colleges already exist")
             
         except Exception as e:
             print(f"❌ Database initialization error: {e}")
             traceback.print_exc()
+            conn.rollback()
         finally:
             cur.close()
             conn.close()
@@ -415,7 +429,15 @@ def check_and_add_columns(cur, conn):
     
     for column_name, column_type in users_columns:
         try:
-            cur.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+            cur.execute(f"""
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                  WHERE table_name='users' AND column_name='{column_name}') THEN
+                        EXECUTE 'ALTER TABLE users ADD COLUMN {column_name} {column_type}';
+                    END IF;
+                END $$;
+            """)
             print(f"   ✅ Verified users column: {column_name}")
         except Exception as e:
             print(f"   ⚠️ Column {column_name} already exists or error: {e}")
@@ -467,7 +489,15 @@ def check_and_add_columns(cur, conn):
     
     for column_name, column_type in records_columns:
         try:
-            cur.execute(f"ALTER TABLE records ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+            cur.execute(f"""
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                  WHERE table_name='records' AND column_name='{column_name}') THEN
+                        EXECUTE 'ALTER TABLE records ADD COLUMN {column_name} {column_type}';
+                    END IF;
+                END $$;
+            """)
             print(f"   ✅ Verified records column: {column_name}")
         except Exception as e:
             print(f"   ⚠️ Column {column_name} already exists or error: {e}")
@@ -2331,7 +2361,7 @@ def get_records():
         
         for r in rows:
             if r['created_at']: 
-                r['created_at'] = r['created_at'].strftime('%Y-%m-d %H:%M:%S')
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: 
                 r['birthdate'] = str(r['birthdate'])
             if r['email_sent_at']: 
