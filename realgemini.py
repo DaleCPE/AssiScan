@@ -101,7 +101,7 @@ def init_db():
         try:
             cur = conn.cursor()
             
-            # Create main records table with COLLEGE field added
+            # Create main records table with COLLEGE field
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
@@ -143,8 +143,8 @@ def init_db():
                     mobile_no VARCHAR(50),
                     school_year VARCHAR(50),
                     student_type VARCHAR(50),
-                    college VARCHAR(150),          -- NEW: College/Department field
-                    program VARCHAR(150),          -- Changed from VARCHAR(100) to 150
+                    college VARCHAR(150),
+                    program VARCHAR(150),
                     last_level_attended VARCHAR(100),
                     is_ip VARCHAR(10),
                     is_pwd VARCHAR(10),
@@ -160,21 +160,107 @@ def init_db():
                     special_talents TEXT,
                     is_scholar VARCHAR(10),
                     siblings TEXT,
-                    -- GOOD MORAL ANALYSIS FIELDS
                     goodmoral_analysis JSONB,
                     disciplinary_status VARCHAR(50),
                     goodmoral_score INTEGER DEFAULT 0,
                     has_disciplinary_record BOOLEAN DEFAULT FALSE,
                     disciplinary_details TEXT,
-                    -- OTHER DOCUMENTS FIELD
                     other_documents JSONB
                 )
             ''')
             
-            conn.commit()
-            print("✅ Database table 'records' created/verified")
+            # Create colleges table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS colleges (
+                    id SERIAL PRIMARY KEY,
+                    code VARCHAR(20) UNIQUE NOT NULL,
+                    name VARCHAR(150) NOT NULL,
+                    description TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    display_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
             
-            # Check for missing columns
+            # Create programs table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS programs (
+                    id SERIAL PRIMARY KEY,
+                    college_id INTEGER REFERENCES colleges(id) ON DELETE CASCADE,
+                    code VARCHAR(50),
+                    name VARCHAR(150) NOT NULL,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    display_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            conn.commit()
+            print("✅ Database tables created/verified")
+            
+            # Insert default colleges if empty
+            cur.execute("SELECT COUNT(*) FROM colleges")
+            if cur.fetchone()[0] == 0:
+                print("📝 Inserting default colleges...")
+                default_colleges = [
+                    ("CCJE", "College of Criminal Justice Education", "College of Criminal Justice Education", 1),
+                    ("CEAS", "College of Education, Arts and Sciences", "College of Education, Arts and Sciences", 2),
+                    ("CITEC", "College of Information Technology, Entertainment and Communication", "College of IT, Entertainment & Communication", 3),
+                    ("CENAR", "College of Engineering and Architecture", "College of Engineering and Architecture", 4),
+                    ("CBAA", "College of Business, Accountancy and Auditing", "College of Business, Accountancy & Auditing", 5)
+                ]
+                
+                for code, name, desc, order in default_colleges:
+                    cur.execute("INSERT INTO colleges (code, name, description, display_order) VALUES (%s, %s, %s, %s) RETURNING id", 
+                               (code, name, desc, order))
+                    college_id = cur.fetchone()[0]
+                    
+                    # Insert default programs based on college
+                    if code == "CCJE":
+                        cur.execute("INSERT INTO programs (college_id, name, display_order) VALUES (%s, %s, %s)",
+                                   (college_id, "Bachelor of Science in Criminology", 1))
+                    elif code == "CEAS":
+                        programs = [
+                            "Bachelor of Elementary Education",
+                            "Bachelor of Secondary Education", 
+                            "Bachelor of Science in Psychology",
+                            "Bachelor of Science in Legal Management",
+                            "Bachelor of Science in Social Work"
+                        ]
+                        for i, program in enumerate(programs):
+                            cur.execute("INSERT INTO programs (college_id, name, display_order) VALUES (%s, %s, %s)",
+                                       (college_id, program, i+1))
+                    elif code == "CITEC":
+                        programs = [
+                            "Bachelor of Science in Information Technology",
+                            "Bachelor of Arts in Multimedia Arts"
+                        ]
+                        for i, program in enumerate(programs):
+                            cur.execute("INSERT INTO programs (college_id, name, display_order) VALUES (%s, %s, %s)",
+                                       (college_id, program, i+1))
+                    elif code == "CENAR":
+                        programs = [
+                            "Bachelor of Science in Industrial Engineering",
+                            "Bachelor of Science in Computer Engineering",
+                            "Bachelor of Science in Architecture"
+                        ]
+                        for i, program in enumerate(programs):
+                            cur.execute("INSERT INTO programs (college_id, name, display_order) VALUES (%s, %s, %s)",
+                                       (college_id, program, i+1))
+                    elif code == "CBAA":
+                        programs = [
+                            "Bachelor of Science in Business Administration",
+                            "Bachelor of Science in Accountancy",
+                            "Bachelor of Science in Internal Auditing"
+                        ]
+                        for i, program in enumerate(programs):
+                            cur.execute("INSERT INTO programs (college_id, name, display_order) VALUES (%s, %s, %s)",
+                                       (college_id, program, i+1))
+                
+                conn.commit()
+                print("✅ Default colleges and programs inserted")
+            
+            # Check for missing columns in records table
             check_and_add_columns(cur, conn)
             
         except Exception as e:
@@ -203,7 +289,7 @@ def check_and_add_columns(cur, conn):
         ("mobile_no", "VARCHAR(50)"),
         ("school_year", "VARCHAR(50)"),
         ("student_type", "VARCHAR(50)"),
-        ("college", "VARCHAR(150)"),  # NEW: College field
+        ("college", "VARCHAR(150)"),
         ("program", "VARCHAR(150)"),
         ("last_level_attended", "VARCHAR(100)"),
         ("is_ip", "VARCHAR(10)"),
@@ -220,13 +306,11 @@ def check_and_add_columns(cur, conn):
         ("special_talents", "TEXT"),
         ("is_scholar", "VARCHAR(10)"),
         ("siblings", "TEXT"),
-        # Good Moral columns
         ("goodmoral_analysis", "JSONB"),
         ("disciplinary_status", "VARCHAR(50)"),
         ("goodmoral_score", "INTEGER DEFAULT 0"),
         ("has_disciplinary_record", "BOOLEAN DEFAULT FALSE"),
         ("disciplinary_details", "TEXT"),
-        # Other documents
         ("other_documents", "JSONB")
     ]
     
@@ -538,6 +622,462 @@ def calculate_goodmoral_score(analysis_data):
     
     return score, status
 
+# ================= COLLEGE MANAGEMENT ROUTES =================
+
+@app.route('/api/colleges', methods=['GET'])
+def get_colleges():
+    """Get all colleges with their programs"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get all active colleges ordered by display_order
+        cur.execute("""
+            SELECT id, code, name, description, is_active, display_order, created_at
+            FROM colleges 
+            WHERE is_active = TRUE
+            ORDER BY display_order, name
+        """)
+        colleges = cur.fetchall()
+        
+        # For each college, get its programs
+        for college in colleges:
+            cur.execute("""
+                SELECT id, code, name, is_active, display_order, created_at
+                FROM programs 
+                WHERE college_id = %s AND is_active = TRUE
+                ORDER BY display_order, name
+            """, (college['id'],))
+            college['programs'] = cur.fetchall()
+        
+        return jsonify(colleges)
+    except Exception as e:
+        print(f"❌ Error getting colleges: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges/all', methods=['GET'])
+def get_all_colleges():
+    """Get all colleges (including inactive) for admin management"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get all colleges ordered by display_order
+        cur.execute("""
+            SELECT id, code, name, description, is_active, display_order, created_at
+            FROM colleges 
+            ORDER BY display_order, name
+        """)
+        colleges = cur.fetchall()
+        
+        # For each college, get its programs
+        for college in colleges:
+            cur.execute("""
+                SELECT id, code, name, is_active, display_order, created_at
+                FROM programs 
+                WHERE college_id = %s
+                ORDER BY display_order, name
+            """, (college['id'],))
+            college['programs'] = cur.fetchall()
+        
+        return jsonify(colleges)
+    except Exception as e:
+        print(f"❌ Error getting all colleges: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges', methods=['POST'])
+def create_college():
+    """Create a new college"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    if not data or not data.get('code') or not data.get('name'):
+        return jsonify({"error": "College code and name are required"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if code already exists
+        cur.execute("SELECT id FROM colleges WHERE code = %s", (data['code'],))
+        if cur.fetchone():
+            return jsonify({"error": "College code already exists"}), 409
+        
+        # Insert new college
+        cur.execute("""
+            INSERT INTO colleges (code, name, description, is_active, display_order)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, code, name, description, is_active, display_order, created_at
+        """, (
+            data['code'],
+            data['name'],
+            data.get('description', ''),
+            data.get('is_active', True),
+            data.get('display_order', 0)
+        ))
+        
+        new_college = cur.fetchone()
+        conn.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "College created successfully",
+            "college": new_college
+        })
+    except Exception as e:
+        print(f"❌ Error creating college: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges/<int:college_id>', methods=['PUT'])
+def update_college(college_id):
+    """Update a college"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Build update query dynamically
+        updates = []
+        values = []
+        
+        if 'code' in data:
+            # Check if new code conflicts with another college
+            cur.execute("SELECT id FROM colleges WHERE code = %s AND id != %s", (data['code'], college_id))
+            if cur.fetchone():
+                return jsonify({"error": "College code already exists"}), 409
+            updates.append("code = %s")
+            values.append(data['code'])
+        
+        if 'name' in data:
+            updates.append("name = %s")
+            values.append(data['name'])
+        
+        if 'description' in data:
+            updates.append("description = %s")
+            values.append(data['description'])
+        
+        if 'is_active' in data:
+            updates.append("is_active = %s")
+            values.append(data['is_active'])
+        
+        if 'display_order' in data:
+            updates.append("display_order = %s")
+            values.append(data['display_order'])
+        
+        if not updates:
+            return jsonify({"error": "No fields to update"}), 400
+        
+        values.append(college_id)
+        update_query = f"UPDATE colleges SET {', '.join(updates)} WHERE id = %s RETURNING *"
+        
+        cur.execute(update_query, values)
+        updated_college = cur.fetchone()
+        conn.commit()
+        
+        if not updated_college:
+            return jsonify({"error": "College not found"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "message": "College updated successfully",
+            "college": updated_college
+        })
+    except Exception as e:
+        print(f"❌ Error updating college: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges/<int:college_id>', methods=['DELETE'])
+def delete_college(college_id):
+    """Delete a college (soft delete)"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        # Soft delete by setting is_active to false
+        cur.execute("UPDATE colleges SET is_active = FALSE WHERE id = %s RETURNING id", (college_id,))
+        
+        if cur.rowcount == 0:
+            return jsonify({"error": "College not found"}), 404
+        
+        conn.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "College deactivated successfully"
+        })
+    except Exception as e:
+        print(f"❌ Error deleting college: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges/<int:college_id>/restore', methods=['POST'])
+def restore_college(college_id):
+    """Restore a deleted college"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        cur.execute("UPDATE colleges SET is_active = TRUE WHERE id = %s RETURNING id", (college_id,))
+        
+        if cur.rowcount == 0:
+            return jsonify({"error": "College not found"}), 404
+        
+        conn.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "College restored successfully"
+        })
+    except Exception as e:
+        print(f"❌ Error restoring college: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/colleges/<int:college_id>/programs', methods=['GET'])
+def get_college_programs(college_id):
+    """Get all programs for a specific college"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if college exists
+        cur.execute("SELECT id FROM colleges WHERE id = %s", (college_id,))
+        if not cur.fetchone():
+            return jsonify({"error": "College not found"}), 404
+        
+        # Get all programs for this college
+        cur.execute("""
+            SELECT id, code, name, is_active, display_order, created_at
+            FROM programs 
+            WHERE college_id = %s
+            ORDER BY display_order, name
+        """, (college_id,))
+        
+        programs = cur.fetchall()
+        return jsonify(programs)
+    except Exception as e:
+        print(f"❌ Error getting college programs: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/programs', methods=['POST'])
+def create_program():
+    """Create a new program"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    if not data or not data.get('college_id') or not data.get('name'):
+        return jsonify({"error": "College ID and program name are required"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if college exists
+        cur.execute("SELECT id FROM colleges WHERE id = %s", (data['college_id'],))
+        if not cur.fetchone():
+            return jsonify({"error": "College not found"}), 404
+        
+        # Check if program name already exists for this college
+        cur.execute("SELECT id FROM programs WHERE college_id = %s AND LOWER(name) = LOWER(%s)", 
+                   (data['college_id'], data['name']))
+        if cur.fetchone():
+            return jsonify({"error": "Program name already exists for this college"}), 409
+        
+        # Insert new program
+        cur.execute("""
+            INSERT INTO programs (college_id, code, name, is_active, display_order)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, college_id, code, name, is_active, display_order, created_at
+        """, (
+            data['college_id'],
+            data.get('code', ''),
+            data['name'],
+            data.get('is_active', True),
+            data.get('display_order', 0)
+        ))
+        
+        new_program = cur.fetchone()
+        conn.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Program created successfully",
+            "program": new_program
+        })
+    except Exception as e:
+        print(f"❌ Error creating program: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/programs/<int:program_id>', methods=['PUT'])
+def update_program(program_id):
+    """Update a program"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Build update query dynamically
+        updates = []
+        values = []
+        
+        if 'name' in data:
+            # Check if new name conflicts with another program in the same college
+            cur.execute("SELECT college_id FROM programs WHERE id = %s", (program_id,))
+            result = cur.fetchone()
+            if not result:
+                return jsonify({"error": "Program not found"}), 404
+            
+            college_id = result['college_id']
+            cur.execute("SELECT id FROM programs WHERE college_id = %s AND LOWER(name) = LOWER(%s) AND id != %s", 
+                       (college_id, data['name'], program_id))
+            if cur.fetchone():
+                return jsonify({"error": "Program name already exists in this college"}), 409
+            updates.append("name = %s")
+            values.append(data['name'])
+        
+        if 'code' in data:
+            updates.append("code = %s")
+            values.append(data['code'])
+        
+        if 'is_active' in data:
+            updates.append("is_active = %s")
+            values.append(data['is_active'])
+        
+        if 'display_order' in data:
+            updates.append("display_order = %s")
+            values.append(data['display_order'])
+        
+        if not updates:
+            return jsonify({"error": "No fields to update"}), 400
+        
+        values.append(program_id)
+        update_query = f"UPDATE programs SET {', '.join(updates)} WHERE id = %s RETURNING *"
+        
+        cur.execute(update_query, values)
+        updated_program = cur.fetchone()
+        conn.commit()
+        
+        if not updated_program:
+            return jsonify({"error": "Program not found"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "message": "Program updated successfully",
+            "program": updated_program
+        })
+    except Exception as e:
+        print(f"❌ Error updating program: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/programs/<int:program_id>', methods=['DELETE'])
+def delete_program(program_id):
+    """Delete a program"""
+    if not session.get('logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        cur.execute("DELETE FROM programs WHERE id = %s RETURNING id", (program_id,))
+        
+        if cur.rowcount == 0:
+            return jsonify({"error": "Program not found"}), 404
+        
+        conn.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Program deleted successfully"
+        })
+    except Exception as e:
+        print(f"❌ Error deleting program: {e}")
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # ================= ROUTES =================
 
 @app.route('/')
@@ -566,6 +1106,13 @@ def history_page():
     if not session.get('logged_in'):
         return redirect('/login') 
     return render_template('history.html')
+
+@app.route('/admin/colleges')
+def admin_colleges():
+    """Admin page for managing colleges and programs"""
+    if not session.get('logged_in'):
+        return redirect('/login')
+    return render_template('admin_colleges.html')
 
 # ================= GOOD MORAL SCANNING ENDPOINT =================
 @app.route('/scan-goodmoral', methods=['POST'])
@@ -1516,6 +2063,58 @@ def check_email_status(record_id):
     finally:
         conn.close()
 
+# ================= COLLEGE API FOR FRONTEND DROPDOWNS =================
+@app.route('/api/colleges-dropdown', methods=['GET'])
+def get_colleges_dropdown():
+    """Get active colleges and their programs for frontend dropdowns"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get all active colleges ordered by display_order
+        cur.execute("""
+            SELECT id, code, name 
+            FROM colleges 
+            WHERE is_active = TRUE
+            ORDER BY display_order, name
+        """)
+        colleges = cur.fetchall()
+        
+        # Get all active programs
+        cur.execute("""
+            SELECT p.id, p.college_id, p.name 
+            FROM programs p
+            JOIN colleges c ON p.college_id = c.id
+            WHERE p.is_active = TRUE AND c.is_active = TRUE
+            ORDER BY p.display_order, p.name
+        """)
+        programs = cur.fetchall()
+        
+        # Group programs by college_id
+        programs_by_college = {}
+        for program in programs:
+            college_id = program['college_id']
+            if college_id not in programs_by_college:
+                programs_by_college[college_id] = []
+            programs_by_college[college_id].append({
+                'id': program['id'],
+                'name': program['name']
+            })
+        
+        # Add programs to colleges
+        for college in colleges:
+            college['programs'] = programs_by_college.get(college['id'], [])
+        
+        return jsonify(colleges)
+    except Exception as e:
+        print(f"❌ Error getting colleges dropdown: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # ================= HEALTH AND DIAGNOSTIC ENDPOINTS =================
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -1525,6 +2124,7 @@ def health_check():
         "goodmoral_scanning": "ENABLED",
         "model": "Gemini 2.5 Flash",
         "dropdown_support": "ENABLED (College & Program dropdowns)",
+        "college_management": "ENABLED",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected"
     })
@@ -1569,18 +2169,19 @@ if __name__ == '__main__':
     print("="*60)
     print("📊 FEATURES:")
     print("   • PSA, Form 137, Good Moral scanning")
-    print("   • College & Program dropdown support")
+    print("   • College Management System")
+    print("   • Dynamic College & Program dropdowns")
     print("   • Disciplinary record detection")
     print("   • Other documents upload with title")
     print("   • Email notifications")
     print("   • Complete student record management")
     print("="*60)
-    print("🎓 COLLEGE & PROGRAM SUPPORT:")
-    print("   • College of Criminal Justice Education (CCJE)")
-    print("   • College of Education, Arts and Sciences (CEAS)")
-    print("   • College of IT, Entertainment & Communication (CITEC)")
-    print("   • College of Engineering and Architecture (CENAR)")
-    print("   • College of Business, Accountancy & Auditing (CBAA)")
+    print("🎓 COLLEGE MANAGEMENT SYSTEM:")
+    print("   • College and Program CRUD operations")
+    print("   • Soft delete with restoration")
+    print("   • Display order control")
+    print("   • Active/Inactive toggle")
+    print("   • Admin management interface")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
