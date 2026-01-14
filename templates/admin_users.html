@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👥 User Management - AssiScan Admin</title>
+    <title>User Management | AssiScan</title>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Use the same dark gold theme from admin_colleges.html */
         :root {
             --gold: #d4af37;
             --gold-light: #f3d576;
@@ -48,12 +47,13 @@
             padding: 20px;
         }
 
+        /* ===== LAYOUT ===== */
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
 
-        /* HEADER - Same as admin_colleges */
+        /* ===== HEADER ===== */
         .header {
             display: flex;
             justify-content: space-between;
@@ -162,62 +162,100 @@
             font-family: 'Cinzel', serif;
         }
 
-        /* STATS CARDS */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+        /* ===== CONTENT HEADER ===== */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
         }
 
-        .stat-card {
-            background: var(--bg-card);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            backdrop-filter: blur(5px);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--gold);
-        }
-
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            color: var(--gold);
-        }
-
-        .stat-content h3 {
+        .content-header h2 {
             font-family: 'Cinzel', serif;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 700;
             color: var(--gold);
-            margin-bottom: 4px;
-        }
-
-        .stat-content p {
-            color: var(--text-muted);
-            font-size: 12px;
-            text-transform: uppercase;
             letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
         }
 
-        /* SEARCH AND FILTER */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+        }
+
+        .btn-primary:hover {
+            background: var(--gold);
+            color: black;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover {
+            background: var(--success);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        /* ===== SEARCH AND FILTER ===== */
         .search-filter-container {
             display: flex;
             gap: 15px;
@@ -288,135 +326,28 @@
             transform: translateY(-2px);
         }
 
-        /* MAIN CONTENT */
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
-        }
-
-        .content-header h2 {
-            font-family: 'Cinzel', serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--gold);
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: var(--transition);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: rgba(212, 175, 55, 0.15);
-            color: var(--gold);
-            border: 1px solid var(--gold);
-        }
-
-        .btn-primary:hover {
-            background: var(--gold);
-            color: black;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-light);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(212, 175, 55, 0.1);
-            border-color: var(--gold);
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: rgba(40, 167, 69, 0.15);
-            color: #28a745;
-            border: 1px solid #28a745;
-        }
-
-        .btn-success:hover {
-            background: #28a745;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-danger {
-            background: rgba(220, 53, 69, 0.15);
-            color: #dc3545;
-            border: 1px solid #dc3545;
-        }
-
-        .btn-danger:hover {
-            background: #dc3545;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-        }
-
-        .btn-info {
-            background: rgba(23, 162, 184, 0.15);
-            color: #17a2b8;
-            border: 1px solid #17a2b8;
-        }
-
-        .btn-info:hover {
-            background: #17a2b8;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
-        }
-
-        /* USERS TABLE */
+        /* ===== USERS TABLE ===== */
         .table-wrapper {
             width: 100%;
             overflow-x: auto;
-            border-radius: 8px;
+            border-radius: var(--border-radius);
             border: 1px solid rgba(212, 175, 55, 0.2);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            box-shadow: var(--shadow);
             background: var(--bg-card);
             backdrop-filter: blur(5px);
-            margin-bottom: 40px;
         }
 
-        .users-table {
+        table {
             width: 100%;
             border-collapse: collapse;
             min-width: 1200px;
         }
 
-        .users-table thead {
+        thead {
             background: rgba(212, 175, 55, 0.1);
         }
 
-        .users-table th {
+        th {
             padding: 18px;
             text-align: left;
             color: var(--gold);
@@ -427,7 +358,7 @@
             text-transform: uppercase;
         }
 
-        .users-table td {
+        td {
             padding: 15px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             font-size: 13px;
@@ -435,50 +366,47 @@
             vertical-align: middle;
         }
 
-        .users-table tr:last-child td {
+        tr:last-child td {
             border-bottom: none;
         }
 
-        .users-table tr:hover {
+        tr:hover {
             background-color: rgba(212, 175, 55, 0.05);
         }
 
-        /* User Role Badges */
-        .role-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* User info cell */
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .role-super-admin {
-            background: rgba(220, 38, 38, 0.2);
-            color: #dc2626;
-            border: 1px solid #dc2626;
+        .user-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
         }
 
-        .role-college-admin {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 1px solid #3b82f6;
+        .user-details h4 {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 4px;
         }
 
-        .role-scanner {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid #22c55e;
+        .user-details p {
+            font-size: 11px;
+            color: var(--text-muted);
         }
 
-        .role-viewer {
-            background: rgba(168, 85, 247, 0.2);
-            color: #a855f7;
-            border: 1px solid #a855f7;
-        }
-
-        /* Status Badges */
+        /* Status badges */
         .status-badge {
             display: inline-block;
             padding: 4px 10px;
@@ -491,8 +419,8 @@
 
         .status-active {
             background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            border: 1px solid #28a745;
+            color: var(--success);
+            border: 1px solid var(--success);
         }
 
         .status-inactive {
@@ -501,13 +429,29 @@
             border: 1px solid #6c757d;
         }
 
-        .status-locked {
-            background: rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-            border: 1px solid #dc3545;
+        .role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* Action Buttons */
+        .role-superadmin {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+        }
+
+        .role-student {
+            background: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+            border: 1px solid #007bff;
+        }
+
+        /* Action buttons */
         .action-buttons-cell {
             display: flex;
             gap: 5px;
@@ -515,8 +459,8 @@
         }
 
         .icon-btn {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 4px;
             border: 1px solid #444;
             display: flex;
@@ -534,36 +478,30 @@
         }
 
         .icon-btn.edit:hover {
-            background: #ffc107;
+            background: var(--warning);
             color: black;
-            border-color: #ffc107;
-        }
-
-        .icon-btn.reset:hover {
-            background: #17a2b8;
-            color: white;
-            border-color: #17a2b8;
-        }
-
-        .icon-btn.activate:hover {
-            background: #28a745;
-            color: white;
-            border-color: #28a745;
-        }
-
-        .icon-btn.deactivate:hover {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
+            border-color: var(--warning);
         }
 
         .icon-btn.delete:hover {
-            background: #dc3545;
+            background: var(--danger);
             color: white;
-            border-color: #dc3545;
+            border-color: var(--danger);
         }
 
-        /* MODALS */
+        .icon-btn.reset:hover {
+            background: var(--info);
+            color: white;
+            border-color: var(--info);
+        }
+
+        /* Last login */
+        .last-login {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ===== MODALS ===== */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -580,11 +518,6 @@
             animation: fadeIn 0.3s ease;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
         .modal-container {
             background: #121212;
             border: 1px solid var(--gold);
@@ -595,17 +528,6 @@
             max-height: 90vh;
             overflow-y: auto;
             animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .modal-header {
@@ -667,8 +589,7 @@
         }
 
         .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-group select {
             width: 100%;
             padding: 10px 15px;
             background: rgba(255, 255, 255, 0.05);
@@ -680,8 +601,7 @@
         }
 
         .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-group select:focus {
             outline: none;
             border-color: var(--gold);
             box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
@@ -708,7 +628,16 @@
             gap: 10px;
         }
 
-        /* NOTIFICATIONS */
+        /* Password reset section */
+        .password-reset-section {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            border: 1px dashed rgba(212, 175, 55, 0.3);
+        }
+
+        /* ===== NOTIFICATION ===== */
         .notification {
             position: fixed;
             top: 30px;
@@ -751,8 +680,8 @@
             border: 1px solid #17a2b8;
         }
 
-        /* LOADING STATES */
-        .loading-state {
+        /* ===== LOADING ===== */
+        .loading {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -776,53 +705,28 @@
             to { transform: rotate(360deg); }
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-muted);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: var(--border-radius);
-            background: var(--bg-card);
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: rgba(212, 175, 55, 0.5);
-        }
-
-        /* User Avatar in Table */
-        .user-avatar-small {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: white;
-            font-weight: 600;
-            margin-right: 10px;
-        }
-
-        .user-name-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .users-table {
-                min-width: 1100px;
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
                 gap: 15px;
+                text-align: center;
             }
 
             .user-nav {
@@ -831,11 +735,6 @@
             }
 
             .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .action-buttons {
                 flex-wrap: wrap;
                 justify-content: center;
             }
@@ -854,8 +753,8 @@
                 min-width: 100%;
             }
 
-            .modal-container {
-                margin: 10px;
+            .action-buttons-cell {
+                flex-wrap: wrap;
             }
         }
 
@@ -864,19 +763,8 @@
                 padding: 10px;
             }
 
-            .stat-card {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .action-buttons-cell {
-                flex-direction: column;
-                gap: 5px;
-            }
-
-            .icon-btn {
-                width: 100%;
-                justify-content: center;
+            .modal-container {
+                margin: 10px;
             }
         }
     </style>
@@ -896,9 +784,9 @@
             </div>
             <div class="user-nav">
                 <div class="nav-links">
-                    <a href="/history.html" class="nav-link">
-                        <i class="fas fa-database"></i>
-                        <span>Records</span>
+                    <a href="/admin/dashboard" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
                     </a>
                     <a href="/admin/users" class="nav-link active">
                         <i class="fas fa-users"></i>
@@ -908,59 +796,40 @@
                         <i class="fas fa-university"></i>
                         <span>Colleges</span>
                     </a>
-                    <a href="/" class="nav-link">
-                        <i class="fas fa-qrcode"></i>
-                        <span>Scanner</span>
+                    <a href="/history.html" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Records</span>
                     </a>
-                    <a href="/logout" class="nav-link">
+                    <a href="#" class="nav-link" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
                     </a>
                 </div>
                 <div class="user-info">
-                    <div class="user-avatar">A</div>
-                    <span>Super Admin</span>
+                    <div class="user-avatar" id="userAvatar">SA</div>
+                    <div>
+                        <div id="userName">Super Admin</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Super Admin</div>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- STATS -->
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="totalUsers">0</h3>
-                    <p>Total Users</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-user-check"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="activeUsers">0</h3>
-                    <p>Active Users</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-user-shield"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="scannerUsers">0</h3>
-                    <p>Scanner Operators</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="todayLogins">0</h3>
-                    <p>Today's Logins</p>
-                </div>
+        <!-- CONTENT HEADER -->
+        <div class="content-header">
+            <h2>
+                <i class="fas fa-users-cog"></i>
+                User Accounts Management
+            </h2>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="refreshUsers()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+                <button class="btn btn-primary" onclick="openCreateUserModal()">
+                    <i class="fas fa-user-plus"></i>
+                    Add New User
+                </button>
             </div>
         </div>
 
@@ -968,187 +837,157 @@
         <div class="search-filter-container">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search users by name, username, or email...">
+                <input type="text" id="searchInput" placeholder="Search by name, username, or email...">
             </div>
             <div class="filter-buttons">
                 <button class="filter-btn active" onclick="filterUsers('all')">All Users</button>
                 <button class="filter-btn" onclick="filterUsers('active')">Active</button>
-                <button class="filter-btn" onclick="filterUsers('scanner')">Scanner Operators</button>
                 <button class="filter-btn" onclick="filterUsers('inactive')">Inactive</button>
-            </div>
-        </div>
-
-        <!-- MAIN CONTENT -->
-        <div class="content-header">
-            <h2>
-                <i class="fas fa-user-cog"></i>
-                System Users
-            </h2>
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="refreshUsers()">
-                    <i class="fas fa-sync-alt"></i>
-                    Refresh
-                </button>
-                <button class="btn btn-primary" onclick="openAddUserModal()">
-                    <i class="fas fa-plus"></i>
-                    Add New User
-                </button>
+                <button class="filter-btn" onclick="filterUsers('super_admin')">Super Admin</button>
+                <button class="filter-btn" onclick="filterUsers('student')">Student</button>
             </div>
         </div>
 
         <!-- USERS TABLE -->
         <div class="table-wrapper">
-            <table class="users-table" id="usersTable">
+            <table id="usersTable">
                 <thead>
                     <tr>
                         <th>User Information</th>
-                        <th>Username & Email</th>
-                        <th>Role & College</th>
+                        <th>Role</th>
                         <th>Status</th>
+                        <th>College</th>
                         <th>Last Login</th>
+                        <th>Created</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
                     <!-- Users will be loaded here -->
+                    <tr>
+                        <td colspan="7">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading users...</p>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-            <div id="noUsersMessage" class="empty-state" style="display: none;">
-                <i class="fas fa-users"></i>
-                <h3>No Users Found</h3>
-                <p>Add your first user to get started!</p>
-                <button class="btn btn-primary" onclick="openAddUserModal()">
-                    <i class="fas fa-plus"></i> Add First User
-                </button>
-            </div>
         </div>
 
-        <!-- MODALS -->
-        <!-- Add User Modal -->
-        <div id="addUserModal" class="modal-overlay">
+        <!-- CREATE USER MODAL -->
+        <div id="createUserModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-plus-circle"></i> Add New User</h3>
-                    <button class="close-modal" onclick="closeModal('addUserModal')">&times;</button>
+                    <h3><i class="fas fa-user-plus"></i> Create User Account</h3>
+                    <button class="close-modal" onclick="closeModal('createUserModal')">&times;</button>
                 </div>
-                <form id="addUserForm">
+                <form id="createUserForm">
                     <div class="modal-body">
                         <div class="form-group">
-                            <label for="newFullName"><i class="fas fa-user"></i> Full Name *</label>
-                            <input type="text" id="newFullName" placeholder="e.g., Juan Dela Cruz" required>
+                            <label for="newUsername"><i class="fas fa-user"></i> Username *</label>
+                            <input type="text" id="newUsername" required>
                         </div>
                         <div class="form-group">
-                            <label for="newUsername"><i class="fas fa-at"></i> Username *</label>
-                            <input type="text" id="newUsername" placeholder="e.g., juan.delacruz" required>
-                            <small style="color: var(--text-muted); font-size: 11px;">Unique username for login</small>
+                            <label for="newFullName"><i class="fas fa-id-card"></i> Full Name *</label>
+                            <input type="text" id="newFullName" required>
                         </div>
                         <div class="form-group">
-                            <label for="newEmail"><i class="fas fa-envelope"></i> Email Address</label>
-                            <input type="email" id="newEmail" placeholder="e.g., juan@example.com">
+                            <label for="newEmail"><i class="fas fa-envelope"></i> Email *</label>
+                            <input type="email" id="newEmail" required>
                         </div>
                         <div class="form-group">
-                            <label for="newPassword"><i class="fas fa-lock"></i> Password *</label>
-                            <input type="password" id="newPassword" placeholder="Enter password" required>
-                            <small style="color: var(--text-muted); font-size: 11px;">Minimum 8 characters</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="newConfirmPassword"><i class="fas fa-lock"></i> Confirm Password *</label>
-                            <input type="password" id="newConfirmPassword" placeholder="Confirm password" required>
+                            <label for="newRole"><i class="fas fa-user-tag"></i> Role *</label>
+                            <select id="newRole" required>
+                                <option value="STUDENT">Student</option>
+                                <option value="SUPER_ADMIN">Super Admin</option>
+                            </select>
                         </div>
                         <div class="row" style="display: flex; gap: 15px;">
                             <div class="form-group" style="flex: 1;">
-                                <label for="newRole"><i class="fas fa-user-tag"></i> Role *</label>
-                                <select id="newRole" required onchange="toggleCollegeField()">
-                                    <option value="scanner_operator">Scanner Operator</option>
-                                    <option value="college_admin">College Admin</option>
-                                    <option value="viewer">Viewer</option>
-                                    <option value="super_admin">Super Admin</option>
+                                <label for="newCollegeId">College (Optional)</label>
+                                <select id="newCollegeId">
+                                    <option value="">-- Select College --</option>
                                 </select>
                             </div>
                             <div class="form-group" style="flex: 1;">
-                                <label><i class="fas fa-toggle-on"></i> Status</label>
-                                <div class="checkbox-group">
-                                    <input type="checkbox" id="newIsActive" checked>
-                                    <label for="newIsActive">Active</label>
-                                </div>
+                                <label for="newProgramId">Program (Optional)</label>
+                                <select id="newProgramId" disabled>
+                                    <option value="">-- Select College First --</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="form-group" id="collegeFieldContainer" style="display: none;">
-                            <label for="newCollegeId"><i class="fas fa-university"></i> Assigned College</label>
-                            <select id="newCollegeId">
-                                <option value="">Select College</option>
-                            </select>
+                        <div class="form-group">
+                            <label><i class="fas fa-toggle-on"></i> Status</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="newIsActive" checked>
+                                <label for="newIsActive">Active Account</label>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create User</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Account</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Edit User Modal -->
+        <!-- EDIT USER MODAL -->
         <div id="editUserModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-edit"></i> Edit User</h3>
+                    <h3><i class="fas fa-edit"></i> Edit User Account</h3>
                     <button class="close-modal" onclick="closeModal('editUserModal')">&times;</button>
                 </div>
                 <form id="editUserForm">
                     <input type="hidden" id="editUserId">
                     <div class="modal-body">
                         <div class="form-group">
-                            <label for="editFullName"><i class="fas fa-user"></i> Full Name *</label>
+                            <label for="editFullName"><i class="fas fa-id-card"></i> Full Name *</label>
                             <input type="text" id="editFullName" required>
                         </div>
                         <div class="form-group">
-                            <label for="editUsername"><i class="fas fa-at"></i> Username *</label>
-                            <input type="text" id="editUsername" required>
+                            <label for="editEmail"><i class="fas fa-envelope"></i> Email *</label>
+                            <input type="email" id="editEmail" required>
                         </div>
                         <div class="form-group">
-                            <label for="editEmail"><i class="fas fa-envelope"></i> Email Address</label>
-                            <input type="email" id="editEmail">
+                            <label for="editRole"><i class="fas fa-user-tag"></i> Role *</label>
+                            <select id="editRole" required>
+                                <option value="STUDENT">Student</option>
+                                <option value="SUPER_ADMIN">Super Admin</option>
+                            </select>
                         </div>
                         <div class="row" style="display: flex; gap: 15px;">
                             <div class="form-group" style="flex: 1;">
-                                <label for="editRole"><i class="fas fa-user-tag"></i> Role *</label>
-                                <select id="editRole" required onchange="toggleEditCollegeField()">
-                                    <option value="scanner_operator">Scanner Operator</option>
-                                    <option value="college_admin">College Admin</option>
-                                    <option value="viewer">Viewer</option>
-                                    <option value="super_admin">Super Admin</option>
+                                <label for="editCollegeId">College</label>
+                                <select id="editCollegeId">
+                                    <option value="">-- Select College --</option>
                                 </select>
                             </div>
                             <div class="form-group" style="flex: 1;">
-                                <label><i class="fas fa-toggle-on"></i> Status</label>
-                                <div class="checkbox-group">
-                                    <input type="checkbox" id="editIsActive">
-                                    <label for="editIsActive">Active</label>
-                                </div>
+                                <label for="editProgramId">Program</label>
+                                <select id="editProgramId" disabled>
+                                    <option value="">-- Select College First --</option>
+                                </select>
                             </div>
-                        </div>
-                        <div class="form-group" id="editCollegeFieldContainer" style="display: none;">
-                            <label for="editCollegeId"><i class="fas fa-university"></i> Assigned College</label>
-                            <select id="editCollegeId">
-                                <option value="">Select College</option>
-                            </select>
                         </div>
                         <div class="form-group">
-                            <label><i class="fas fa-key"></i> Password Reset</label>
+                            <label><i class="fas fa-toggle-on"></i> Status</label>
                             <div class="checkbox-group">
-                                <input type="checkbox" id="resetPassword">
-                                <label for="resetPassword">Reset password on save</label>
+                                <input type="checkbox" id="editIsActive">
+                                <label for="editIsActive">Active Account</label>
                             </div>
                         </div>
-                        <div id="newPasswordSection" style="display: none;">
+                        
+                        <div class="password-reset-section">
                             <div class="form-group">
-                                <label for="editNewPassword"><i class="fas fa-lock"></i> New Password</label>
-                                <input type="password" id="editNewPassword" placeholder="Enter new password">
-                            </div>
-                            <div class="form-group">
-                                <label for="editConfirmPassword"><i class="fas fa-lock"></i> Confirm Password</label>
-                                <input type="password" id="editConfirmPassword" placeholder="Confirm new password">
+                                <label><i class="fas fa-key"></i> Password Reset</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="editResetPassword">
+                                    <label for="editResetPassword">Reset password (generate new temporary password)</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1160,7 +999,7 @@
             </div>
         </div>
 
-        <!-- Confirmation Modal -->
+        <!-- CONFIRMATION MODAL -->
         <div id="confirmModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 400px;">
                 <div class="modal-header">
@@ -1177,34 +1016,6 @@
             </div>
         </div>
 
-        <!-- Reset Password Modal -->
-        <div id="resetPasswordModal" class="modal-overlay">
-            <div class="modal-container" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-key"></i> Reset Password</h3>
-                    <button class="close-modal" onclick="closeModal('resetPasswordModal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="resetUserInfo">User</label>
-                        <input type="text" id="resetUserInfo" readonly style="background: rgba(255,255,255,0.05);">
-                    </div>
-                    <div class="form-group">
-                        <label for="resetPassword">New Password *</label>
-                        <input type="password" id="resetPassword" placeholder="Enter new password" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="resetConfirmPassword">Confirm Password *</label>
-                        <input type="password" id="resetConfirmPassword" placeholder="Confirm new password" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="performResetPassword()">Reset Password</button>
-                </div>
-            </div>
-        </div>
-
         <!-- NOTIFICATION -->
         <div id="notification" class="notification">
             <i class="fas fa-check-circle"></i>
@@ -1213,225 +1024,159 @@
     </div>
 
     <script>
-        // Global variables
         let usersData = [];
         let collegesData = [];
         let currentAction = {};
         let currentFilter = 'all';
-
-        // Role mapping for display
-        const roleNames = {
-            'super_admin': 'Super Admin',
-            'college_admin': 'College Admin',
-            'scanner_operator': 'Scanner Operator',
-            'viewer': 'Viewer'
-        };
-
-        // Role badge classes
-        const roleBadgeClasses = {
-            'super_admin': 'role-super-admin',
-            'college_admin': 'role-college-admin',
-            'scanner_operator': 'role-scanner',
-            'viewer': 'role-viewer'
-        };
+        let currentUserId = null;
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        window.addEventListener('load', function() {
+            checkAuth();
             loadUsers();
-            loadCollegesForDropdown();
-            setupFormEvents();
+            loadCollegesForModal();
             setupSearch();
         });
 
-        // Load users from API
-        async function loadUsers() {
+        // Check authentication
+        async function checkAuth() {
+            const sessionToken = localStorage.getItem('session_token');
+            
+            if (!sessionToken) {
+                window.location.href = '/login';
+                return;
+            }
+            
             try {
-                const response = await fetch('/api/users');
-                if (response.status === 401) {
+                const response = await fetch('/api/check-session', {
+                    headers: {
+                        'Authorization': sessionToken
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.authenticated) {
+                    localStorage.clear();
                     window.location.href = '/login';
                     return;
                 }
                 
+                if (data.user.role !== 'SUPER_ADMIN') {
+                    window.location.href = '/';
+                    return;
+                }
+                
+                // Set user data
+                document.getElementById('userName').textContent = data.user.full_name;
+                document.getElementById('userAvatar').textContent = 
+                    data.user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                
+            } catch (error) {
+                console.error('Auth check error:', error);
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
+                });
+                
                 if (response.ok) {
                     usersData = await response.json();
-                    updateStats();
                     renderUsers(usersData);
                 } else {
-                    console.error('Failed to load users:', response.status);
+                    showNotification('Failed to load users', 'error');
                 }
             } catch (error) {
-                console.error('Error loading users:', error);
+                console.error('Load users error:', error);
+                showNotification('Connection error', 'error');
             }
         }
 
-        // Load colleges for dropdown
-        async function loadCollegesForDropdown() {
-            try {
-                const response = await fetch('/api/colleges-dropdown');
-                if (response.ok) {
-                    collegesData = await response.json();
-                    populateCollegeDropdowns();
-                }
-            } catch (error) {
-                console.error('Error loading colleges:', error);
-            }
-        }
-
-        // Populate college dropdowns in modals
-        function populateCollegeDropdowns() {
-            const addCollegeSelect = document.getElementById('newCollegeId');
-            const editCollegeSelect = document.getElementById('editCollegeId');
-            
-            // Clear existing options except first one
-            addCollegeSelect.innerHTML = '<option value="">Select College</option>';
-            editCollegeSelect.innerHTML = '<option value="">Select College</option>';
-            
-            // Add college options
-            collegesData.forEach(college => {
-                const option1 = document.createElement('option');
-                option1.value = college.id;
-                option1.textContent = `${college.code} - ${college.name}`;
-                addCollegeSelect.appendChild(option1);
-                
-                const option2 = document.createElement('option');
-                option2.value = college.id;
-                option2.textContent = `${college.code} - ${college.name}`;
-                editCollegeSelect.appendChild(option2);
-            });
-        }
-
-        // Update statistics
-        function updateStats() {
-            const totalUsers = usersData.length;
-            const activeUsers = usersData.filter(u => u.is_active).length;
-            const scannerUsers = usersData.filter(u => u.role === 'scanner_operator').length;
-            
-            // Calculate today's logins (mock data for now)
-            const today = new Date().toISOString().split('T')[0];
-            const todayLogins = usersData.filter(u => {
-                if (u.last_login) {
-                    const loginDate = new Date(u.last_login).toISOString().split('T')[0];
-                    return loginDate === today;
-                }
-                return false;
-            }).length;
-            
-            document.getElementById('totalUsers').textContent = totalUsers;
-            document.getElementById('activeUsers').textContent = activeUsers;
-            document.getElementById('scannerUsers').textContent = scannerUsers;
-            document.getElementById('todayLogins').textContent = todayLogins;
-        }
-
-        // Render users table
         function renderUsers(users) {
             const tbody = document.getElementById('usersTableBody');
-            const noUsersMessage = document.getElementById('noUsersMessage');
             
             if (users.length === 0) {
-                tbody.innerHTML = '';
-                noUsersMessage.style.display = 'block';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                <i class="fas fa-users-slash" style="font-size: 48px; margin-bottom: 15px;"></i>
+                                <h3>No Users Found</h3>
+                                <p>Create your first user account to get started!</p>
+                                <button class="btn btn-primary" onclick="openCreateUserModal()">
+                                    <i class="fas fa-user-plus"></i> Create First User
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
             
-            noUsersMessage.style.display = 'none';
-            
             tbody.innerHTML = users.map(user => {
-                // Get user initials for avatar
-                const initials = user.full_name 
-                    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-                    : '??';
+                const initials = user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const lastLogin = user.last_login ? formatDateTime(user.last_login) : 'Never';
+                const created = formatDateTime(user.created_at);
                 
-                // Format last login
-                let lastLogin = 'Never';
-                if (user.last_login) {
-                    const loginDate = new Date(user.last_login);
-                    lastLogin = loginDate.toLocaleDateString() + ' ' + loginDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                }
-                
-                // Get college name
-                let collegeName = 'Not assigned';
-                if (user.college_id && collegesData.length > 0) {
-                    const college = collegesData.find(c => c.id == user.college_id);
-                    if (college) {
-                        collegeName = college.code;
-                    }
-                }
-                
-                // Determine status
-                let statusBadge = '';
-                let statusText = '';
-                if (user.locked_until && new Date(user.locked_until) > new Date()) {
-                    statusBadge = 'status-locked';
-                    statusText = 'LOCKED';
-                } else if (user.is_active) {
-                    statusBadge = 'status-active';
-                    statusText = 'ACTIVE';
-                } else {
-                    statusBadge = 'status-inactive';
-                    statusText = 'INACTIVE';
-                }
+                // Don't show delete button for current user
+                const showDelete = user.id !== currentUserId;
                 
                 return `
                     <tr id="user-${user.id}">
                         <td>
-                            <div class="user-name-cell">
+                            <div class="user-cell">
                                 <div class="user-avatar-small">${initials}</div>
-                                <div>
-                                    <div class="highlight-text">${user.full_name || 'No Name'}</div>
-                                    <div class="sub-text">ID: ${user.id}</div>
+                                <div class="user-details">
+                                    <h4>${user.full_name}</h4>
+                                    <p>${user.username} • ${user.email}</p>
+                                    ${user.created_by_name ? `<p style="font-size: 10px; color: var(--gold);">Created by: ${user.created_by_name}</p>` : ''}
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <div class="highlight-text">@${user.username}</div>
-                            <div class="sub-text">${user.email || 'No email'}</div>
+                            <span class="role-badge ${user.role === 'SUPER_ADMIN' ? 'role-superadmin' : 'role-student'}">
+                                ${user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Student'}
+                            </span>
                         </td>
                         <td>
-                            <div class="role-badge ${roleBadgeClasses[user.role] || 'role-scanner'}">
-                                ${roleNames[user.role] || user.role}
-                            </div>
-                            ${user.role === 'college_admin' ? `
-                                <div class="sub-text" style="margin-top: 3px;">
-                                    <i class="fas fa-university"></i> ${collegeName}
-                                </div>
-                            ` : ''}
+                            <span class="status-badge ${user.is_active ? 'status-active' : 'status-inactive'}">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
                         </td>
                         <td>
-                            <div class="status-badge ${statusBadge}">${statusText}</div>
-                            ${user.failed_attempts > 0 ? `
-                                <div class="sub-text" style="margin-top: 3px;">
-                                    <i class="fas fa-exclamation-triangle"></i> ${user.failed_attempts} failed attempts
-                                </div>
-                            ` : ''}
+                            <div>${user.college_name || '—'}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">${user.program_name || ''}</div>
                         </td>
                         <td>
-                            <div class="sub-text">${lastLogin}</div>
-                            ${user.created_at ? `
-                                <div class="sub-text" style="font-size: 10px;">
-                                    Created: ${new Date(user.created_at).toLocaleDateString()}
-                                </div>
-                            ` : ''}
+                            <div class="last-login">${lastLogin}</div>
+                        </td>
+                        <td>
+                            <div class="last-login">${created}</div>
                         </td>
                         <td>
                             <div class="action-buttons-cell">
                                 <button class="icon-btn edit" onclick="openEditUserModal(${user.id})" title="Edit User">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="icon-btn reset" onclick="openResetPasswordModal(${user.id})" title="Reset Password">
+                                <button class="icon-btn reset" onclick="confirmResetPassword(${user.id})" title="Reset Password">
                                     <i class="fas fa-key"></i>
                                 </button>
-                                ${user.is_active ? `
-                                    <button class="icon-btn deactivate" onclick="confirmDeactivateUser(${user.id})" title="Deactivate User">
+                                ${user.is_active && showDelete ? `
+                                    <button class="icon-btn delete" onclick="confirmDeactivateUser(${user.id})" title="Deactivate User">
                                         <i class="fas fa-user-slash"></i>
                                     </button>
-                                ` : `
-                                    <button class="icon-btn activate" onclick="confirmActivateUser(${user.id})" title="Activate User">
+                                ` : ''}
+                                ${!user.is_active && showDelete ? `
+                                    <button class="icon-btn edit" onclick="confirmActivateUser(${user.id})" title="Activate User">
                                         <i class="fas fa-user-check"></i>
-                                    </button>
-                                `}
-                                ${user.id !== 1 ? ` <!-- Don't allow deleting super admin (ID 1) -->
-                                    <button class="icon-btn delete" onclick="confirmDeleteUser(${user.id})" title="Delete User">
-                                        <i class="fas fa-trash"></i>
                                     </button>
                                 ` : ''}
                             </div>
@@ -1439,6 +1184,79 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        // Load colleges for modal
+        async function loadCollegesForModal() {
+            try {
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    collegesData = await response.json();
+                    
+                    // For create modal
+                    const createCollegeSelect = document.getElementById('newCollegeId');
+                    createCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                    
+                    // For edit modal
+                    const editCollegeSelect = document.getElementById('editCollegeId');
+                    editCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                    
+                    collegesData.forEach(college => {
+                        const option1 = document.createElement('option');
+                        option1.value = college.id;
+                        option1.textContent = `${college.code} - ${college.name}`;
+                        createCollegeSelect.appendChild(option1);
+                        
+                        const option2 = document.createElement('option');
+                        option2.value = college.id;
+                        option2.textContent = `${college.code} - ${college.name}`;
+                        editCollegeSelect.appendChild(option2);
+                    });
+                    
+                    // Update programs when college changes
+                    createCollegeSelect.addEventListener('change', function() {
+                        const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
+                        updateCreateProgramSelect(selectedCollege);
+                    });
+                    
+                    editCollegeSelect.addEventListener('change', function() {
+                        const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
+                        updateEditProgramSelect(selectedCollege);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading colleges:', error);
+            }
+        }
+
+        function updateCreateProgramSelect(college) {
+            const programSelect = document.getElementById('newProgramId');
+            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
+            programSelect.disabled = !college;
+            
+            if (college && college.programs) {
+                college.programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.id;
+                    option.textContent = program.name;
+                    programSelect.appendChild(option);
+                });
+            }
+        }
+
+        function updateEditProgramSelect(college) {
+            const programSelect = document.getElementById('editProgramId');
+            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
+            programSelect.disabled = !college;
+            
+            if (college && college.programs) {
+                college.programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.id;
+                    option.textContent = program.name;
+                    programSelect.appendChild(option);
+                });
+            }
         }
 
         // Filter users
@@ -1460,8 +1278,11 @@
                 case 'inactive':
                     filteredUsers = usersData.filter(u => !u.is_active);
                     break;
-                case 'scanner':
-                    filteredUsers = usersData.filter(u => u.role === 'scanner_operator');
+                case 'super_admin':
+                    filteredUsers = usersData.filter(u => u.role === 'SUPER_ADMIN');
+                    break;
+                case 'student':
+                    filteredUsers = usersData.filter(u => u.role === 'STUDENT');
                     break;
                 case 'all':
                 default:
@@ -1471,7 +1292,7 @@
             renderUsers(filteredUsers);
         }
 
-        // Setup search functionality
+        // Search functionality
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('input', function() {
@@ -1483,11 +1304,12 @@
                 }
                 
                 const filteredUsers = usersData.filter(user => {
-                    const nameMatch = user.full_name?.toLowerCase().includes(searchTerm) || false;
-                    const usernameMatch = user.username?.toLowerCase().includes(searchTerm) || false;
-                    const emailMatch = user.email?.toLowerCase().includes(searchTerm) || false;
+                    const nameMatch = user.full_name.toLowerCase().includes(searchTerm);
+                    const usernameMatch = user.username.toLowerCase().includes(searchTerm);
+                    const emailMatch = user.email.toLowerCase().includes(searchTerm);
+                    const collegeMatch = user.college_name?.toLowerCase().includes(searchTerm) || false;
                     
-                    return nameMatch || usernameMatch || emailMatch;
+                    return nameMatch || usernameMatch || emailMatch || collegeMatch;
                 });
                 
                 renderUsers(filteredUsers);
@@ -1505,75 +1327,134 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Toggle college field based on role selection
-        function toggleCollegeField() {
-            const role = document.getElementById('newRole').value;
-            const container = document.getElementById('collegeFieldContainer');
-            
-            if (role === 'college_admin') {
-                container.style.display = 'block';
-            } else {
-                container.style.display = 'none';
-            }
+        function openCreateUserModal() {
+            document.getElementById('createUserForm').reset();
+            document.getElementById('newRole').value = 'STUDENT';
+            document.getElementById('newIsActive').checked = true;
+            document.getElementById('newCollegeId').value = '';
+            document.getElementById('newProgramId').innerHTML = '<option value="">-- Select College First --</option>';
+            document.getElementById('newProgramId').disabled = true;
+            openModal('createUserModal');
         }
 
-        function toggleEditCollegeField() {
-            const role = document.getElementById('editRole').value;
-            const container = document.getElementById('editCollegeFieldContainer');
-            
-            if (role === 'college_admin') {
-                container.style.display = 'block';
-            } else {
-                container.style.display = 'none';
-            }
-        }
-
-        // Open Add User Modal
-        function openAddUserModal() {
-            document.getElementById('addUserForm').reset();
-            toggleCollegeField();
-            openModal('addUserModal');
-        }
-
-        // Open Edit User Modal
-        async function openEditUserModal(userId) {
+        function openEditUserModal(userId) {
             const user = usersData.find(u => u.id === userId);
             if (!user) return;
             
             document.getElementById('editUserId').value = user.id;
-            document.getElementById('editFullName').value = user.full_name || '';
-            document.getElementById('editUsername').value = user.username || '';
-            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editFullName').value = user.full_name;
+            document.getElementById('editEmail').value = user.email;
             document.getElementById('editRole').value = user.role;
+            document.getElementById('editCollegeId').value = user.college_id || '';
             document.getElementById('editIsActive').checked = user.is_active;
-            document.getElementById('resetPassword').checked = false;
+            document.getElementById('editResetPassword').checked = false;
             
-            // Set college if user is college admin
-            if (user.role === 'college_admin' && user.college_id) {
-                document.getElementById('editCollegeId').value = user.college_id;
+            // Update program select based on college
+            if (user.college_id) {
+                const selectedCollege = collegesData.find(c => c.id === user.college_id);
+                updateEditProgramSelect(selectedCollege);
+                document.getElementById('editProgramId').value = user.program_id || '';
+            } else {
+                document.getElementById('editProgramId').innerHTML = '<option value="">-- Select College First --</option>';
+                document.getElementById('editProgramId').disabled = true;
             }
             
-            toggleEditCollegeField();
             openModal('editUserModal');
         }
 
-        // Open Reset Password Modal
-        function openResetPasswordModal(userId) {
-            const user = usersData.find(u => u.id === userId);
-            if (!user) return;
+        // Create user
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            currentAction = {
-                type: 'resetPassword',
-                userId: userId,
-                userName: user.full_name || user.username
+            const userData = {
+                username: document.getElementById('newUsername').value,
+                full_name: document.getElementById('newFullName').value,
+                email: document.getElementById('newEmail').value,
+                role: document.getElementById('newRole').value,
+                college_id: document.getElementById('newCollegeId').value || null,
+                program_id: document.getElementById('newProgramId').value || null,
+                is_active: document.getElementById('newIsActive').checked
             };
             
-            document.getElementById('resetUserInfo').value = `${user.full_name || user.username} (@${user.username})`;
-            document.getElementById('resetPassword').value = '';
-            document.getElementById('resetConfirmPassword').value = '';
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`User created successfully! Temporary password: ${data.user.temp_password}`, 'success');
+                    closeModal('createUserModal');
+                    
+                    // Reload users
+                    setTimeout(() => {
+                        loadUsers();
+                    }, 1000);
+                    
+                } else {
+                    showNotification(data.error || 'Failed to create user', 'error');
+                }
+            } catch (error) {
+                console.error('Create user error:', error);
+                showNotification('Connection error', 'error');
+            }
+        });
+
+        // Edit user
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            openModal('resetPasswordModal');
-        }
+            const userId = document.getElementById('editUserId').value;
+            const userData = {
+                full_name: document.getElementById('editFullName').value,
+                email: document.getElementById('editEmail').value,
+                role: document.getElementById('editRole').value,
+                college_id: document.getElementById('editCollegeId').value || null,
+                program_id: document.getElementById('editProgramId').value || null,
+                is_active: document.getElementById('editIsActive').checked,
+                reset_password: document.getElementById('editResetPassword').checked
+            };
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let message = 'User updated successfully';
+                    if (data.temp_password) {
+                        message += `. New temporary password: ${data.temp_password}`;
+                    }
+                    
+                    showNotification(message, 'success');
+                    closeModal('editUserModal');
+                    
+                    // Reload users
+                    setTimeout(() => {
+                        loadUsers();
+                    }, 1000);
+                    
+                } else {
+                    showNotification(data.error || 'Failed to update user', 'error');
+                }
+            } catch (error) {
+                console.error('Edit user error:', error);
+                showNotification('Connection error', 'error');
+            }
+        });
 
         // Confirmation functions
         function confirmDeactivateUser(userId) {
@@ -1581,7 +1462,7 @@
             currentAction = {
                 type: 'deactivateUser',
                 userId: userId,
-                userName: user?.full_name || user?.username || 'Unknown'
+                userName: user?.full_name || 'Unknown User'
             };
             
             document.getElementById('confirmMessage').textContent = 
@@ -1594,7 +1475,7 @@
             currentAction = {
                 type: 'activateUser',
                 userId: userId,
-                userName: user?.full_name || user?.username || 'Unknown'
+                userName: user?.full_name || 'Unknown User'
             };
             
             document.getElementById('confirmMessage').textContent = 
@@ -1602,280 +1483,148 @@
             openModal('confirmModal');
         }
 
-        function confirmDeleteUser(userId) {
+        function confirmResetPassword(userId) {
             const user = usersData.find(u => u.id === userId);
             currentAction = {
-                type: 'deleteUser',
+                type: 'resetPassword',
                 userId: userId,
-                userName: user?.full_name || user?.username || 'Unknown'
+                userName: user?.full_name || 'Unknown User'
             };
             
             document.getElementById('confirmMessage').textContent = 
-                `Are you sure you want to permanently delete "${currentAction.userName}"? This action cannot be undone.`;
+                `Are you sure you want to reset password for "${currentAction.userName}"?`;
             openModal('confirmModal');
         }
 
-        function confirmAction() {
+        async function confirmAction() {
             switch(currentAction.type) {
                 case 'deactivateUser':
-                    deactivateUser(currentAction.userId);
+                    await deactivateUser(currentAction.userId);
                     break;
                 case 'activateUser':
-                    activateUser(currentAction.userId);
+                    await activateUser(currentAction.userId);
                     break;
-                case 'deleteUser':
-                    deleteUser(currentAction.userId);
+                case 'resetPassword':
+                    await resetPassword(currentAction.userId);
                     break;
             }
             closeModal('confirmModal');
         }
 
-        // Setup form events
-        function setupFormEvents() {
-            // Add User Form
-            document.getElementById('addUserForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await addUser();
-            });
-            
-            // Edit User Form
-            document.getElementById('editUserForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await updateUser();
-            });
-            
-            // Toggle password reset fields
-            document.getElementById('resetPassword').addEventListener('change', function() {
-                const passwordSection = document.getElementById('newPasswordSection');
-                passwordSection.style.display = this.checked ? 'block' : 'none';
-            });
-        }
-
-        // API Functions
-        async function addUser() {
-            const fullName = document.getElementById('newFullName').value.trim();
-            const username = document.getElementById('newUsername').value.trim();
-            const email = document.getElementById('newEmail').value.trim();
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('newConfirmPassword').value;
-            const role = document.getElementById('newRole').value;
-            const isActive = document.getElementById('newIsActive').checked;
-            const collegeId = document.getElementById('newCollegeId').value;
-            
-            // Validation
-            if (password !== confirmPassword) {
-                showNotification('Passwords do not match!', 'error');
-                return;
-            }
-            
-            if (password.length < 8) {
-                showNotification('Password must be at least 8 characters!', 'error');
-                return;
-            }
-            
-            const userData = {
-                full_name: fullName,
-                username: username,
-                email: email || null,
-                password: password,
-                role: role,
-                is_active: isActive,
-                college_id: role === 'college_admin' ? (collegeId || null) : null
-            };
-            
-            try {
-                const response = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(userData)
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    showNotification('User created successfully!', 'success');
-                    closeModal('addUserModal');
-                    await loadUsers();
-                } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to create user', 'error');
-                }
-            } catch (error) {
-                console.error('Error creating user:', error);
-                showNotification('Network error. Please try again.', 'error');
-            }
-        }
-
-        async function updateUser() {
-            const userId = document.getElementById('editUserId').value;
-            const fullName = document.getElementById('editFullName').value.trim();
-            const username = document.getElementById('editUsername').value.trim();
-            const email = document.getElementById('editEmail').value.trim();
-            const role = document.getElementById('editRole').value;
-            const isActive = document.getElementById('editIsActive').checked;
-            const collegeId = document.getElementById('editCollegeId').value;
-            const resetPassword = document.getElementById('resetPassword').checked;
-            const newPassword = document.getElementById('editNewPassword').value;
-            const confirmPassword = document.getElementById('editConfirmPassword').value;
-            
-            // Password validation if resetting
-            if (resetPassword) {
-                if (newPassword !== confirmPassword) {
-                    showNotification('Passwords do not match!', 'error');
-                    return;
-                }
-                
-                if (newPassword.length < 8) {
-                    showNotification('Password must be at least 8 characters!', 'error');
-                    return;
-                }
-            }
-            
-            const userData = {
-                full_name: fullName,
-                username: username,
-                email: email || null,
-                role: role,
-                is_active: isActive,
-                college_id: role === 'college_admin' ? (collegeId || null) : null
-            };
-            
-            // Add password if resetting
-            if (resetPassword) {
-                userData.password = newPassword;
-            }
-            
-            try {
-                const response = await fetch(`/api/users/${userId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(userData)
-                });
-                
-                if (response.ok) {
-                    showNotification('User updated successfully!', 'success');
-                    closeModal('editUserModal');
-                    await loadUsers();
-                } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to update user', 'error');
-                }
-            } catch (error) {
-                console.error('Error updating user:', error);
-                showNotification('Network error. Please try again.', 'error');
-            }
-        }
-
-        async function performResetPassword() {
-            const userId = currentAction.userId;
-            const password = document.getElementById('resetPassword').value;
-            const confirmPassword = document.getElementById('resetConfirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                showNotification('Passwords do not match!', 'error');
-                return;
-            }
-            
-            if (password.length < 8) {
-                showNotification('Password must be at least 8 characters!', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/users/${userId}/reset-password`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ password: password })
-                });
-                
-                if (response.ok) {
-                    showNotification('Password reset successfully!', 'success');
-                    closeModal('resetPasswordModal');
-                } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to reset password', 'error');
-                }
-            } catch (error) {
-                console.error('Error resetting password:', error);
-                showNotification('Network error. Please try again.', 'error');
-            }
-        }
-
+        // User actions
         async function deactivateUser(userId) {
             try {
-                const response = await fetch(`/api/users/${userId}/deactivate`, {
-                    method: 'POST'
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
                 });
                 
+                const data = await response.json();
+                
                 if (response.ok) {
-                    showNotification('User deactivated successfully!', 'success');
-                    await loadUsers();
+                    showNotification('User deactivated successfully', 'success');
+                    loadUsers();
                 } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to deactivate user', 'error');
+                    showNotification(data.error || 'Failed to deactivate user', 'error');
                 }
             } catch (error) {
-                console.error('Error deactivating user:', error);
-                showNotification('Network error. Please try again.', 'error');
+                console.error('Deactivate error:', error);
+                showNotification('Connection error', 'error');
             }
         }
 
         async function activateUser(userId) {
             try {
                 const response = await fetch(`/api/users/${userId}/activate`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
                 });
                 
+                const data = await response.json();
+                
                 if (response.ok) {
-                    showNotification('User activated successfully!', 'success');
-                    await loadUsers();
+                    showNotification('User activated successfully', 'success');
+                    loadUsers();
                 } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to activate user', 'error');
+                    showNotification(data.error || 'Failed to activate user', 'error');
                 }
             } catch (error) {
-                console.error('Error activating user:', error);
-                showNotification('Network error. Please try again.', 'error');
+                console.error('Activate error:', error);
+                showNotification('Connection error', 'error');
             }
         }
 
-        async function deleteUser(userId) {
+        async function resetPassword(userId) {
             try {
+                const user = usersData.find(u => u.id === userId);
                 const response = await fetch(`/api/users/${userId}`, {
-                    method: 'DELETE'
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify({
+                        reset_password: true
+                    })
                 });
                 
+                const data = await response.json();
+                
                 if (response.ok) {
-                    showNotification('User deleted successfully!', 'success');
-                    await loadUsers();
+                    let message = 'Password reset successful';
+                    if (data.temp_password) {
+                        message += `. New temporary password: ${data.temp_password}`;
+                    }
+                    
+                    showNotification(message, 'success');
                 } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to delete user', 'error');
+                    showNotification(data.error || 'Failed to reset password', 'error');
                 }
             } catch (error) {
-                console.error('Error deleting user:', error);
-                showNotification('Network error. Please try again.', 'error');
+                console.error('Reset password error:', error);
+                showNotification('Connection error', 'error');
             }
         }
 
-        // Refresh users
-        async function refreshUsers() {
-            await loadUsers();
-            showNotification('Users refreshed successfully!', 'info');
+        function refreshUsers() {
+            loadUsers();
+            showNotification('Users list refreshed', 'info');
         }
 
-        // Notification function
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        // Helper functions
+        function formatDateTime(timestamp) {
+            if (!timestamp) return '—';
+            
+            const date = new Date(timestamp);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             const messageEl = document.getElementById('notificationMessage');
             const icon = notification.querySelector('i');
             
-            // Set icon based on type
             icon.className = {
                 'success': 'fas fa-check-circle',
                 'error': 'fas fa-exclamation-circle',
@@ -1911,9 +1660,6 @@
                 }
             }
         });
-
-        // Initial load
-        loadUsers();
     </script>
 </body>
 </html>
