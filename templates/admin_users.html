@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👥 User Management - AssiScan Admin</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Use the same dark gold theme from admin_colleges.html */
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f3d576;
+            --gold-dark: #b8941c;
+            --dark-red: #331010;
+            --bg-dark: #050101;
+            --bg-darker: #030000;
+            --bg-card: rgba(20, 5, 5, 0.7);
+            --bg-hover: rgba(212, 175, 55, 0.1);
+            --text-light: #f0f0f0;
+            --text-muted: #888;
+            --border-color: rgba(212, 175, 55, 0.3);
+            --border-radius: 6px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+            --transition: all 0.3s ease;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #1a0505 0%, #000 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* HEADER - Same as admin_colleges */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: black;
+            box-shadow: var(--shadow);
+        }
+
+        .logo-text h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+            margin-bottom: 4px;
+        }
+
+        .logo-text p {
+            font-size: 13px;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .user-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .nav-link:hover {
+            background: var(--bg-hover);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .nav-link.active {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(20, 5, 5, 0.7);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            font-weight: 600;
+            font-family: 'Cinzel', serif;
+        }
+
+        /* STATS CARDS */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--gold);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--gold);
+        }
+
+        .stat-content h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 4px;
+        }
+
+        .stat-content p {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* SEARCH AND FILTER */
+        .search-filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            padding-right: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--text-light);
+            border-radius: var(--border-radius);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold);
+            pointer-events: none;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            border-radius: var(--border-radius);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        /* MAIN CONTENT */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .content-header h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+        }
+
+        .btn-primary:hover {
+            background: var(--gold);
+            color: black;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .btn-success:hover {
+            background: #28a745;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-info {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17a2b8;
+            border: 1px solid #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #17a2b8;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+
+        /* USERS TABLE */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            background: var(--bg-card);
+            backdrop-filter: blur(5px);
+            margin-bottom: 40px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        .users-table thead {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .users-table th {
+            padding: 18px;
+            text-align: left;
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            border-bottom: 2px solid var(--dark-red);
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        .users-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+            color: #ccc;
+            vertical-align: middle;
+        }
+
+        .users-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .users-table tr:hover {
+            background-color: rgba(212, 175, 55, 0.05);
+        }
+
+        /* User Role Badges */
+        .role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .role-super-admin {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+            border: 1px solid #dc2626;
+        }
+
+        .role-college-admin {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
+        .role-scanner {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+
+        .role-viewer {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            border: 1px solid #a855f7;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .status-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+
+        .status-locked {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        /* Action Buttons */
+        .action-buttons-cell {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: rgba(0, 0, 0, 0.5);
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .icon-btn.edit:hover {
+            background: #ffc107;
+            color: black;
+            border-color: #ffc107;
+        }
+
+        .icon-btn.reset:hover {
+            background: #17a2b8;
+            color: white;
+            border-color: #17a2b8;
+        }
+
+        .icon-btn.activate:hover {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .icon-btn.deactivate:hover {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .icon-btn.delete:hover {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-container {
+            background: #121212;
+            border: 1px solid var(--gold);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .close-modal:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+        }
+
+        .modal-body {
+            padding: 20px;
+            color: #ddd;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 13px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--gold);
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* NOTIFICATIONS */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1100;
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            max-width: 400px;
+            backdrop-filter: blur(5px);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+            border-left: 4px solid #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .notification.error {
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border-left: 4px solid #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .notification.info {
+            background: rgba(23, 162, 184, 0.9);
+            color: white;
+            border-left: 4px solid #17a2b8;
+            border: 1px solid #17a2b8;
+        }
+
+        /* LOADING STATES */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--gold);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(212, 175, 55, 0.3);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: var(--border-radius);
+            background: var(--bg-card);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: rgba(212, 175, 55, 0.5);
+        }
+
+        /* User Avatar in Table */
+        .user-avatar-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .user-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .users-table {
+                min-width: 1100px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .user-nav {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .action-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .content-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .search-filter-container {
+                flex-direction: column;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+
+            .modal-container {
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .stat-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .action-buttons-cell {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .icon-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>User Management</h1>
+                    <p>AssiScan System Administration</p>
+                </div>
+            </div>
+            <div class="user-nav">
+                <div class="nav-links">
+                    <a href="/history.html" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Records</span>
+                    </a>
+                    <a href="/admin/users" class="nav-link active">
+                        <i class="fas fa-users"></i>
+                        <span>Users</span>
+                    </a>
+                    <a href="/admin/colleges" class="nav-link">
+                        <i class="fas fa-university"></i>
+                        <span>Colleges</span>
+                    </a>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-qrcode"></i>
+                        <span>Scanner</span>
+                    </a>
+                    <a href="/logout" class="nav-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <span>Super Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalUsers">0</h3>
+                    <p>Total Users</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="activeUsers">0</h3>
+                    <p>Active Users</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="scannerUsers">0</h3>
+                    <p>Scanner Operators</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="todayLogins">0</h3>
+                    <p>Today's Logins</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEARCH AND FILTER -->
+        <div class="search-filter-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search users by name, username, or email...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterUsers('all')">All Users</button>
+                <button class="filter-btn" onclick="filterUsers('active')">Active</button>
+                <button class="filter-btn" onclick="filterUsers('scanner')">Scanner Operators</button>
+                <button class="filter-btn" onclick="filterUsers('inactive')">Inactive</button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="content-header">
+            <h2>
+                <i class="fas fa-user-cog"></i>
+                System Users
+            </h2>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="refreshUsers()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+                <button class="btn btn-primary" onclick="openAddUserModal()">
+                    <i class="fas fa-plus"></i>
+                    Add New User
+                </button>
+            </div>
+        </div>
+
+        <!-- USERS TABLE -->
+        <div class="table-wrapper">
+            <table class="users-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>User Information</th>
+                        <th>Username & Email</th>
+                        <th>Role & College</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+            <div id="noUsersMessage" class="empty-state" style="display: none;">
+                <i class="fas fa-users"></i>
+                <h3>No Users Found</h3>
+                <p>Add your first user to get started!</p>
+                <button class="btn btn-primary" onclick="openAddUserModal()">
+                    <i class="fas fa-plus"></i> Add First User
+                </button>
+            </div>
+        </div>
+
+        <!-- MODALS -->
+        <!-- Add User Modal -->
+        <div id="addUserModal" class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-plus-circle"></i> Add New User</h3>
+                    <button class="close-modal" onclick="closeModal('addUserModal')">&times;</button>
+                </div>
+                <form id="addUserForm">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="newFullName"><i class="fas fa-user"></i> Full Name *</label>
+                            <input type="text" id="newFullName" placeholder="e.g., Juan Dela Cruz" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUsername"><i class="fas fa-at"></i> Username *</label>
+                            <input type="text" id="newUsername" placeholder="e.g., juan.delacruz" required>
+                            <small style="color: var(--text-muted); font-size: 11px;">Unique username for login</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmail"><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="newEmail" placeholder="e.g., juan@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword"><i class="fas fa-lock"></i> Password *</label>
+                            <input type="password" id="newPassword" placeholder="Enter password" required>
+                            <small style="color: var(--text-muted); font-size: 11px;">Minimum 8 characters</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="newConfirmPassword"><i class="fas fa-lock"></i> Confirm Password *</label>
+                            <input type="password" id="newConfirmPassword" placeholder="Confirm password" required>
+                        </div>
+                        <div class="row" style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="newRole"><i class="fas fa-user-tag"></i> Role *</label>
+                                <select id="newRole" required onchange="toggleCollegeField()">
+                                    <option value="scanner_operator">Scanner Operator</option>
+                                    <option value="college_admin">College Admin</option>
+                                    <option value="viewer">Viewer</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-toggle-on"></i> Status</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="newIsActive" checked>
+                                    <label for="newIsActive">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="collegeFieldContainer" style="display: none;">
+                            <label for="newCollegeId"><i class="fas fa-university"></i> Assigned College</label>
+                            <select id="newCollegeId">
+                                <option value="">Select College</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit User Modal -->
+        <div id="editUserModal" class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-edit"></i> Edit User</h3>
+                    <button class="close-modal" onclick="closeModal('editUserModal')">&times;</button>
+                </div>
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="editFullName"><i class="fas fa-user"></i> Full Name *</label>
+                            <input type="text" id="editFullName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUsername"><i class="fas fa-at"></i> Username *</label>
+                            <input type="text" id="editUsername" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmail"><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="editEmail">
+                        </div>
+                        <div class="row" style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="editRole"><i class="fas fa-user-tag"></i> Role *</label>
+                                <select id="editRole" required onchange="toggleEditCollegeField()">
+                                    <option value="scanner_operator">Scanner Operator</option>
+                                    <option value="college_admin">College Admin</option>
+                                    <option value="viewer">Viewer</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-toggle-on"></i> Status</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="editIsActive">
+                                    <label for="editIsActive">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="editCollegeFieldContainer" style="display: none;">
+                            <label for="editCollegeId"><i class="fas fa-university"></i> Assigned College</label>
+                            <select id="editCollegeId">
+                                <option value="">Select College</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-key"></i> Password Reset</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="resetPassword">
+                                <label for="resetPassword">Reset password on save</label>
+                            </div>
+                        </div>
+                        <div id="newPasswordSection" style="display: none;">
+                            <div class="form-group">
+                                <label for="editNewPassword"><i class="fas fa-lock"></i> New Password</label>
+                                <input type="password" id="editNewPassword" placeholder="Enter new password">
+                            </div>
+                            <div class="form-group">
+                                <label for="editConfirmPassword"><i class="fas fa-lock"></i> Confirm Password</label>
+                                <input type="password" id="editConfirmPassword" placeholder="Confirm new password">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+                    <button class="close-modal" onclick="closeModal('confirmModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage">Are you sure you want to perform this action?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmAction()">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Password Modal -->
+        <div id="resetPasswordModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-key"></i> Reset Password</h3>
+                    <button class="close-modal" onclick="closeModal('resetPasswordModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="resetUserInfo">User</label>
+                        <input type="text" id="resetUserInfo" readonly style="background: rgba(255,255,255,0.05);">
+                    </div>
+                    <div class="form-group">
+                        <label for="resetPassword">New Password *</label>
+                        <input type="password" id="resetPassword" placeholder="Enter new password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="resetConfirmPassword">Confirm Password *</label>
+                        <input type="password" id="resetConfirmPassword" placeholder="Confirm new password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="performResetPassword()">Reset Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTIFICATION -->
+        <div id="notification" class="notification">
+            <i class="fas fa-check-circle"></i>
+            <span id="notificationMessage">Operation successful!</span>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let usersData = [];
+        let collegesData = [];
+        let currentAction = {};
+        let currentFilter = 'all';
+
+        // Role mapping for display
+        const roleNames = {
+            'super_admin': 'Super Admin',
+            'college_admin': 'College Admin',
+            'scanner_operator': 'Scanner Operator',
+            'viewer': 'Viewer'
+        };
+
+        // Role badge classes
+        const roleBadgeClasses = {
+            'super_admin': 'role-super-admin',
+            'college_admin': 'role-college-admin',
+            'scanner_operator': 'role-scanner',
+            'viewer': 'role-viewer'
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+            loadCollegesForDropdown();
+            setupFormEvents();
+            setupSearch();
+        });
+
+        // Load users from API
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                if (response.ok) {
+                    usersData = await response.json();
+                    updateStats();
+                    renderUsers(usersData);
+                } else {
+                    console.error('Failed to load users:', response.status);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load colleges for dropdown
+        async function loadCollegesForDropdown() {
+            try {
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    collegesData = await response.json();
+                    populateCollegeDropdowns();
+                }
+            } catch (error) {
+                console.error('Error loading colleges:', error);
+            }
+        }
+
+        // Populate college dropdowns in modals
+        function populateCollegeDropdowns() {
+            const addCollegeSelect = document.getElementById('newCollegeId');
+            const editCollegeSelect = document.getElementById('editCollegeId');
+            
+            // Clear existing options except first one
+            addCollegeSelect.innerHTML = '<option value="">Select College</option>';
+            editCollegeSelect.innerHTML = '<option value="">Select College</option>';
+            
+            // Add college options
+            collegesData.forEach(college => {
+                const option1 = document.createElement('option');
+                option1.value = college.id;
+                option1.textContent = `${college.code} - ${college.name}`;
+                addCollegeSelect.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = college.id;
+                option2.textContent = `${college.code} - ${college.name}`;
+                editCollegeSelect.appendChild(option2);
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            const totalUsers = usersData.length;
+            const activeUsers = usersData.filter(u => u.is_active).length;
+            const scannerUsers = usersData.filter(u => u.role === 'scanner_operator').length;
+            
+            // Calculate today's logins (mock data for now)
+            const today = new Date().toISOString().split('T')[0];
+            const todayLogins = usersData.filter(u => {
+                if (u.last_login) {
+                    const loginDate = new Date(u.last_login).toISOString().split('T')[0];
+                    return loginDate === today;
+                }
+                return false;
+            }).length;
+            
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('activeUsers').textContent = activeUsers;
+            document.getElementById('scannerUsers').textContent = scannerUsers;
+            document.getElementById('todayLogins').textContent = todayLogins;
+        }
+
+        // Render users table
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            const noUsersMessage = document.getElementById('noUsersMessage');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '';
+                noUsersMessage.style.display = 'block';
+                return;
+            }
+            
+            noUsersMessage.style.display = 'none';
+            
+            tbody.innerHTML = users.map(user => {
+                // Get user initials for avatar
+                const initials = user.full_name 
+                    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+                    : '??';
+                
+                // Format last login
+                let lastLogin = 'Never';
+                if (user.last_login) {
+                    const loginDate = new Date(user.last_login);
+                    lastLogin = loginDate.toLocaleDateString() + ' ' + loginDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+                
+                // Get college name
+                let collegeName = 'Not assigned';
+                if (user.college_id && collegesData.length > 0) {
+                    const college = collegesData.find(c => c.id == user.college_id);
+                    if (college) {
+                        collegeName = college.code;
+                    }
+                }
+                
+                // Determine status
+                let statusBadge = '';
+                let statusText = '';
+                if (user.locked_until && new Date(user.locked_until) > new Date()) {
+                    statusBadge = 'status-locked';
+                    statusText = 'LOCKED';
+                } else if (user.is_active) {
+                    statusBadge = 'status-active';
+                    statusText = 'ACTIVE';
+                } else {
+                    statusBadge = 'status-inactive';
+                    statusText = 'INACTIVE';
+                }
+                
+                return `
+                    <tr id="user-${user.id}">
+                        <td>
+                            <div class="user-name-cell">
+                                <div class="user-avatar-small">${initials}</div>
+                                <div>
+                                    <div class="highlight-text">${user.full_name || 'No Name'}</div>
+                                    <div class="sub-text">ID: ${user.id}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="highlight-text">@${user.username}</div>
+                            <div class="sub-text">${user.email || 'No email'}</div>
+                        </td>
+                        <td>
+                            <div class="role-badge ${roleBadgeClasses[user.role] || 'role-scanner'}">
+                                ${roleNames[user.role] || user.role}
+                            </div>
+                            ${user.role === 'college_admin' ? `
+                                <div class="sub-text" style="margin-top: 3px;">
+                                    <i class="fas fa-university"></i> ${collegeName}
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <div class="status-badge ${statusBadge}">${statusText}</div>
+                            ${user.failed_attempts > 0 ? `
+                                <div class="sub-text" style="margin-top: 3px;">
+                                    <i class="fas fa-exclamation-triangle"></i> ${user.failed_attempts} failed attempts
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <div class="sub-text">${lastLogin}</div>
+                            ${user.created_at ? `
+                                <div class="sub-text" style="font-size: 10px;">
+                                    Created: ${new Date(user.created_at).toLocaleDateString()}
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <div class="action-buttons-cell">
+                                <button class="icon-btn edit" onclick="openEditUserModal(${user.id})" title="Edit User">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="icon-btn reset" onclick="openResetPasswordModal(${user.id})" title="Reset Password">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                ${user.is_active ? `
+                                    <button class="icon-btn deactivate" onclick="confirmDeactivateUser(${user.id})" title="Deactivate User">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>
+                                ` : `
+                                    <button class="icon-btn activate" onclick="confirmActivateUser(${user.id})" title="Activate User">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                `}
+                                ${user.id !== 1 ? ` <!-- Don't allow deleting super admin (ID 1) -->
+                                    <button class="icon-btn delete" onclick="confirmDeleteUser(${user.id})" title="Delete User">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Filter users
+        function filterUsers(filter) {
+            currentFilter = filter;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            let filteredUsers = usersData;
+            
+            switch(filter) {
+                case 'active':
+                    filteredUsers = usersData.filter(u => u.is_active);
+                    break;
+                case 'inactive':
+                    filteredUsers = usersData.filter(u => !u.is_active);
+                    break;
+                case 'scanner':
+                    filteredUsers = usersData.filter(u => u.role === 'scanner_operator');
+                    break;
+                case 'all':
+                default:
+                    filteredUsers = usersData;
+            }
+            
+            renderUsers(filteredUsers);
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                if (searchTerm === '') {
+                    filterUsers(currentFilter);
+                    return;
+                }
+                
+                const filteredUsers = usersData.filter(user => {
+                    const nameMatch = user.full_name?.toLowerCase().includes(searchTerm) || false;
+                    const usernameMatch = user.username?.toLowerCase().includes(searchTerm) || false;
+                    const emailMatch = user.email?.toLowerCase().includes(searchTerm) || false;
+                    
+                    return nameMatch || usernameMatch || emailMatch;
+                });
+                
+                renderUsers(filteredUsers);
+            });
+        }
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Toggle college field based on role selection
+        function toggleCollegeField() {
+            const role = document.getElementById('newRole').value;
+            const container = document.getElementById('collegeFieldContainer');
+            
+            if (role === 'college_admin') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function toggleEditCollegeField() {
+            const role = document.getElementById('editRole').value;
+            const container = document.getElementById('editCollegeFieldContainer');
+            
+            if (role === 'college_admin') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        // Open Add User Modal
+        function openAddUserModal() {
+            document.getElementById('addUserForm').reset();
+            toggleCollegeField();
+            openModal('addUserModal');
+        }
+
+        // Open Edit User Modal
+        async function openEditUserModal(userId) {
+            const user = usersData.find(u => u.id === userId);
+            if (!user) return;
+            
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editFullName').value = user.full_name || '';
+            document.getElementById('editUsername').value = user.username || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editRole').value = user.role;
+            document.getElementById('editIsActive').checked = user.is_active;
+            document.getElementById('resetPassword').checked = false;
+            
+            // Set college if user is college admin
+            if (user.role === 'college_admin' && user.college_id) {
+                document.getElementById('editCollegeId').value = user.college_id;
+            }
+            
+            toggleEditCollegeField();
+            openModal('editUserModal');
+        }
+
+        // Open Reset Password Modal
+        function openResetPasswordModal(userId) {
+            const user = usersData.find(u => u.id === userId);
+            if (!user) return;
+            
+            currentAction = {
+                type: 'resetPassword',
+                userId: userId,
+                userName: user.full_name || user.username
+            };
+            
+            document.getElementById('resetUserInfo').value = `${user.full_name || user.username} (@${user.username})`;
+            document.getElementById('resetPassword').value = '';
+            document.getElementById('resetConfirmPassword').value = '';
+            
+            openModal('resetPasswordModal');
+        }
+
+        // Confirmation functions
+        function confirmDeactivateUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'deactivateUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to deactivate "${currentAction.userName}"?`;
+            openModal('confirmModal');
+        }
+
+        function confirmActivateUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'activateUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to activate "${currentAction.userName}"?`;
+            openModal('confirmModal');
+        }
+
+        function confirmDeleteUser(userId) {
+            const user = usersData.find(u => u.id === userId);
+            currentAction = {
+                type: 'deleteUser',
+                userId: userId,
+                userName: user?.full_name || user?.username || 'Unknown'
+            };
+            
+            document.getElementById('confirmMessage').textContent = 
+                `Are you sure you want to permanently delete "${currentAction.userName}"? This action cannot be undone.`;
+            openModal('confirmModal');
+        }
+
+        function confirmAction() {
+            switch(currentAction.type) {
+                case 'deactivateUser':
+                    deactivateUser(currentAction.userId);
+                    break;
+                case 'activateUser':
+                    activateUser(currentAction.userId);
+                    break;
+                case 'deleteUser':
+                    deleteUser(currentAction.userId);
+                    break;
+            }
+            closeModal('confirmModal');
+        }
+
+        // Setup form events
+        function setupFormEvents() {
+            // Add User Form
+            document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await addUser();
+            });
+            
+            // Edit User Form
+            document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await updateUser();
+            });
+            
+            // Toggle password reset fields
+            document.getElementById('resetPassword').addEventListener('change', function() {
+                const passwordSection = document.getElementById('newPasswordSection');
+                passwordSection.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+
+        // API Functions
+        async function addUser() {
+            const fullName = document.getElementById('newFullName').value.trim();
+            const username = document.getElementById('newUsername').value.trim();
+            const email = document.getElementById('newEmail').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('newConfirmPassword').value;
+            const role = document.getElementById('newRole').value;
+            const isActive = document.getElementById('newIsActive').checked;
+            const collegeId = document.getElementById('newCollegeId').value;
+            
+            // Validation
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showNotification('Password must be at least 8 characters!', 'error');
+                return;
+            }
+            
+            const userData = {
+                full_name: fullName,
+                username: username,
+                email: email || null,
+                password: password,
+                role: role,
+                is_active: isActive,
+                college_id: role === 'college_admin' ? (collegeId || null) : null
+            };
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('User created successfully!', 'success');
+                    closeModal('addUserModal');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to create user', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function updateUser() {
+            const userId = document.getElementById('editUserId').value;
+            const fullName = document.getElementById('editFullName').value.trim();
+            const username = document.getElementById('editUsername').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            const role = document.getElementById('editRole').value;
+            const isActive = document.getElementById('editIsActive').checked;
+            const collegeId = document.getElementById('editCollegeId').value;
+            const resetPassword = document.getElementById('resetPassword').checked;
+            const newPassword = document.getElementById('editNewPassword').value;
+            const confirmPassword = document.getElementById('editConfirmPassword').value;
+            
+            // Password validation if resetting
+            if (resetPassword) {
+                if (newPassword !== confirmPassword) {
+                    showNotification('Passwords do not match!', 'error');
+                    return;
+                }
+                
+                if (newPassword.length < 8) {
+                    showNotification('Password must be at least 8 characters!', 'error');
+                    return;
+                }
+            }
+            
+            const userData = {
+                full_name: fullName,
+                username: username,
+                email: email || null,
+                role: role,
+                is_active: isActive,
+                college_id: role === 'college_admin' ? (collegeId || null) : null
+            };
+            
+            // Add password if resetting
+            if (resetPassword) {
+                userData.password = newPassword;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    showNotification('User updated successfully!', 'success');
+                    closeModal('editUserModal');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update user', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function performResetPassword() {
+            const userId = currentAction.userId;
+            const password = document.getElementById('resetPassword').value;
+            const confirmPassword = document.getElementById('resetConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showNotification('Password must be at least 8 characters!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                if (response.ok) {
+                    showNotification('Password reset successfully!', 'success');
+                    closeModal('resetPasswordModal');
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to reset password', 'error');
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function deactivateUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/deactivate`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification('User deactivated successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to deactivate user', 'error');
+                }
+            } catch (error) {
+                console.error('Error deactivating user:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function activateUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/activate`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification('User activated successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to activate user', 'error');
+                }
+            } catch (error) {
+                console.error('Error activating user:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('User deleted successfully!', 'success');
+                    await loadUsers();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete user', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showNotification('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Refresh users
+        async function refreshUsers() {
+            await loadUsers();
+            showNotification('Users refreshed successfully!', 'info');
+        }
+
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notificationMessage');
+            const icon = notification.querySelector('i');
+            
+            // Set icon based on type
+            icon.className = {
+                'success': 'fas fa-check-circle',
+                'error': 'fas fa-exclamation-circle',
+                'info': 'fas fa-info-circle'
+            }[type] || 'fas fa-info-circle';
+            
+            notification.className = `notification ${type}`;
+            messageEl.textContent = message;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal-overlay');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        };
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
+                if (openModal) {
+                    closeModal(openModal.id);
+                }
+            }
+        });
+
+        // Initial load
+        loadUsers();
+    </script>
+</body>
+</html>
