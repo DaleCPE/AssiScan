@@ -87,7 +87,8 @@ PERMISSIONS = {
         'send_emails', 'view_dashboard', 'access_admin_panel'
     ],
     'STUDENT': [
-        'access_scanner', 'submit_documents', 'view_own_records'
+        'access_scanner', 'submit_documents', 'view_own_records',
+        'change_password'  # Added change_password permission for students
     ]
 }
 
@@ -337,7 +338,7 @@ def init_db():
                     'admin@assiscan.com',
                     'SUPER_ADMIN',
                     True,
-                    False
+                    False  # Super admin doesn't need password reset
                 ))
                 conn.commit()
                 print("✅ Default Super Admin created")
@@ -1053,6 +1054,8 @@ def check_session():
         print("❌ Invalid session token")
         return jsonify({"authenticated": False}), 200
 
+# ================= NEW PASSWORD MANAGEMENT ENDPOINTS =================
+
 @app.route('/api/change-password', methods=['POST'])
 @login_required
 def change_password():
@@ -1067,6 +1070,16 @@ def change_password():
         
         if len(new_password) < 6:
             return jsonify({"error": "Password must be at least 6 characters"}), 400
+        
+        # Check password strength
+        if not re.search(r'[A-Z]', new_password):
+            return jsonify({"error": "Password must contain at least one uppercase letter"}), 400
+        
+        if not re.search(r'[a-z]', new_password):
+            return jsonify({"error": "Password must contain at least one lowercase letter"}), 400
+        
+        if not re.search(r'[0-9]', new_password):
+            return jsonify({"error": "Password must contain at least one number"}), 400
         
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1092,6 +1105,9 @@ def change_password():
         
         conn.commit()
         
+        # Update session
+        session['requires_password_reset'] = False
+        
         return jsonify({
             "status": "success",
             "message": "Password changed successfully"
@@ -1102,6 +1118,44 @@ def change_password():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+@app.route('/api/check-password-reset', methods=['GET'])
+@login_required
+def check_password_reset():
+    """Check if user needs to reset password"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("SELECT requires_password_reset FROM users WHERE id = %s", (session['user_id'],))
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        return jsonify({
+            "requires_password_reset": user['requires_password_reset']
+        })
+        
+    except Exception as e:
+        print(f"❌ Password reset check error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# ================= CHANGE PASSWORD PAGE =================
+
+@app.route('/change-password', methods=['GET'])
+def change_password_page():
+    """Render change password page"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role != 'STUDENT':
+        return redirect('/')
+    
+    return render_template('change_password.html')
 
 # ================= USER MANAGEMENT ROUTES (SUPER ADMIN ONLY) =================
 
@@ -3209,7 +3263,13 @@ def health_check():
         "user_management": "ENABLED",
         "roles": ["SUPER_ADMIN", "STUDENT"],
         "timestamp": datetime.now().isoformat(),
-        "database": "connected" if get_db_connection() else "disconnected"
+        "database": "connected" if get_db_connection() else "disconnected",
+        "features": {
+            "password_reset": "ENABLED",
+            "change_password": "ENABLED",
+            "college_management": "ENABLED",
+            "goodmoral_analysis": "ENABLED"
+        }
     })
 
 @app.route('/list-uploads', methods=['GET'])
@@ -3249,7 +3309,8 @@ def check_login():
             "logged_in": True,
             "username": session.get('username'),
             "role": session.get('role'),
-            "full_name": session.get('full_name')
+            "full_name": session.get('full_name'),
+            "requires_password_reset": session.get('requires_password_reset', False)
         })
     else:
         return jsonify({"logged_in": False})
@@ -3259,7 +3320,7 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH USER MANAGEMENT SYSTEM")
+    print("🚀 ASSISCAN WITH USER MANAGEMENT & PASSWORD RESET SYSTEM")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3269,9 +3330,16 @@ if __name__ == '__main__':
     print("="*60)
     print("👥 USER ROLES:")
     print("   • SUPER_ADMIN: Full system access")
-    print("   • STUDENT: Scanner access only")
+    print("   • STUDENT: Scanner access + Change password")
     print("="*60)
-    print("📊 FEATURES:")
+    print("🔐 NEW SECURITY FEATURES:")
+    print("   • Password strength validation")
+    print("   • Force password reset for new users")
+    print("   • Change password endpoint (/api/change-password)")
+    print("   • Password reset check (/api/check-password-reset)")
+    print("   • Change password page (/change-password)")
+    print("="*60)
+    print("📊 OTHER FEATURES:")
     print("   • User Authentication & Sessions")
     print("   • Role-Based Access Control")
     print("   • User Management (Super Admin only)")
