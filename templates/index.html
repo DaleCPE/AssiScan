@@ -163,6 +163,274 @@
             margin-top: 20px;
         }
 
+        /* Change Password Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 10px;
+        }
+
+        .modal-title {
+            font-family: 'Cinzel', serif;
+            color: var(--primary-gold);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .close-modal:hover {
+            color: var(--primary-gold);
+        }
+
+        .modal-form-group {
+            margin-bottom: 15px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #331010;
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .modal-input:focus {
+            border-color: var(--primary-gold);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .password-strength {
+            font-size: 10px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .strength-weak { color: #f44336; }
+        .strength-fair { color: #ff9800; }
+        .strength-good { color: #4caf50; }
+        .strength-strong { color: #2e7d32; }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-modal-primary {
+            flex: 1;
+            background: linear-gradient(90deg, #1e3c22, #2e7d32);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-modal-primary:hover {
+            background: #388e3c;
+            transform: translateY(-2px);
+        }
+
+        .btn-modal-secondary {
+            flex: 1;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--border-dim);
+            color: var(--primary-gold);
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-modal-secondary:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        /* Password Requirements */
+        .password-requirements {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid #331010;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 3px;
+        }
+
+        .requirement.valid {
+            color: #4CAF50;
+        }
+
+        .requirement.invalid {
+            color: #f44336;
+        }
+
+        /* Password Toggle */
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+
+        .alert-error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #f44336;
+        }
+
+        .alert-warning {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            color: #ff9800;
+        }
+
+        /* Force Password Reset Modal */
+        .force-reset-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .force-reset-content {
+            background: var(--panel-bg);
+            border: 2px solid var(--danger-red);
+            border-radius: 10px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(244, 67, 54, 0.3);
+        }
+
+        .force-reset-icon {
+            font-size: 72px;
+            color: var(--danger-red);
+            margin-bottom: 20px;
+        }
+
+        .force-reset-title {
+            font-family: 'Cinzel', serif;
+            color: var(--primary-gold);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .force-reset-message {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .force-reset-warning {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
         /* --- MAIN AREA (Middle - Scanners) --- */
         .main-scan { 
             flex: 1; 
@@ -671,6 +939,112 @@
     </style>
 </head>
 <body>
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-key"></i> CHANGE PASSWORD
+                </div>
+                <button class="close-modal" onclick="closeChangePasswordModal()">&times;</button>
+            </div>
+            
+            <div id="passwordAlert" class="alert" style="display: none;"></div>
+            
+            <form id="changePasswordForm">
+                <div class="modal-form-group">
+                    <label class="modal-label">Current Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="currentPassword" class="modal-input" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('currentPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="modal-form-group">
+                    <label class="modal-label">New Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="newPassword" class="modal-input" required 
+                               oninput="checkPasswordStrength()">
+                        <button type="button" class="password-toggle" onclick="togglePassword('newPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div id="passwordStrength" class="password-strength">
+                        <i class="fas fa-shield-alt"></i>
+                        <span id="strengthText">Password strength</span>
+                    </div>
+                </div>
+                
+                <div class="modal-form-group">
+                    <label class="modal-label">Confirm New Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="confirmPassword" class="modal-input" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div id="passwordMatch" class="password-strength" style="display: none;">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Passwords match</span>
+                    </div>
+                </div>
+                
+                <div class="password-requirements">
+                    <div class="requirement" id="reqLength">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i>
+                        <span>At least 6 characters</span>
+                    </div>
+                    <div class="requirement" id="reqUppercase">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i>
+                        <span>Contains uppercase letter</span>
+                    </div>
+                    <div class="requirement" id="reqLowercase">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i>
+                        <span>Contains lowercase letter</span>
+                    </div>
+                    <div class="requirement" id="reqNumber">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i>
+                        <span>Contains number</span>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-secondary" onclick="closeChangePasswordModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-modal-primary" id="changePasswordBtn">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Force Password Reset Modal -->
+    <div id="forcePasswordResetModal" class="force-reset-modal">
+        <div class="force-reset-content">
+            <div class="force-reset-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="force-reset-title">
+                SECURITY ALERT
+            </div>
+            <div class="force-reset-message">
+                For security reasons, you are required to change your password before accessing the system.
+                This is a mandatory security measure to ensure the safety of your account.
+            </div>
+            <div class="force-reset-warning">
+                <i class="fas fa-shield-alt"></i>
+                <span>You cannot access any features until you change your password.</span>
+            </div>
+            <button class="btn-modal-primary" onclick="openChangePasswordModal()" style="margin-top: 20px; width: 100%;">
+                <i class="fas fa-key"></i> CHANGE PASSWORD NOW
+            </button>
+        </div>
+    </div>
+
     <!-- Check if user is logged in -->
     <div id="accessDenied" class="access-denied" style="display: none;">
         <i class="fas fa-lock"></i>
@@ -697,6 +1071,10 @@
             
             <!-- Student Actions (Only for STUDENT role) -->
             <div id="studentActions" class="student-actions">
+                <button onclick="openChangePasswordModal()" class="student-action-btn">
+                    <i class="fas fa-key"></i> CHANGE PASSWORD
+                </button>
+                
                 <button onclick="viewMyRecords()" class="student-action-btn">
                     <i class="fas fa-history"></i> MY SCANNED RECORDS
                 </button>
@@ -1109,6 +1487,7 @@
         let currentRecordId = null;
         let otherDocuments = [];
         let currentUser = null;
+        let requiresPasswordReset = false;
         
         // Store Good Moral data
         let goodmoralData = {
@@ -1152,7 +1531,16 @@
                 if (data.authenticated && data.user) {
                     // User is logged in
                     currentUser = data.user;
-                    showScanner(data.user);
+                    
+                    // Check if password reset is required
+                    await checkPasswordReset();
+                    
+                    if (requiresPasswordReset && currentUser.role === 'STUDENT') {
+                        showForcePasswordReset();
+                    } else {
+                        showScanner(data.user);
+                    }
+                    
                     return true;
                 } else {
                     // User is not logged in
@@ -1166,9 +1554,34 @@
             }
         }
 
+        async function checkPasswordReset() {
+            try {
+                const response = await fetch('/api/check-password-reset', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    requiresPasswordReset = data.requires_password_reset;
+                    console.log('Password reset required:', requiresPasswordReset);
+                }
+            } catch (error) {
+                console.error('Error checking password reset:', error);
+            }
+        }
+
+        function showForcePasswordReset() {
+            console.log("🔒 Showing force password reset modal");
+            document.getElementById('forcePasswordResetModal').style.display = 'flex';
+            document.getElementById('accessDenied').style.display = 'none';
+            document.getElementById('scannerInterface').style.display = 'none';
+        }
+
         function showScanner(user) {
             console.log("👤 Showing scanner for user:", user);
             
+            document.getElementById('forcePasswordResetModal').style.display = 'none';
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'flex';
             
@@ -1200,8 +1613,183 @@
             console.log("🔒 Showing access denied screen");
             document.getElementById('accessDenied').style.display = 'flex';
             document.getElementById('scannerInterface').style.display = 'none';
+            document.getElementById('forcePasswordResetModal').style.display = 'none';
         }
 
+        // ================= CHANGE PASSWORD FUNCTIONS =================
+        function openChangePasswordModal() {
+            console.log("Opening change password modal");
+            document.getElementById('changePasswordModal').style.display = 'flex';
+            document.getElementById('passwordAlert').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+            checkPasswordStrength();
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+        }
+
+        function togglePassword(fieldId, button) {
+            const field = document.getElementById(fieldId);
+            const icon = button.querySelector('i');
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                field.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            const strengthElement = document.getElementById('strengthText');
+            const requirements = {
+                length: password.length >= 6,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /[0-9]/.test(password)
+            };
+
+            // Update requirement indicators
+            document.getElementById('reqLength').className = requirements.length ? 'requirement valid' : 'requirement invalid';
+            document.getElementById('reqUppercase').className = requirements.uppercase ? 'requirement valid' : 'requirement invalid';
+            document.getElementById('reqLowercase').className = requirements.lowercase ? 'requirement valid' : 'requirement invalid';
+            document.getElementById('reqNumber').className = requirements.number ? 'requirement valid' : 'requirement invalid';
+
+            // Calculate strength
+            let strength = 0;
+            if (requirements.length) strength++;
+            if (requirements.uppercase) strength++;
+            if (requirements.lowercase) strength++;
+            if (requirements.number) strength++;
+
+            // Update strength text
+            const strengthClasses = ['strength-weak', 'strength-fair', 'strength-good', 'strength-strong'];
+            const strengthTexts = ['Weak', 'Fair', 'Good', 'Strong'];
+            
+            // Reset all classes
+            document.getElementById('passwordStrength').className = 'password-strength';
+            
+            if (password.length > 0) {
+                document.getElementById('passwordStrength').classList.add(strengthClasses[strength - 1]);
+                strengthElement.textContent = strengthTexts[strength - 1];
+            } else {
+                strengthElement.textContent = 'Password strength';
+            }
+
+            // Check password match
+            checkPasswordMatch();
+        }
+
+        function checkPasswordMatch() {
+            const password = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const matchElement = document.getElementById('passwordMatch');
+            
+            if (password && confirm) {
+                if (password === confirm) {
+                    matchElement.style.display = 'flex';
+                } else {
+                    matchElement.style.display = 'none';
+                }
+            }
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showPasswordAlert('Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showPasswordAlert('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showPasswordAlert('Passwords do not match', 'error');
+                return;
+            }
+            
+            // Check requirements
+            const requirements = {
+                uppercase: /[A-Z]/.test(newPassword),
+                lowercase: /[a-z]/.test(newPassword),
+                number: /[0-9]/.test(newPassword)
+            };
+            
+            if (!requirements.uppercase || !requirements.lowercase || !requirements.number) {
+                showPasswordAlert('Password must contain uppercase, lowercase, and number', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('changePasswordBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showPasswordAlert('Password changed successfully!', 'success');
+                    
+                    // Reset modal after success
+                    setTimeout(() => {
+                        closeChangePasswordModal();
+                        
+                        // If this was a forced reset, show scanner now
+                        if (requiresPasswordReset) {
+                            requiresPasswordReset = false;
+                            showScanner(currentUser);
+                        }
+                    }, 2000);
+                } else {
+                    showPasswordAlert(data.error || 'Failed to change password', 'error');
+                    btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                showPasswordAlert('Connection error. Please try again.', 'error');
+                btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
+                btn.disabled = false;
+            }
+        }
+
+        function showPasswordAlert(message, type) {
+            const alertElement = document.getElementById('passwordAlert');
+            alertElement.textContent = message;
+            alertElement.className = `alert alert-${type}`;
+            alertElement.style.display = 'flex';
+            
+            // Scroll to alert
+            alertElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Attach form submit event
+        document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+
+        // ================= OTHER FUNCTIONS =================
         async function logout() {
             try {
                 const response = await fetch('/api/logout', {
@@ -2006,7 +2594,8 @@
                 college: document.getElementById('collegeSelect').value || "Not selected",
                 program: document.getElementById('programSelect').value || "Not selected",
                 email: document.getElementById('contactEmail').value || "Not entered",
-                otherDocumentsCount: otherDocuments.length
+                otherDocumentsCount: otherDocuments.length,
+                requiresPasswordReset: requiresPasswordReset ? "Yes" : "No"
             };
             
             alert(`DEBUG INFORMATION:\n\n
@@ -2023,7 +2612,8 @@
 🎓 College: ${info.college}
 📚 Program: ${info.program}
 📧 Email: ${info.email}
-📎 Other Documents: ${info.otherDocumentsCount}`);
+📎 Other Documents: ${info.otherDocumentsCount}
+🔐 Password Reset Required: ${info.requiresPasswordReset}`);
         }
 
         document.getElementById('fileForm138').addEventListener('change', function(e) {
@@ -2061,6 +2651,10 @@
         window.addEventListener('load', function() {
             // Check session when page loads
             checkSession();
+            
+            // Add event listeners for password fields
+            document.getElementById('newPassword').addEventListener('input', checkPasswordStrength);
+            document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
         });
     </script>
 </body>
