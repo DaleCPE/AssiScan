@@ -1789,9 +1789,12 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= OTHER FUNCTIONS =================
+        // ================= LOGOUT FUNCTION FIXED =================
         async function logout() {
             try {
+                console.log("🚪 Attempting logout...");
+                
+                // Try the current endpoint first
                 const response = await fetch('/api/logout', {
                     method: 'POST',
                     headers: {
@@ -1800,17 +1803,82 @@
                     credentials: 'same-origin'
                 });
                 
+                console.log("Logout response status:", response.status);
+                
                 if (response.ok) {
+                    console.log("✅ Logout successful via /api/logout");
                     window.location.href = 'login.html';
-                } else {
-                    window.location.href = 'login.html';
+                    return;
                 }
+                
+                // If /api/logout fails, try alternative endpoints
+                console.log("⚠️ /api/logout failed, trying alternative endpoints...");
+                
+                // Try common logout endpoints
+                const alternativeEndpoints = [
+                    '/logout',
+                    '/auth/logout',
+                    '/user/logout'
+                ];
+                
+                let logoutSuccessful = false;
+                
+                for (const endpoint of alternativeEndpoints) {
+                    try {
+                        console.log(`Trying endpoint: ${endpoint}`);
+                        const altResponse = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        
+                        if (altResponse.ok) {
+                            console.log(`✅ Logout successful via ${endpoint}`);
+                            logoutSuccessful = true;
+                            break;
+                        }
+                    } catch (altError) {
+                        console.log(`❌ ${endpoint} failed:`, altError.message);
+                    }
+                }
+                
+                // Clear local session data
+                localStorage.removeItem('userSession');
+                sessionStorage.removeItem('userSession');
+                document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                // Redirect to login page
+                console.log("Redirecting to login page...");
+                window.location.href = 'login.html';
+                
             } catch (error) {
                 console.error('Logout error:', error);
+                
+                // Clear local data and redirect anyway
+                localStorage.removeItem('userSession');
+                sessionStorage.removeItem('userSession');
+                document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                alert('Logging out... Redirecting to login page.');
                 window.location.href = 'login.html';
             }
         }
 
+        // Alternative simpler logout function
+        function simpleLogout() {
+            // Clear all local storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Force redirect to login page
+            window.location.href = 'login.html';
+        }
+
+        // ================= OTHER FUNCTIONS =================
         function viewMyRecords() {
             // For students to view their own records
             window.location.href = '/my-records';
@@ -2655,6 +2723,12 @@
             // Add event listeners for password fields
             document.getElementById('newPassword').addEventListener('input', checkPasswordStrength);
             document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+            
+            // Add event listener for logout button (alternative)
+            document.querySelector('.btn-logout').addEventListener('click', function(e) {
+                e.preventDefault();
+                simpleLogout(); // Use the simpler logout function
+            });
         });
     </script>
 </body>
