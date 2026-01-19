@@ -1789,13 +1789,13 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= LOGOUT FUNCTION FIXED =================
+        // ================= FIXED LOGOUT FUNCTION =================
         async function logout() {
             try {
                 console.log("🚪 Attempting logout...");
                 
-                // Try the current endpoint first
-                const response = await fetch('/api/logout', {
+                // FIRST: Try the correct endpoint from your backend which is /logout
+                const response = await fetch('/logout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1806,66 +1806,78 @@
                 console.log("Logout response status:", response.status);
                 
                 if (response.ok) {
-                    console.log("✅ Logout successful via /api/logout");
+                    console.log("✅ Logout successful via /logout");
+                    // Clear local storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    
+                    // Clear cookies
+                    document.cookie.split(";").forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                    });
+                    
+                    // Redirect to login page
                     window.location.href = 'login.html';
                     return;
                 }
                 
-                // If /api/logout fails, try alternative endpoints
-                console.log("⚠️ /api/logout failed, trying alternative endpoints...");
+                // If /logout fails with POST, try GET
+                console.log("⚠️ /logout POST failed, trying GET method");
                 
-                // Try common logout endpoints
-                const alternativeEndpoints = [
-                    '/logout',
-                    '/auth/logout',
-                    '/user/logout'
-                ];
-                
-                let logoutSuccessful = false;
-                
-                for (const endpoint of alternativeEndpoints) {
-                    try {
-                        console.log(`Trying endpoint: ${endpoint}`);
-                        const altResponse = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        
-                        if (altResponse.ok) {
-                            console.log(`✅ Logout successful via ${endpoint}`);
-                            logoutSuccessful = true;
-                            break;
-                        }
-                    } catch (altError) {
-                        console.log(`❌ ${endpoint} failed:`, altError.message);
+                try {
+                    const getResponse = await fetch('/logout', {
+                        method: 'GET',
+                        credentials: 'same-origin'
+                    });
+                    
+                    if (getResponse.ok) {
+                        console.log("✅ Logout successful via GET /logout");
+                        window.location.href = 'login.html';
+                        return;
                     }
+                } catch (getError) {
+                    console.log("❌ GET /logout failed:", getError.message);
                 }
                 
-                // Clear local session data
-                localStorage.removeItem('userSession');
-                sessionStorage.removeItem('userSession');
-                document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                // LAST RESORT: Clear everything and redirect
+                console.log("⚠️ Both methods failed, forcing logout...");
                 
-                // Redirect to login page
-                console.log("Redirecting to login page...");
+                // Clear all storage
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach(function(c) {
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                
+                // Try to invalidate session via API
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                } catch (apiError) {
+                    console.log("API logout failed, continuing...");
+                }
+                
+                // Force redirect
+                alert('Logging out... Redirecting to login page.');
                 window.location.href = 'login.html';
                 
             } catch (error) {
                 console.error('Logout error:', error);
                 
-                // Clear local data and redirect anyway
-                localStorage.removeItem('userSession');
-                sessionStorage.removeItem('userSession');
-                document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                // Clear everything and redirect anyway
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach(function(c) {
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
                 
                 alert('Logging out... Redirecting to login page.');
                 window.location.href = 'login.html';
             }
         }
 
-        // Alternative simpler logout function
+        // Alternative simple logout (direct redirect)
         function simpleLogout() {
-            // Clear all local storage
+            // Clear all storage
             localStorage.clear();
             sessionStorage.clear();
             
@@ -1874,8 +1886,8 @@
                 document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             });
             
-            // Force redirect to login page
-            window.location.href = 'login.html';
+            // Force redirect to login page - Use the Flask route that exists
+            window.location.href = '/logout';  // This is the correct route in your backend
         }
 
         // ================= OTHER FUNCTIONS =================
@@ -2724,11 +2736,14 @@
             document.getElementById('newPassword').addEventListener('input', checkPasswordStrength);
             document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
             
-            // Add event listener for logout button (alternative)
-            document.querySelector('.btn-logout').addEventListener('click', function(e) {
-                e.preventDefault();
-                simpleLogout(); // Use the simpler logout function
-            });
+            // Alternative logout button event
+            const logoutBtn = document.querySelector('.btn-logout');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    simpleLogout(); // Use the simple logout function
+                });
+            }
         });
     </script>
 </body>
