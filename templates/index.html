@@ -1050,7 +1050,7 @@
         <i class="fas fa-lock"></i>
         <h2>ACCESS RESTRICTED</h2>
         <p>Please login using your credentials to access the document scanning system.</p>
-        <a href="/login" class="btn-login">
+        <a href="login.html" class="btn-login">
             <i class="fas fa-sign-in-alt"></i> GO TO LOGIN PAGE
         </a>
     </div>
@@ -1801,13 +1801,13 @@
                 });
                 
                 if (response.ok) {
-                    window.location.href = '/login';
+                    window.location.href = 'login.html';
                 } else {
-                    window.location.href = '/login';
+                    window.location.href = 'login.html';
                 }
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = '/login';
+                window.location.href = 'login.html';
             }
         }
 
