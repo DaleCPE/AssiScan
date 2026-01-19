@@ -22,12 +22,13 @@
 
         body {
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             background-image: radial-gradient(circle at 50% 50%, #1a0505 0%, #000 100%);
             color: var(--text-light);
             min-height: 100vh;
+            box-sizing: border-box;
         }
 
         /* HEADER */
@@ -35,42 +36,47 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             border-bottom: 1px solid rgba(212, 175, 55, 0.3);
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         h2 {
             margin: 0;
             font-family: 'Cinzel', serif;
             color: var(--gold);
-            font-size: 24px;
-            letter-spacing: 2px;
+            font-size: clamp(18px, 4vw, 24px);
+            letter-spacing: 1px;
             text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn-group { 
             display: flex; 
-            gap: 10px; 
+            gap: 8px; 
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn-action {
             text-decoration: none;
             font-size: 11px;
             font-weight: bold;
-            padding: 8px 16px;
+            padding: 8px 12px;
             border-radius: 4px;
             transition: 0.3s;
             text-transform: uppercase;
             letter-spacing: 1px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
+            white-space: nowrap;
         }
 
         .btn-back {
@@ -174,16 +180,16 @@
         /* SEARCH & FILTER BAR */
         .filter-container {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             margin-bottom: 20px;
-            align-items: center;
+            align-items: stretch;
             flex-wrap: wrap;
         }
 
         .search-container {
             position: relative;
-            flex: 1;
-            min-width: 300px;
+            flex: 1 1 300px;
+            min-width: 250px;
         }
 
         .search-input {
@@ -198,6 +204,7 @@
             font-size: 14px;
             transition: 0.3s;
             outline: none;
+            box-sizing: border-box;
         }
 
         .search-input:focus {
@@ -223,9 +230,10 @@
             border-radius: 6px;
             font-family: 'Inter', sans-serif;
             font-size: 14px;
-            min-width: 180px;
+            flex: 1 1 180px;
             cursor: pointer;
             outline: none;
+            box-sizing: border-box;
         }
 
         .filter-select:focus {
@@ -238,6 +246,22 @@
             color: white;
         }
 
+        .clear-filters-btn {
+            padding: 12px 15px;
+            background: rgba(51, 51, 51, 0.8);
+            border: 1px solid rgba(85, 85, 85, 0.8);
+            color: #fff;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            flex: 0 1 auto;
+        }
+
         /* TABLE */
         .table-wrapper {
             width: 100%;
@@ -247,12 +271,14 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
             background: var(--glass);
             backdrop-filter: blur(5px);
+            margin-bottom: 20px;
+            -webkit-overflow-scrolling: touch;
         }
 
         table { 
             width: 100%; 
             border-collapse: collapse; 
-            min-width: 1500px; 
+            min-width: 1200px; 
         }
 
         thead { 
@@ -260,18 +286,19 @@
         }
 
         th {
-            padding: 18px;
+            padding: 16px 12px;
             text-align: left;
             color: var(--gold);
-            font-family: 'Cinzel', serif;
-            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
             border-bottom: 2px solid var(--dark-red);
             white-space: nowrap;
             text-transform: uppercase;
+            font-weight: 600;
         }
 
         td {
-            padding: 15px;
+            padding: 14px 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             font-size: 13px;
             color: #ccc;
@@ -352,7 +379,7 @@
             color: #aaa;
             text-decoration: none;
             font-size: 10px;
-            margin-right: 5px;
+            margin-right: 4px;
             padding: 4px 8px;
             border: 1px solid #444;
             border-radius: 4px;
@@ -362,6 +389,7 @@
             gap: 5px;
             margin-bottom: 4px;
             cursor: pointer;
+            white-space: nowrap;
         }
         
         .doc-link.psa { border-color: #4a6fa5; color: #8cb4f5; }
@@ -385,6 +413,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 5px;
+            white-space: nowrap;
         }
         
         .badge-good {
@@ -435,14 +464,15 @@
         .action-buttons {
             display: flex;
             gap: 5px;
-            justify-content: center;
+            justify-content: flex-start;
+            flex-wrap: wrap;
         }
 
         .action-btn {
             background: transparent;
             border: 1px solid #555;
             color: #aaa;
-            padding: 6px 10px;
+            padding: 6px 8px;
             border-radius: 4px;
             cursor: pointer;
             transition: 0.2s;
@@ -451,11 +481,13 @@
             justify-content: center;
             text-decoration: none;
             font-size: 11px;
-            min-width: 36px;
+            min-width: 32px;
+            height: 32px;
+            box-sizing: border-box;
         }
         
         .action-btn:hover { 
-            transform: scale(1.1); 
+            transform: scale(1.05); 
         }
 
         .btn-print { 
@@ -505,6 +537,7 @@
             font-family: monospace; 
             letter-spacing: 0.5px; 
             margin-bottom: 5px;
+            word-break: break-all;
         }
         
         .grade-badge { 
@@ -515,6 +548,7 @@
             font-size: 11px; 
             font-weight: bold;
             display: inline-block;
+            white-space: nowrap;
         }
 
         /* Email Status */
@@ -524,6 +558,7 @@
             border-radius: 10px;
             display: inline-block;
             margin-top: 3px;
+            white-space: nowrap;
         }
         
         .email-sent { 
@@ -545,6 +580,7 @@
             margin-top: 50px; 
             font-family: 'Cinzel', serif; 
             animation: pulse 1.5s infinite; 
+            padding: 20px;
         }
         
         @keyframes pulse { 
@@ -556,7 +592,7 @@
         #no-match-msg { 
             display: none; 
             text-align: center; 
-            padding: 20px; 
+            padding: 40px 20px; 
             color: #888; 
             font-style: italic; 
         }
@@ -564,12 +600,14 @@
         /* Stats Bar */
         .stats-bar {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
             padding: 15px;
             background: rgba(20, 5, 5, 0.5);
             border-radius: 8px;
             border: 1px solid rgba(212, 175, 55, 0.2);
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .stat-item {
@@ -577,24 +615,27 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 6px;
             background: rgba(0, 0, 0, 0.3);
-            min-width: 100px;
+            min-width: 80px;
+            flex: 1;
+            max-width: 150px;
         }
 
         .stat-number {
-            font-size: 24px;
+            font-size: clamp(18px, 4vw, 24px);
             font-weight: bold;
             color: var(--gold);
             font-family: 'Cinzel', serif;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: #888;
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-align: center;
         }
 
         /* ================= MODAL STYLES ================= */
@@ -608,12 +649,15 @@
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(5px);
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
         }
 
         .modal-box {
             background: #121212;
             border: 1px solid var(--gold);
-            width: 90%;
+            width: 100%;
             max-width: 900px;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
@@ -631,7 +675,7 @@
 
         .modal-header {
             background: rgba(212, 175, 55, 0.1);
-            padding: 15px 20px;
+            padding: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
@@ -643,7 +687,7 @@
             font-family: 'Cinzel', serif; 
             color: var(--gold); 
             margin: 0; 
-            font-size: 18px; 
+            font-size: clamp(16px, 4vw, 18px); 
         }
         
         .modal-close { 
@@ -651,6 +695,7 @@
             cursor: pointer; 
             font-size: 20px; 
             transition: 0.2s; 
+            flex-shrink: 0;
         }
         
         .modal-close:hover { 
@@ -658,7 +703,7 @@
         }
 
         .modal-body { 
-            padding: 20px; 
+            padding: 15px; 
             color: #ddd; 
             overflow-y: auto;
             flex-grow: 1;
@@ -668,28 +713,32 @@
         .student-info-header {
             display: flex;
             justify-content: space-between;
-            align-items: start;
+            align-items: flex-start;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .student-name-large {
             font-family: 'Cinzel', serif;
             color: var(--gold);
-            font-size: 20px;
+            font-size: clamp(16px, 4vw, 20px);
             margin: 0;
+            word-break: break-word;
         }
         
         .student-details-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
         
         .detail-item {
             font-size: 13px;
+            word-break: break-word;
         }
         
         .detail-label {
@@ -724,47 +773,282 @@
         .college-title {
             font-family: 'Cinzel', serif;
             color: var(--gold);
-            font-size: 16px;
+            font-size: clamp(14px, 3vw, 16px);
         }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
-            table { min-width: 1300px; }
-            .student-details-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .filter-container {
-                flex-direction: column;
-                align-items: stretch;
-            }
+        /* Document Grid in Modal */
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .document-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        /* Mobile-optimized table */
+        .mobile-row {
+            display: none;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 1024px) {
+            table { min-width: 1100px; }
             .search-container {
-                min-width: 100%;
+                flex: 1 1 250px;
+            }
+            .filter-select {
+                flex: 1 1 160px;
             }
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
             .header {
                 flex-direction: column;
-                gap: 15px;
                 align-items: flex-start;
+                gap: 10px;
             }
+            
+            h2 {
+                font-size: 20px;
+            }
+            
             .btn-group {
                 width: 100%;
                 justify-content: space-between;
-                flex-wrap: wrap;
-                gap: 8px;
             }
+            
             .btn-action {
+                flex: 1;
+                justify-content: center;
+                padding: 8px;
                 font-size: 10px;
-                padding: 6px 12px;
             }
+            
+            .filter-container {
+                flex-direction: column;
+            }
+            
+            .search-container,
+            .filter-select,
+            .clear-filters-btn {
+                flex: 1 1 auto;
+                width: 100%;
+            }
+            
             .stats-bar {
-                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .stat-item {
+                min-width: calc(50% - 10px);
+                max-width: calc(50% - 10px);
+                padding: 8px 10px;
+            }
+            
+            .table-wrapper {
+                border-radius: 6px;
+                border-width: 1px;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+                font-size: 12px;
+            }
+            
+            .student-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 11px;
+            }
+            
+            .student-name {
+                font-size: 13px;
+            }
+            
+            .action-buttons {
                 justify-content: center;
             }
+            
+            .action-btn {
+                min-width: 30px;
+                height: 30px;
+                padding: 6px;
+            }
+            
+            .modal-box {
+                max-height: 85vh;
+            }
+            
+            .modal-body {
+                padding: 12px;
+            }
+            
+            .student-details-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+            
+            h2 {
+                font-size: 18px;
+                gap: 8px;
+            }
+            
+            .btn-action {
+                font-size: 9px;
+                padding: 6px 8px;
+                gap: 4px;
+            }
+            
+            .btn-group {
+                gap: 5px;
+            }
+            
+            .stats-bar {
+                padding: 10px;
+            }
+            
             .stat-item {
-                min-width: 80px;
-                padding: 8px 12px;
+                min-width: calc(50% - 5px);
+                max-width: calc(50% - 5px);
+                padding: 6px 8px;
+            }
+            
+            .stat-number {
+                font-size: 16px;
+            }
+            
+            .stat-label {
+                font-size: 9px;
+            }
+            
+            th {
+                font-size: 11px;
+                padding: 10px 6px;
+            }
+            
+            td {
+                padding: 10px 6px;
+                font-size: 11px;
+            }
+            
+            .student-cell {
+                min-width: 150px;
+            }
+            
+            .doc-link {
+                font-size: 9px;
+                padding: 3px 6px;
+            }
+            
+            .record-badge {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            
+            .reason-text {
+                font-size: 10px;
+            }
+            
+            .modal-header {
+                padding: 12px;
+            }
+            
+            .modal-title {
+                font-size: 16px;
+            }
+            
+            .student-name-large {
+                font-size: 16px;
+            }
+            
+            .detail-item {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .btn-action {
+                font-size: 8px;
+                padding: 5px 6px;
+            }
+            
+            .stat-item {
+                min-width: 100%;
+                max-width: 100%;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .action-btn {
+                width: 100%;
+                margin-bottom: 4px;
+            }
+        }
+
+        /* Extra small devices: Hide some non-essential elements */
+        @media (max-width: 320px) {
+            .program-name {
+                max-width: 120px;
+            }
+            
+            .student-avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            
+            .student-name {
+                font-size: 12px;
+            }
+            
+            .college-badge {
+                font-size: 9px;
+                padding: 2px 6px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .header, .stats-bar, .filter-container, .action-buttons {
+                display: none;
+            }
+            
+            .table-wrapper {
+                border: 1px solid #000;
+                box-shadow: none;
+            }
+            
+            table {
+                min-width: 100%;
+            }
+            
+            th {
+                color: black;
             }
         }
 
@@ -801,6 +1085,23 @@
             background: rgba(168, 85, 247, 0.2);
             color: #a855f7;
             border: 1px solid #a855f7;
+        }
+
+        /* Touch-friendly improvements */
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        .action-btn, .btn-action, .doc-link {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* iOS specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            .modal-overlay {
+                -webkit-overflow-scrolling: touch;
+            }
         }
 
     </style>
@@ -859,7 +1160,7 @@
             <option value="POOR">Poor Record</option>
         </select>
         
-        <button onclick="clearFilters()" class="btn-action" style="background: #333; color: #fff; border: 1px solid #555;">
+        <button onclick="clearFilters()" class="clear-filters-btn">
             <i class="fas fa-times"></i> Clear Filters
         </button>
     </div>
@@ -895,14 +1196,15 @@
                     <!-- Content will be loaded here -->
                 </div>
             </div>
-            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
+            <div class="modal-footer" style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
                 <button onclick="closeModal('studentModal')" style="
                     background: #333;
                     color: #fff;
                     border: none;
-                    padding: 8px 20px;
+                    padding: 10px 20px;
                     border-radius: 4px;
-                    cursor: pointer;">
+                    cursor: pointer;
+                    font-size: 14px;">
                     Close
                 </button>
             </div>
@@ -919,7 +1221,7 @@
             <div class="modal-body">
                 <div id="emailModalContent">
                     <p id="emailMessage">Are you sure you want to send an email notification to this student?</p>
-                    <div class="student-email-info">
+                    <div class="student-email-info" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
                         <p><strong>Student:</strong> <span id="emailStudentName"></span></p>
                         <p><strong>Email:</strong> <span id="emailAddress"></span></p>
                         <p><strong>College:</strong> <span id="emailCollege"></span></p>
@@ -927,23 +1229,25 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                 <button onclick="closeModal('emailModal')" style="
                     background: #6c757d;
                     color: #fff;
                     border: none;
-                    padding: 8px 20px;
+                    padding: 10px 20px;
                     border-radius: 4px;
-                    cursor: pointer;">
+                    cursor: pointer;
+                    font-size: 14px;">
                     Cancel
                 </button>
                 <button onclick="confirmSendEmail()" style="
                     background: #28a745;
                     color: #fff;
                     border: none;
-                    padding: 8px 20px;
+                    padding: 10px 20px;
                     border-radius: 4px;
-                    cursor: pointer;">
+                    cursor: pointer;
+                    font-size: 14px;">
                     Send Email
                 </button>
             </div>
@@ -1042,9 +1346,11 @@
             
             if(records.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No records found.</td></tr>';
+                document.getElementById('no-match-msg').style.display = 'block';
                 return;
             }
 
+            document.getElementById('no-match-msg').style.display = 'none';
             tbody.innerHTML = records.map(r => {
                 const psaPath = r.image_path || r.psa_image_path;
                 const f137Path = r.form137_path || r.f137_image_path;
@@ -1338,6 +1644,13 @@
                 }
             }
 
+            // Collect all documents
+            const psaPath = r.image_path || r.psa_image_path;
+            const f137Path = r.form137_path || r.f137_image_path;
+            const f138Path = r.form138_path;
+            const goodmoralPath = r.goodmoral_path;
+            const otherDocs = r.other_documents || [];
+
             // Build HTML content
             let html = `
                 <div class="student-info-header">
@@ -1487,6 +1800,66 @@
                 </div>
             `;
 
+            // Add Documents Section
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-file-alt"></i> Documents
+                    </h4>
+                    <div class="document-grid">
+                        ${psaPath ? `
+                            <div class="document-item">
+                                <i class="fas fa-id-card" style="color: #8cb4f5; font-size: 24px; margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: bold;">PSA Birth Certificate</div>
+                                <a href="${getImageUrl(psaPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        ${f137Path ? `
+                            <div class="document-item">
+                                <i class="fas fa-file-contract" style="color: #f3d576; font-size: 24px; margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: bold;">Form 137 / SF10</div>
+                                <a href="${getImageUrl(f137Path)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        ${f138Path ? `
+                            <div class="document-item">
+                                <i class="fas fa-file-invoice" style="color: #e1bee7; font-size: 24px; margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: bold;">Form 138</div>
+                                <a href="${getImageUrl(f138Path)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        ${goodmoralPath ? `
+                            <div class="document-item">
+                                <i class="fas fa-certificate" style="color: #80b918; font-size: 24px; margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: bold;">Good Moral</div>
+                                <a href="${getImageUrl(goodmoralPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        ${otherDocs.length > 0 ? otherDocs.map((doc, index) => `
+                            <div class="document-item">
+                                <i class="fas fa-file" style="color: #FFCC80; font-size: 24px; margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: bold;">Other Doc ${index + 1}</div>
+                                <a href="${getImageUrl(doc)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            </div>
+                        `).join('') : ''}
+                    </div>
+                </div>
+            `;
+
             // Add Good Moral Analysis section
             if (goodmoralAnalysis || r.goodmoral_score) {
                 html += `
@@ -1535,6 +1908,14 @@
             // Set content and show modal
             document.getElementById('studentModalContent').innerHTML = html;
             document.getElementById('studentModal').style.display = 'flex';
+        }
+
+        // Helper function for image URLs
+        function getImageUrl(filename) {
+            if (!filename) return null;
+            const firstFilename = filename.split(',')[0].trim();
+            const cleanFilename = firstFilename.split('/').pop();
+            return `${serverBaseUrl}/uploads/${cleanFilename}`;
         }
 
         // ================= EMAIL FUNCTIONS =================
@@ -1746,8 +2127,19 @@
                 }
             };
             
+            // Handle window resize for better mobile experience
+            window.addEventListener('resize', function() {
+                // Force re-render on resize for better mobile adaptation
+                if (window.innerWidth <= 768) {
+                    // Adjust table rendering if needed
+                }
+            });
+            
             console.log('AssiScan History Page Loaded with College System');
         });
+
+        // Touch event improvements for mobile
+        document.addEventListener('touchstart', function() {}, {passive: true});
 
     </script>
 </body>
