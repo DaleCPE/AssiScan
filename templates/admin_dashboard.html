@@ -612,6 +612,62 @@
             border: 1px solid #17a2b8;
         }
 
+        /* ===== FORM STYLES ===== */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--text-light);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: var(--border-radius);
+            color: var(--text-light);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
         /* ===== LOADING ===== */
         .loading {
             display: flex;
@@ -650,6 +706,33 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* ===== BACK TO SCANNER BUTTON ===== */
+        .back-to-scanner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: var(--transition);
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .back-to-scanner:hover {
+            background: var(--gold);
+            color: black;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
         }
 
         /* ===== RESPONSIVE ===== */
@@ -705,6 +788,12 @@
             </div>
             <div class="user-nav">
                 <div class="nav-links">
+                    <!-- BACK TO SCANNER BUTTON -->
+                    <a href="index.html" class="back-to-scanner">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Scanner</span>
+                    </a>
+                    
                     <a href="/admin/dashboard" class="nav-link active">
                         <i class="fas fa-tachometer-alt"></i>
                         <span>Dashboard</span>
@@ -717,7 +806,7 @@
                         <i class="fas fa-university"></i>
                         <span>Colleges</span>
                     </a>
-                    <a href="/history.html" class="nav-link">
+                    <a href="history.html" class="nav-link">
                         <i class="fas fa-database"></i>
                         <span>Records</span>
                     </a>
@@ -754,7 +843,7 @@
                 </div>
             </div>
 
-            <div class="dashboard-card" onclick="window.location.href='/history.html'">
+            <div class="dashboard-card" onclick="window.location.href='history.html'">
                 <div class="card-header">
                     <div class="card-icon">
                         <i class="fas fa-database"></i>
@@ -801,7 +890,7 @@
                 </div>
                 <div class="action-text">Add College/Program</div>
             </div>
-            <div class="action-btn" onclick="window.open('/history.html', '_blank')">
+            <div class="action-btn" onclick="window.open('history.html', '_blank')">
                 <div class="action-icon">
                     <i class="fas fa-chart-bar"></i>
                 </div>
@@ -959,7 +1048,7 @@
             const sessionToken = localStorage.getItem('session_token');
             
             if (!sessionToken) {
-                window.location.href = '/login';
+                window.location.href = 'login.html';
                 return;
             }
             
@@ -974,12 +1063,12 @@
                 
                 if (!data.authenticated) {
                     localStorage.clear();
-                    window.location.href = '/login';
+                    window.location.href = 'login.html';
                     return;
                 }
                 
                 if (data.user.role !== 'SUPER_ADMIN') {
-                    window.location.href = '/';
+                    window.location.href = 'index.html';
                     return;
                 }
                 
@@ -992,7 +1081,7 @@
             } catch (error) {
                 console.error('Auth check error:', error);
                 localStorage.clear();
-                window.location.href = '/login';
+                window.location.href = 'login.html';
             }
         }
 
@@ -1307,7 +1396,7 @@
             }
             
             localStorage.clear();
-            window.location.href = '/login';
+            window.location.href = 'login.html';
         }
 
         // Helper functions
