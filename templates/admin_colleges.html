@@ -679,14 +679,7 @@
 
         /* ===== USER MANAGEMENT TABLE ===== */
         .users-table-container {
-            background: var(--bg-card);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            backdrop-filter: blur(5px);
-            margin-bottom: 40px;
-            display: none; /* Hidden by default */
+            display: none; /* Hidden since user management is removed */
         }
 
         /* ===== COLLEGE BADGES ===== */
@@ -1022,11 +1015,6 @@
                 bottom: 15px;
                 right: 15px;
             }
-
-            .users-table {
-                display: block;
-                overflow-x: auto;
-            }
         }
 
         @media (max-width: 480px) {
@@ -1071,10 +1059,6 @@
             .program-actions {
                 opacity: 1; /* Always show on mobile */
             }
-
-            .user-actions {
-                flex-direction: column;
-            }
         }
     </style>
 </head>
@@ -1101,10 +1085,6 @@
                         <i class="fas fa-university"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="index.html" class="nav-link">
-                        <i class="fas fa-qrcode"></i>
-                        <span>Scanner</span>
-                    </a>
                     <a href="/logout" class="nav-link">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
@@ -1116,11 +1096,6 @@
                 </div>
             </div>
         </header>
-
-        <!-- TABS (Hidden since we removed the Users tab) -->
-        <div class="tabs-container">
-            <!-- Removed User Accounts tab button -->
-        </div>
 
         <!-- STATS -->
         <div class="stats-container">
@@ -1394,11 +1369,8 @@
     <script>
         // Global variables
         let collegesData = [];
-        let usersData = [];
         let currentAction = {};
         let currentFilter = 'all';
-        let currentUserFilter = 'all';
-        let collegesList = [];
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1406,19 +1378,6 @@
             setupFormEvents();
             setupSearch();
         });
-
-        // Load colleges for dropdowns (removed since user management is removed)
-        async function loadCollegesForDropdown() {
-            // Function removed as user management features are no longer needed
-            try {
-                const response = await fetch('/api/colleges-dropdown');
-                if (response.ok) {
-                    collegesList = await response.json();
-                }
-            } catch (error) {
-                console.error('Error loading colleges:', error);
-            }
-        }
 
         // ========== COLLEGE FUNCTIONS ==========
         async function loadColleges() {
