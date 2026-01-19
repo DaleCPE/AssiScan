@@ -659,6 +659,7 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Age: {student_data.get('age', 'N/A')}
 • Civil Status: {student_data.get('civil_status', 'N/A')}
 • Nationality: {student_data.get('nationality', 'N/A')}
+• Religion: {student_data.get('religion', 'N/A')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👨‍👩‍👧‍👦 PARENT INFORMATION
@@ -2336,6 +2337,89 @@ def scan_goodmoral():
         traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
+# ================= UPDATED PSA EXTRACTION ENDPOINT (WITHOUT RELIGION) =================
+@app.route('/extract', methods=['POST'])
+@login_required
+@permission_required('access_scanner')
+def extract_data():
+    if 'imageFiles' not in request.files: 
+        return jsonify({"error": "No files uploaded"}), 400
+    
+    files = request.files.getlist('imageFiles')
+    if not files or files[0].filename == '': 
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        saved_paths, pil_images = save_multiple_files(files, "PSA")
+        
+        if not pil_images:
+             return jsonify({"error": "No valid images found"}), 400
+
+        print(f"📸 Processing PSA with Gemini 2.5 Flash")
+        
+        prompt = """Extract information from this PSA Birth Certificate.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "is_valid_document": true,
+            "Name": "Full Name Here",
+            "Sex": "Male or Female",
+            "Birthdate": "YYYY-MM-DD format",
+            "PlaceOfBirth": "City/Municipality, Province",
+            "BirthOrder": "1st, 2nd, 3rd, etc",
+            "Mother_MaidenName": "Mother's Maiden Name",
+            "Mother_Citizenship": "Citizenship",
+            "Mother_Occupation": "Occupation if stated",
+            "Father_Name": "Father's Full Name",
+            "Father_Citizenship": "Citizenship",
+            "Father_Occupation": "Occupation if stated"
+        }
+        
+        IMPORTANT: DO NOT extract Religion field. Religion is selected separately in the system.
+        
+        Return ONLY the JSON, no additional text."""
+        
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            
+            cleaned_text = response_text.strip()
+            
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            
+            try:
+                data = json.loads(json_str)
+                
+                if not data.get("is_valid_document", False):
+                    return jsonify({
+                        "error": f"Invalid document"
+                    }), 400
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
+        except Exception as ai_error:
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
+    except Exception as e:
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
+
 # ================= UPDATED SAVE RECORD ENDPOINT WITH USER ID =================
 @app.route('/save-record', methods=['POST'])
 @login_required
@@ -2353,6 +2437,9 @@ def save_record():
         disciplinary_details = d.get('disciplinary_details')
         has_disciplinary_record = d.get('has_disciplinary_record', False)
         
+        # Get religion from frontend dropdown
+        religion = d.get('religion', '')
+        
         # Parse other_documents if provided
         other_documents = d.get('other_documents')
         if other_documents and isinstance(other_documents, list):
@@ -2369,6 +2456,7 @@ def save_record():
         
         print(f"🎓 College selected: {college}")
         print(f"📚 Program selected: {program}")
+        print(f"🙏 Religion selected: {religion}")
         
         conn = get_db_connection()
         if not conn: 
@@ -2443,7 +2531,7 @@ def save_record():
         ''', (
             session['user_id'],  # Add user_id
             d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-            d.get('birth_order'), d.get('religion'), d.get('age'),
+            d.get('birth_order'), religion, d.get('age'),  # Use religion from frontend
             d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
             d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
             d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
@@ -2475,6 +2563,7 @@ def save_record():
         print(f"👤 User ID: {session['user_id']}")
         print(f"🎓 College: {college}")
         print(f"📚 Program: {program}")
+        print(f"🙏 Religion: {religion}")
         print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
         
         if has_disciplinary_record:
@@ -2485,6 +2574,7 @@ def save_record():
             "db_id": new_id,
             "college": college,
             "program": program,
+            "religion": religion,
             "goodmoral_score": goodmoral_score,
             "disciplinary_status": disciplinary_status,
             "has_disciplinary_record": has_disciplinary_record,
@@ -2534,7 +2624,7 @@ def get_records():
             if r['birthdate']: 
                 r['birthdate'] = str(r['birthdate'])
             if r['email_sent_at']: 
-                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-d %H:%M:%S')
             
             # Parse Good Moral analysis JSON
             if r.get('goodmoral_analysis'):
@@ -2729,88 +2819,7 @@ def delete_other_document(record_id, doc_id):
         if conn:
             conn.close()
 
-# ================= EXISTING PSA AND FORM 137 ENDPOINTS =================
-@app.route('/extract', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def extract_data():
-    if 'imageFiles' not in request.files: 
-        return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': 
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "PSA")
-        
-        if not pil_images:
-             return jsonify({"error": "No valid images found"}), 400
-
-        print(f"📸 Processing PSA with Gemini 2.5 Flash")
-        
-        prompt = """Extract information from this PSA Birth Certificate.
-        
-        Return ONLY a valid JSON object with the following structure:
-        {
-            "is_valid_document": true,
-            "Name": "Full Name Here",
-            "Sex": "Male or Female",
-            "Birthdate": "YYYY-MM-DD format",
-            "PlaceOfBirth": "City/Municipality, Province",
-            "BirthOrder": "1st, 2nd, 3rd, etc",
-            "Religion": "Religion if stated",
-            "Mother_MaidenName": "Mother's Maiden Name",
-            "Mother_Citizenship": "Citizenship",
-            "Mother_Occupation": "Occupation if stated",
-            "Father_Name": "Father's Full Name",
-            "Father_Citizenship": "Citizenship",
-            "Father_Occupation": "Occupation if stated"
-        }
-        
-        Return ONLY the JSON, no additional text."""
-        
-        try:
-            response_text = extract_with_gemini(prompt, pil_images)
-            
-            cleaned_text = response_text.strip()
-            
-            if cleaned_text.startswith('```'):
-                lines = cleaned_text.split('\n')
-                if lines[0].startswith('```'):
-                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-            
-            start = cleaned_text.find('{')
-            end = cleaned_text.rfind('}') + 1
-            
-            if start == -1 or end == 0:
-                return jsonify({"error": "Invalid JSON response from AI"}), 500
-                
-            json_str = cleaned_text[start:end]
-            
-            try:
-                data = json.loads(json_str)
-                
-                if not data.get("is_valid_document", False):
-                    return jsonify({
-                        "error": f"Invalid document"
-                    }), 400
-                
-                return jsonify({
-                    "message": "Success", 
-                    "structured_data": data, 
-                    "image_paths": ",".join(saved_paths)
-                })
-            except json.JSONDecodeError:
-                return jsonify({"error": "Failed to parse AI response"}), 500
-        except Exception as ai_error:
-            return jsonify({
-                "error": "AI service unavailable",
-                "details": str(ai_error)[:200]
-            }), 500
-    except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
-
+# ================= EXISTING FORM 137 ENDPOINT =================
 @app.route('/extract-form137', methods=['POST'])
 @login_required
 @permission_required('access_scanner')
@@ -2896,7 +2905,7 @@ def send_email_only(record_id):
         
         # Get record details with college field
         cur.execute("""
-            SELECT name, email, email_sent, 
+            SELECT name, email, email_sent, religion,
                    goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
@@ -2927,6 +2936,7 @@ def send_email_only(record_id):
         print(f"\n📧 Sending email for record ID: {record_id}")
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
+        print(f"🙏 Religion: {record.get('religion', 'N/A')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -2973,7 +2983,7 @@ def resend_email(record_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT name, email, 
+            SELECT name, email, religion,
                    goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
@@ -3001,6 +3011,7 @@ def resend_email(record_id):
         print(f"\n📧 Resending email for ID: {record_id}")
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
+        print(f"🙏 Religion: {record.get('religion', 'N/A')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3268,7 +3279,8 @@ def health_check():
             "password_reset": "ENABLED",
             "change_password": "ENABLED",
             "college_management": "ENABLED",
-            "goodmoral_analysis": "ENABLED"
+            "goodmoral_analysis": "ENABLED",
+            "religion_dropdown": "ENABLED"  # Added this feature
         }
     })
 
@@ -3332,6 +3344,10 @@ if __name__ == '__main__':
     print("   • SUPER_ADMIN: Full system access")
     print("   • STUDENT: Scanner access + Change password")
     print("="*60)
+    print("🔄 RELIGION FEATURE UPDATE:")
+    print("   • Religion field REMOVED from PSA scanning")
+    print("   • Religion now selected ONLY from frontend dropdown")
+    print("="*60)
     print("🔐 NEW SECURITY FEATURES:")
     print("   • Password strength validation")
     print("   • Force password reset for new users")
@@ -3343,7 +3359,7 @@ if __name__ == '__main__':
     print("   • User Authentication & Sessions")
     print("   • Role-Based Access Control")
     print("   • User Management (Super Admin only)")
-    print("   • PSA, Form 137, Good Moral scanning")
+    print("   • PSA (without religion), Form 137, Good Moral scanning")
     print("   • College Management System")
     print("   • Email notifications")
     print("="*60)
