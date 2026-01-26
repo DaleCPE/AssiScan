@@ -1922,6 +1922,11 @@
         // ================= COLLEGE MANAGEMENT FUNCTIONS =================
         async function loadDynamicColleges() {
             const collegeSelect = document.getElementById('collegeSelect');
+            if (!collegeSelect) {
+                console.error('collegeSelect element not found');
+                return;
+            }
+            
             collegeSelect.innerHTML = '<option value="">Loading colleges from database...</option>';
             
             try {
@@ -1955,6 +1960,8 @@
         
         function loadFallbackColleges() {
             const collegeSelect = document.getElementById('collegeSelect');
+            if (!collegeSelect) return;
+            
             const hardcodedColleges = [
                 { id: 1, code: 'CCJE', name: 'College of Criminal Justice Education (CCJE)' },
                 { id: 2, code: 'CEAS', name: 'College of Education, Arts and Sciences (CEAS)' },
@@ -2018,6 +2025,9 @@
         function updatePrograms() {
             const collegeSelect = document.getElementById('collegeSelect');
             const programSelect = document.getElementById('programSelect');
+            
+            if (!collegeSelect || !programSelect) return;
+            
             const selectedCollege = dynamicColleges.find(c => c.name === collegeSelect.value);
             
             programSelect.innerHTML = '<option value="">-- Select Program --</option>';
@@ -2102,7 +2112,7 @@
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
                     document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
                     document.getElementById('birthOrder').value = d.BirthOrder || "";
-                    document.getElementById('childReligion').value = d.Religion || "";
+                    // NOTE: Religion is not extracted from PSA, it's selected separately
                     document.getElementById('motherName').value = d.Mother_MaidenName || "";
                     document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
                     document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
@@ -2326,17 +2336,37 @@
         }
 
         async function saveRecord() {
+            console.log("💾 Starting saveRecord function...");
+            
+            // Get elements with null checks
             const btn = document.getElementById('saveBtn');
-            const name = document.getElementById('childName').value;
+            const nameElement = document.getElementById('childName');
+            const collegeElement = document.getElementById('collegeSelect');
+            const programElement = document.getElementById('programSelect');
+            
+            // Check if elements exist
+            if (!btn || !nameElement || !collegeElement || !programElement) {
+                console.error('Required elements not found:', {
+                    btn: !!btn,
+                    nameElement: !!nameElement,
+                    collegeElement: !!collegeElement,
+                    programElement: !!programElement
+                });
+                alert("System error: Required form elements not found. Please refresh the page.");
+                return;
+            }
+            
+            const name = nameElement.value;
+            const college = collegeElement ? collegeElement.value : "";
+            const program = programElement ? programElement.value : "";
+            
+            console.log("📝 Form data:", { name, college, program });
             
             if(!name) {
                 alert("Student Name is required!");
                 return;
             }
 
-            const college = document.getElementById('collegeSelect').value;
-            const program = document.getElementById('programSelect').value;
-            
             if (!college) {
                 alert("Please select a College/Department!");
                 return;
@@ -2352,8 +2382,10 @@
             
             if (emailValue && !validateEmail(emailValue)) {
                 alert("Please enter a valid email address!");
-                emailInput.focus();
-                emailInput.style.borderColor = 'red';
+                if (emailInput) {
+                    emailInput.focus();
+                    emailInput.style.borderColor = 'red';
+                }
                 return;
             } else if (emailInput) {
                 emailInput.style.borderColor = '';
@@ -2363,15 +2395,18 @@
             btn.disabled = true;
 
             let siblingsList = [];
-            document.querySelectorAll('#siblingsTable tbody tr').forEach(row => {
-                let sName = row.querySelector('.sib-name').value;
-                let sAge = row.querySelector('.sib-age').value;
-                let sOcc = row.querySelector('.sib-occ').value;
-                
-                if(sName && sName.trim() !== "") { 
-                    siblingsList.push({ name: sName, age: sAge, occupation: sOcc });
-                }
-            });
+            const siblingsTable = document.getElementById('siblingsTable');
+            if (siblingsTable) {
+                siblingsTable.querySelectorAll('tbody tr').forEach(row => {
+                    let sName = row.querySelector('.sib-name') ? row.querySelector('.sib-name').value : '';
+                    let sAge = row.querySelector('.sib-age') ? row.querySelector('.sib-age').value : '';
+                    let sOcc = row.querySelector('.sib-occ') ? row.querySelector('.sib-occ').value : '';
+                    
+                    if(sName && sName.trim() !== "") { 
+                        siblingsList.push({ name: sName, age: sAge, occupation: sOcc });
+                    }
+                });
+            }
 
             let goodmoralPayload = {};
             if (goodmoralAnalysis) {
@@ -2384,56 +2419,62 @@
                 };
             }
 
+            // Helper function to safely get element value
+            function getValue(id) {
+                const element = document.getElementById(id);
+                return element ? element.value : "";
+            }
+
             const recordData = {
-                school_year: document.getElementById('schoolYear').value,
-                student_type: document.getElementById('studentType').value,
+                school_year: getValue('schoolYear'),
+                student_type: getValue('studentType'),
                 college: college,
                 program: program,
-                last_level_attended: document.getElementById('lastLevel').value,
+                last_level_attended: getValue('lastLevel'),
                 name: name,
-                sex: document.getElementById('childSex').value,
-                birthdate: document.getElementById('childBirthdate').value,
-                birthplace: document.getElementById('childBirthplace').value,
-                birth_order: document.getElementById('birthOrder').value,
-                religion: document.getElementById('childReligion').value,
-                age: document.getElementById('childAge').value,
-                civil_status: document.getElementById('childCivilStatus').value,
-                nationality: document.getElementById('childNationality').value,
-                mobile_no: document.getElementById('childMobile').value,
-                is_ip: document.getElementById('isIP').value,
-                is_pwd: document.getElementById('isPWD').value,
-                has_medication: document.getElementById('hasMedication').value,
-                is_working: document.getElementById('isWorking').value,
-                is_gifted: document.getElementById('isGifted').value, 
-                needs_assistance: document.getElementById('needsAssistance').value, 
-                region: document.getElementById('addressRegion').value,
-                province: document.getElementById('addressProvince').value,
-                specific_address: document.getElementById('addressSpecific').value,
-                residence_type: document.getElementById('residenceType').value,
-                employer_name: document.getElementById('employerName').value,
-                marital_status: document.getElementById('maritalStatus').value, 
-                mother_name: document.getElementById('motherName').value,
-                mother_citizenship: document.getElementById('motherCitizenship').value,
-                mother_occupation: document.getElementById('motherOccupation').value,
-                mother_contact: document.getElementById('motherContact').value,
-                father_name: document.getElementById('fatherName').value,
-                father_citizenship: document.getElementById('fatherCitizenship').value,
-                father_occupation: document.getElementById('fatherOccupation').value,
-                father_contact: document.getElementById('fatherContact').value,
-                guardian_name: document.getElementById('guardianName').value,
-                guardian_relation: document.getElementById('guardianRelation').value,
-                guardian_contact: document.getElementById('guardianContact').value,
+                sex: getValue('childSex'),
+                birthdate: getValue('childBirthdate'),
+                birthplace: getValue('childBirthplace'),
+                birth_order: getValue('birthOrder'),
+                religion: getValue('childReligion'),
+                age: getValue('childAge'),
+                civil_status: getValue('childCivilStatus'),
+                nationality: getValue('childNationality'),
+                mobile_no: getValue('childMobile'),
+                is_ip: getValue('isIP'),
+                is_pwd: getValue('isPWD'),
+                has_medication: getValue('hasMedication'),
+                is_working: getValue('isWorking'),
+                is_gifted: getValue('isGifted'),
+                needs_assistance: getValue('needsAssistance'),
+                region: getValue('addressRegion'),
+                province: getValue('addressProvince'),
+                specific_address: getValue('addressSpecific'),
+                residence_type: getValue('residenceType'),
+                employer_name: getValue('employerName'),
+                marital_status: getValue('maritalStatus'),
+                mother_name: getValue('motherName'),
+                mother_citizenship: getValue('motherCitizenship'),
+                mother_occupation: getValue('motherOccupation'),
+                mother_contact: getValue('motherContact'),
+                father_name: getValue('fatherName'),
+                father_citizenship: getValue('fatherCitizenship'),
+                father_occupation: getValue('fatherOccupation'),
+                father_contact: getValue('fatherContact'),
+                guardian_name: getValue('guardianName'),
+                guardian_relation: getValue('guardianRelation'),
+                guardian_contact: getValue('guardianContact'),
                 
                 siblings: siblingsList,
 
-                lrn: document.getElementById('lrn').value,
-                school_name: document.getElementById('schoolName').value,
-                school_address: document.getElementById('schoolAddress').value,
-                final_general_average: document.getElementById('genAverage').value,
-                school_type: document.getElementById('schoolType').value, 
-                year_attended: document.getElementById('yearAttended').value, 
-                special_talents: document.getElementById('specialTalents').value, 
-                is_scholar: document.getElementById('isScholar').value, 
+                lrn: getValue('lrn'),
+                school_name: getValue('schoolName'),
+                school_address: getValue('schoolAddress'),
+                final_general_average: getValue('genAverage'),
+                school_type: getValue('schoolType'),
+                year_attended: getValue('yearAttended'),
+                special_talents: getValue('specialTalents'),
+                is_scholar: getValue('isScholar'),
                 
                 email: emailValue,
                 
@@ -2483,9 +2524,11 @@
                         `✅ Record Saved Successfully! ID: ${currentRecordId}`, 
                         'success');
                     
-                    document.getElementById('sendBtn').disabled = false;
-                    document.getElementById('sendBtn').innerHTML = 
-                        '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                    const sendBtn = document.getElementById('sendBtn');
+                    if (sendBtn) {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
+                    }
                     
                     btn.innerHTML = '<i class="fas fa-check"></i> Saved to Database';
                     btn.style.background = 'linear-gradient(90deg, #2E7D32, #388E3C)';
@@ -2574,7 +2617,9 @@
                 return;
             }
             
-            const emailValue = document.getElementById('contactEmail').value.trim();
+            const emailInput = document.getElementById('contactEmail');
+            const emailValue = emailInput ? emailInput.value.trim() : '';
+            
             if (!emailValue) {
                 alert("Email address is required to send notification!");
                 return;
@@ -2582,12 +2627,16 @@
             
             if (!validateEmail(emailValue)) {
                 alert("Please enter a valid email address!");
-                document.getElementById('contactEmail').focus();
-                document.getElementById('contactEmail').style.borderColor = 'red';
+                if (emailInput) {
+                    emailInput.focus();
+                    emailInput.style.borderColor = 'red';
+                }
                 return;
             }
             
             const btn = document.getElementById('sendBtn');
+            if (!btn) return;
+            
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
             btn.disabled = true;
             
@@ -2645,6 +2694,8 @@
             if (!currentRecordId) return;
             
             const btn = document.getElementById('sendBtn');
+            if (!btn) return;
+            
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> RESENDING...';
             btn.disabled = true;
             
@@ -2693,10 +2744,10 @@
                 goodmoralStatus: goodmoralData.status || "Not analyzed",
                 hasDisciplinaryRecord: goodmoralData.hasIssues ? "Yes" : "No",
                 disciplinaryDetails: goodmoralData.disciplinaryDetails || "None",
-                studentName: document.getElementById('childName').value || "Not entered",
-                college: document.getElementById('collegeSelect').value || "Not selected",
-                program: document.getElementById('programSelect').value || "Not selected",
-                email: document.getElementById('contactEmail').value || "Not entered",
+                studentName: document.getElementById('childName') ? document.getElementById('childName').value : "Not found",
+                college: document.getElementById('collegeSelect') ? document.getElementById('collegeSelect').value : "Not found",
+                program: document.getElementById('programSelect') ? document.getElementById('programSelect').value : "Not found",
+                email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : "Not found",
                 otherDocumentsCount: otherDocuments.length,
                 requiresPasswordReset: requiresPasswordReset ? "Yes" : "No"
             };
@@ -2719,14 +2770,20 @@
 🔐 Password Reset Required: ${info.requiresPasswordReset}`);
         }
 
-        document.getElementById('fileForm138').addEventListener('change', function(e) {
-            if (currentRecordId && e.target.files.length > 0) {
-                console.log("Form 138 selected, will be uploaded on save");
-            }
-        });
+        // Safely attach event listeners
+        const fileForm138 = document.getElementById('fileForm138');
+        if (fileForm138) {
+            fileForm138.addEventListener('change', function(e) {
+                if (currentRecordId && e.target.files.length > 0) {
+                    console.log("Form 138 selected, will be uploaded on save");
+                }
+            });
+        }
         
         function populateRegions() {
             const regionSelect = document.getElementById("addressRegion");
+            if (!regionSelect) return;
+            
             for (const region in philippineLocations) {
                 const option = document.createElement("option");
                 option.value = region;
@@ -2738,6 +2795,9 @@
         function updateProvinces() {
             const regionSelect = document.getElementById("addressRegion");
             const provinceSelect = document.getElementById("addressProvince");
+            
+            if (!regionSelect || !provinceSelect) return;
+            
             const selectedRegion = regionSelect.value;
             provinceSelect.innerHTML = '<option value="">Select Province</option>';
             if (selectedRegion && philippineLocations[selectedRegion]) {
@@ -2752,12 +2812,22 @@
 
         // ================= INITIALIZATION =================
         window.addEventListener('load', function() {
+            console.log("🔄 Page loaded, initializing...");
+            
             // Check session when page loads
             checkSession();
             
             // Add event listeners for password fields
-            document.getElementById('newPassword').addEventListener('input', checkPasswordStrength);
-            document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+            const newPasswordField = document.getElementById('newPassword');
+            const confirmPasswordField = document.getElementById('confirmPassword');
+            
+            if (newPasswordField) {
+                newPasswordField.addEventListener('input', checkPasswordStrength);
+            }
+            
+            if (confirmPasswordField) {
+                confirmPasswordField.addEventListener('input', checkPasswordMatch);
+            }
             
             // Alternative logout button event
             const logoutBtn = document.querySelector('.btn-logout');
@@ -2767,6 +2837,9 @@
                     simpleLogout(); // Use the simple logout function
                 });
             }
+            
+            // Add initial sibling row
+            addSiblingRow();
         });
     </script>
 </body>
