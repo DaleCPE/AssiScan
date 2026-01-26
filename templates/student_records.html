@@ -648,6 +648,45 @@
             color: #ddd;
         }
 
+        /* ===== DOCUMENTS SECTION ===== */
+        .documents-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .document-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .document-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-title {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .document-filename {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
         /* ===== NOTIFICATION ===== */
         .notification {
             position: fixed;
@@ -751,7 +790,7 @@
         <header class="header">
             <div class="logo-container">
                 <div class="logo-icon">
-                    <i class="fas fa-university"></i>
+                    <i class="fas fa-file-alt"></i>
                 </div>
                 <div class="logo-text">
                     <h1>My Scanned Records</h1>
@@ -867,24 +906,11 @@
 
         // Check authentication
         async function checkAuth() {
-            const sessionToken = localStorage.getItem('session_token');
-            
-            if (!sessionToken) {
-                window.location.href = '/login';
-                return;
-            }
-            
             try {
-                const response = await fetch('/api/check-session', {
-                    headers: {
-                        'Authorization': sessionToken
-                    }
-                });
-                
+                const response = await fetch('/api/check-session');
                 const data = await response.json();
                 
                 if (!data.authenticated) {
-                    localStorage.clear();
                     window.location.href = '/login';
                     return;
                 }
@@ -906,7 +932,6 @@
                 
             } catch (error) {
                 console.error('Auth check error:', error);
-                localStorage.clear();
                 window.location.href = '/login';
             }
         }
@@ -922,11 +947,7 @@
             `;
             
             try {
-                const response = await fetch('/api/my-records', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
+                const response = await fetch('/api/my-records');
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -1054,6 +1075,9 @@
                     day: 'numeric'
                 });
                 
+                // Count documents
+                const documentCount = countDocuments(record);
+                
                 return `
                 <div class="record-card" data-id="${record.id}">
                     <div class="record-card-header">
@@ -1093,9 +1117,9 @@
                                 </span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Other Documents</span>
+                                <span class="detail-label">Documents</span>
                                 <span class="detail-value">
-                                    ${record.other_documents ? record.other_documents.length : 0} file(s)
+                                    <i class="fas fa-paperclip"></i> ${documentCount} file(s)
                                 </span>
                             </div>
                         </div>
@@ -1104,15 +1128,27 @@
                             <button class="btn btn-primary" onclick="viewRecordDetails(${record.id})">
                                 <i class="fas fa-eye"></i> View Details
                             </button>
-                            <button class="btn btn-secondary" onclick="requestEmailResend(${record.id})" 
-                                    ${record.email_sent ? '' : 'disabled'}>
-                                <i class="fas fa-paper-plane"></i> Request Email
+                            <button class="btn btn-secondary" onclick="viewDocuments(${record.id})">
+                                <i class="fas fa-download"></i> Documents
                             </button>
                         </div>
                     </div>
                 </div>
                 `;
             }).join('');
+        }
+
+        // Count documents in a record
+        function countDocuments(record) {
+            let count = 0;
+            
+            if (record.image_path) count += record.image_path.split(',').filter(p => p.trim()).length;
+            if (record.form137_path) count += record.form137_path.split(',').filter(p => p.trim()).length;
+            if (record.form138_path) count += record.form138_path.split(',').filter(p => p.trim()).length;
+            if (record.goodmoral_path) count += record.goodmoral_path.split(',').filter(p => p.trim()).length;
+            if (record.other_documents) count += record.other_documents.length;
+            
+            return count;
         }
 
         // Filter records
@@ -1176,28 +1212,35 @@
 
         // View record details
         async function viewRecordDetails(recordId) {
-            const record = recordsData.find(r => r.id === recordId);
-            if (!record) return;
-            
-            // Get full record details
             try {
-                const response = await fetch(`/api/record/${recordId}`, {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
+                const response = await fetch(`/api/record/${recordId}`);
+                const data = await response.json();
                 
-                let fullRecord = record;
                 if (response.ok) {
-                    const data = await response.json();
-                    fullRecord = data.record || record;
+                    showRecordModal(data.record);
+                } else {
+                    showNotification('Failed to load record details', 'error');
                 }
-                
-                showRecordModal(fullRecord);
-                
             } catch (error) {
                 console.error('Error fetching record details:', error);
-                showRecordModal(record);
+                showNotification('Connection error', 'error');
+            }
+        }
+
+        // View documents
+        async function viewDocuments(recordId) {
+            try {
+                const response = await fetch(`/api/student/documents/${recordId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showDocumentsModal(data.documents, recordId);
+                } else {
+                    showNotification('Failed to load documents', 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching documents:', error);
+                showNotification('Connection error', 'error');
             }
         }
 
@@ -1225,9 +1268,6 @@
             } else if (record.disciplinary_status) {
                 goodmoralInfo = record.disciplinary_status;
             }
-            
-            // Count other documents
-            const otherDocsCount = record.other_documents ? record.other_documents.length : 0;
             
             modalContent.innerHTML = `
                 <div style="margin-bottom: 20px;">
@@ -1283,41 +1323,16 @@
                             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Good Moral Score</div>
                             <div style="font-weight: 500; font-size: 14px;">${goodmoralInfo}</div>
                         </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Other Documents</div>
-                            <div style="font-weight: 500; font-size: 14px;">${otherDocsCount} file(s)</div>
-                        </div>
                     </div>
                 </div>
-                
-                ${record.other_documents && record.other_documents.length > 0 ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-paperclip"></i> Additional Documents
-                    </h4>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${record.other_documents.map(doc => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
-                                <div>
-                                    <div style="font-weight: 500;">${doc.title}</div>
-                                    <div style="font-size: 11px; color: var(--text-muted);">${doc.filename}</div>
-                                </div>
-                                <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 10px;">
-                                    <i class="fas fa-download"></i> Download
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
                         <button class="btn btn-secondary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
                             Close
                         </button>
-                        <button class="btn btn-primary" onclick="printRecord(${record.id})" style="padding: 8px 20px;">
-                            <i class="fas fa-print"></i> Print Record
+                        <button class="btn btn-primary" onclick="viewDocuments(${record.id})" style="padding: 8px 20px;">
+                            <i class="fas fa-download"></i> View Documents
                         </button>
                     </div>
                 </div>
@@ -1326,48 +1341,145 @@
             openModal('recordModal');
         }
 
-        // Request email resend
-        async function requestEmailResend(recordId) {
-            if (!confirm('Request email resend for this record?')) return;
+        // Show documents modal
+        function showDocumentsModal(documents, recordId) {
+            const modalContent = document.getElementById('recordModalContent');
             
-            try {
-                const response = await fetch(`/api/resend-email/${recordId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
-                
-                if (response.ok) {
-                    showNotification('Email resend request submitted successfully!', 'success');
-                } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to request email resend', 'error');
-                }
-            } catch (error) {
-                showNotification('Connection error', 'error');
-            }
-        }
-
-        // Print record
-        function printRecord(recordId) {
-            window.open(`/view-form/${recordId}`, '_blank');
+            modalContent.innerHTML = `
+                <div class="modal-header">
+                    <h3><i class="fas fa-paperclip"></i> Documents for Record #${recordId}</h3>
+                    <button class="close-modal" onclick="closeModal('recordModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="documents-section">
+                        <h4 style="color: var(--gold); margin-bottom: 15px;">
+                            <i class="fas fa-file-alt"></i> PSA Birth Certificate
+                        </h4>
+                        <div class="document-list">
+                            ${documents.psa_documents.length > 0 ? 
+                                documents.psa_documents.map(doc => `
+                                    <div class="document-item">
+                                        <div class="document-info">
+                                            <div class="document-title">PSA Document</div>
+                                            <div class="document-filename">${doc.filename}</div>
+                                        </div>
+                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                    </div>
+                                `).join('') : 
+                                '<p style="color: var(--text-muted); font-style: italic;">No PSA documents found</p>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="documents-section">
+                        <h4 style="color: var(--gold); margin-bottom: 15px;">
+                            <i class="fas fa-file-contract"></i> Form 137
+                        </h4>
+                        <div class="document-list">
+                            ${documents.form137_documents.length > 0 ? 
+                                documents.form137_documents.map(doc => `
+                                    <div class="document-item">
+                                        <div class="document-info">
+                                            <div class="document-title">Form 137</div>
+                                            <div class="document-filename">${doc.filename}</div>
+                                        </div>
+                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                    </div>
+                                `).join('') : 
+                                '<p style="color: var(--text-muted); font-style: italic;">No Form 137 documents found</p>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="documents-section">
+                        <h4 style="color: var(--gold); margin-bottom: 15px;">
+                            <i class="fas fa-award"></i> Good Moral Certificate
+                        </h4>
+                        <div class="document-list">
+                            ${documents.goodmoral_documents.length > 0 ? 
+                                documents.goodmoral_documents.map(doc => `
+                                    <div class="document-item">
+                                        <div class="document-info">
+                                            <div class="document-title">Good Moral Certificate</div>
+                                            <div class="document-filename">${doc.filename}</div>
+                                        </div>
+                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                    </div>
+                                `).join('') : 
+                                '<p style="color: var(--text-muted); font-style: italic;">No Good Moral documents found</p>'
+                            }
+                        </div>
+                    </div>
+                    
+                    ${documents.form138_documents.length > 0 ? `
+                    <div class="documents-section">
+                        <h4 style="color: var(--gold); margin-bottom: 15px;">
+                            <i class="fas fa-file-invoice"></i> Form 138 (Report Card)
+                        </h4>
+                        <div class="document-list">
+                            ${documents.form138_documents.map(doc => `
+                                <div class="document-item">
+                                    <div class="document-info">
+                                        <div class="document-title">Form 138</div>
+                                        <div class="document-filename">${doc.filename}</div>
+                                    </div>
+                                    <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${documents.other_documents.length > 0 ? `
+                    <div class="documents-section">
+                        <h4 style="color: var(--gold); margin-bottom: 15px;">
+                            <i class="fas fa-paperclip"></i> Other Documents
+                        </h4>
+                        <div class="document-list">
+                            ${documents.other_documents.map(doc => `
+                                <div class="document-item">
+                                    <div class="document-info">
+                                        <div class="document-title">${doc.title || 'Untitled Document'}</div>
+                                        <div class="document-filename">${doc.filename}</div>
+                                    </div>
+                                    <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button class="btn btn-primary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            openModal('recordModal');
         }
 
         // Logout
         async function logout() {
             try {
-                await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
+                await fetch('/api/logout', { method: 'POST' });
             } catch (error) {
                 console.error('Logout error:', error);
             }
             
-            localStorage.clear();
             window.location.href = '/login';
         }
 
