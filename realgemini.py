@@ -88,7 +88,7 @@ PERMISSIONS = {
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
-        'change_password'  # Added change_password permission for students
+        'change_password', 'view_own_documents', 'download_own_documents'
     ]
 }
 
@@ -2072,6 +2072,257 @@ def get_colleges_dropdown():
     finally:
         conn.close()
 
+# ================= NEW STUDENT RECORDS API ENDPOINTS =================
+
+@app.route('/api/my-records', methods=['GET'])
+@login_required
+@role_required('STUDENT')
+def get_my_records():
+    """Get only the records of the currently logged-in student"""
+    conn = get_db_connection()
+    if not conn: 
+        return jsonify({"records": [], "error": "Database connection failed"})
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get only records of the current student user
+        cur.execute("""
+            SELECT * FROM records 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, (session['user_id'],))
+        
+        rows = cur.fetchall()
+        
+        for r in rows:
+            if r['created_at']: 
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: 
+                r['birthdate'] = str(r['birthdate'])
+            if r['email_sent_at']: 
+                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Parse Good Moral analysis JSON
+            if r.get('goodmoral_analysis'):
+                try:
+                    r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                except:
+                    r['goodmoral_analysis'] = {}
+            
+            # Parse other_documents JSON
+            if r.get('other_documents'):
+                try:
+                    r['other_documents'] = json.loads(r['other_documents'])
+                except:
+                    r['other_documents'] = []
+            else:
+                r['other_documents'] = []
+            
+            # Process image paths and add full URLs for student access
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            for field in image_fields:
+                if r.get(field):
+                    # Split multiple files if comma-separated
+                    paths = str(r[field]).split(',')
+                    if paths and paths[0].strip():
+                        first_path = paths[0].strip()
+                        # Create full URL for frontend access
+                        r[f'{field}_url'] = f"{request.host_url}uploads/{first_path}"
+                    else:
+                        r[f'{field}_url'] = None
+                else:
+                    r[f'{field}_url'] = None
+        
+        return jsonify({
+            "records": rows,
+            "server_url": request.host_url.rstrip('/'),
+            "user_id": session['user_id']
+        })
+    except Exception as e:
+        print(f"❌ Error in get_my_records: {e}")
+        return jsonify({"records": [], "error": str(e)})
+    finally:
+        conn.close()
+
+@app.route('/api/student/record/<int:record_id>', methods=['GET'])
+@login_required
+@role_required('STUDENT')
+def get_student_record(record_id):
+    """Get a specific record for a student (with document URLs)"""
+    conn = get_db_connection()
+    if not conn: 
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get record and ensure it belongs to the current student
+        cur.execute("""
+            SELECT * FROM records 
+            WHERE id = %s AND user_id = %s
+        """, (record_id, session['user_id']))
+        
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found or unauthorized"}), 404
+        
+        # Format dates
+        if record['created_at']: 
+            record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        if record['birthdate']: 
+            record['birthdate'] = str(record['birthdate'])
+        if record['email_sent_at']: 
+            record['email_sent_at'] = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Parse Good Moral analysis JSON
+        if record.get('goodmoral_analysis'):
+            try:
+                record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
+            except:
+                record['goodmoral_analysis'] = {}
+        
+        # Parse other_documents JSON
+        if record.get('other_documents'):
+            try:
+                record['other_documents'] = json.loads(record['other_documents'])
+            except:
+                record['other_documents'] = []
+        else:
+            record['other_documents'] = []
+        
+        # Add document URLs for student access
+        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+        for field in image_fields:
+            if record.get(field):
+                # Split multiple files if comma-separated
+                paths = str(record[field]).split(',')
+                if paths and paths[0].strip():
+                    first_path = paths[0].strip()
+                    # Create full URL for frontend access
+                    record[f'{field}_url'] = f"{request.host_url}uploads/{first_path}"
+                else:
+                    record[f'{field}_url'] = None
+            else:
+                record[f'{field}_url'] = None
+        
+        # Add URLs for other documents
+        if record['other_documents']:
+            for doc in record['other_documents']:
+                if doc.get('filename'):
+                    doc['download_url'] = f"{request.host_url}uploads/{doc['filename']}"
+        
+        return jsonify({
+            "record": record,
+            "server_url": request.host_url.rstrip('/')
+        })
+    except Exception as e:
+        print(f"❌ Error in get_student_record: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/student/documents/<int:record_id>', methods=['GET'])
+@login_required
+@role_required('STUDENT')
+def get_student_documents(record_id):
+    """Get all documents for a specific student record"""
+    conn = get_db_connection()
+    if not conn: 
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if record belongs to student
+        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        if record['user_id'] != session['user_id']:
+            return jsonify({"error": "Unauthorized access"}), 403
+        
+        # Get record with document paths
+        cur.execute("""
+            SELECT image_path, form137_path, form138_path, goodmoral_path, other_documents
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
+        record_data = cur.fetchone()
+        
+        # Prepare document URLs
+        documents = {
+            "psa_documents": [],
+            "form137_documents": [],
+            "form138_documents": [],
+            "goodmoral_documents": [],
+            "other_documents": []
+        }
+        
+        # PSA Documents
+        if record_data['image_path']:
+            paths = str(record_data['image_path']).split(',')
+            for path in paths:
+                if path.strip():
+                    documents['psa_documents'].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Form 137 Documents
+        if record_data['form137_path']:
+            paths = str(record_data['form137_path']).split(',')
+            for path in paths:
+                if path.strip():
+                    documents['form137_documents'].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Form 138 Documents
+        if record_data['form138_path']:
+            paths = str(record_data['form138_path']).split(',')
+            for path in paths:
+                if path.strip():
+                    documents['form138_documents'].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Good Moral Documents
+        if record_data['goodmoral_path']:
+            paths = str(record_data['goodmoral_path']).split(',')
+            for path in paths:
+                if path.strip():
+                    documents['goodmoral_documents'].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Other Documents
+        if record_data['other_documents']:
+            try:
+                other_docs = json.loads(record_data['other_documents'])
+                for doc in other_docs:
+                    if doc.get('filename'):
+                        doc['download_url'] = f"{request.host_url}uploads/{doc['filename']}"
+                        documents['other_documents'].append(doc)
+            except:
+                documents['other_documents'] = []
+        
+        return jsonify({
+            "documents": documents,
+            "record_id": record_id
+        })
+    except Exception as e:
+        print(f"❌ Error in get_student_documents: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # ================= FIXED ROUTES WITH ROLE-BASED ACCESS =================
 
 @app.route('/')
@@ -2207,7 +2458,7 @@ def admin_colleges():
 
 @app.route('/my-records')
 @login_required
-def my_records():
+def my_records_page():
     """Page for students to view their own records"""
     user_role = session.get('role', '').upper()
     if user_role != 'STUDENT':
@@ -3280,7 +3531,9 @@ def health_check():
             "change_password": "ENABLED",
             "college_management": "ENABLED",
             "goodmoral_analysis": "ENABLED",
-            "religion_dropdown": "ENABLED"  # Added this feature
+            "religion_dropdown": "ENABLED",
+            "student_records": "ENABLED",
+            "document_access": "ENABLED"
         }
     })
 
@@ -3327,12 +3580,87 @@ def check_login():
     else:
         return jsonify({"logged_in": False})
 
+# ================= FIXED STUDENT RECORDS API =================
+@app.route('/api/record/<int:record_id>', methods=['GET'])
+@login_required
+def get_single_record(record_id):
+    """Get a single record by ID"""
+    conn = get_db_connection()
+    if not conn: 
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get user role
+        user_role = session.get('role', '').upper()
+        
+        if user_role == 'STUDENT':
+            # Students can only see their own records
+            cur.execute("""
+                SELECT * FROM records 
+                WHERE id = %s AND user_id = %s
+            """, (record_id, session['user_id']))
+        elif user_role == 'SUPER_ADMIN':
+            # Super Admin can see all records
+            cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
+        else:
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        record = cur.fetchone()
+        
+        if not record:
+            return jsonify({"error": "Record not found"}), 404
+        
+        # Format dates
+        if record['created_at']: 
+            record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        if record['birthdate']: 
+            record['birthdate'] = str(record['birthdate'])
+        if record['email_sent_at']: 
+            record['email_sent_at'] = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Parse JSON fields
+        if record.get('goodmoral_analysis'):
+            try:
+                record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
+            except:
+                record['goodmoral_analysis'] = {}
+        
+        if record.get('other_documents'):
+            try:
+                record['other_documents'] = json.loads(record['other_documents'])
+            except:
+                record['other_documents'] = []
+        else:
+            record['other_documents'] = []
+        
+        # Add document URLs
+        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+        for field in image_fields:
+            if record.get(field):
+                paths = str(record[field]).split(',')
+                if paths and paths[0].strip():
+                    first_path = paths[0].strip()
+                    record[f'{field}_url'] = f"{request.host_url}uploads/{first_path}"
+                else:
+                    record[f'{field}_url'] = None
+            else:
+                record[f'{field}_url'] = None
+        
+        return jsonify({"record": record})
+    except Exception as e:
+        print(f"❌ Error in get_single_record: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH USER MANAGEMENT & PASSWORD RESET SYSTEM")
+    print("🚀 ASSISCAN WITH STUDENT RECORDS FIX")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3342,26 +3670,18 @@ if __name__ == '__main__':
     print("="*60)
     print("👥 USER ROLES:")
     print("   • SUPER_ADMIN: Full system access")
-    print("   • STUDENT: Scanner access + Change password")
+    print("   • STUDENT: Scanner access + View own records + Download documents")
     print("="*60)
-    print("🔄 RELIGION FEATURE UPDATE:")
-    print("   • Religion field REMOVED from PSA scanning")
-    print("   • Religion now selected ONLY from frontend dropdown")
+    print("🔄 FIXED FEATURES:")
+    print("   • Student can now view their own records")
+    print("   • Document URLs are properly generated")
+    print("   • File download links work correctly")
+    print("   • API endpoints for student records added")
     print("="*60)
-    print("🔐 NEW SECURITY FEATURES:")
-    print("   • Password strength validation")
-    print("   • Force password reset for new users")
-    print("   • Change password endpoint (/api/change-password)")
-    print("   • Password reset check (/api/check-password-reset)")
-    print("   • Change password page (/change-password)")
-    print("="*60)
-    print("📊 OTHER FEATURES:")
-    print("   • User Authentication & Sessions")
-    print("   • Role-Based Access Control")
-    print("   • User Management (Super Admin only)")
-    print("   • PSA (without religion), Form 137, Good Moral scanning")
-    print("   • College Management System")
-    print("   • Email notifications")
+    print("🔐 SECURITY FEATURES:")
+    print("   • Role-based access control")
+    print("   • Students can only access their own records")
+    print("   • Document access permissions")
     print("="*60)
     
     if os.path.exists(UPLOAD_FOLDER):
