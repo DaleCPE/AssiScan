@@ -22,7 +22,7 @@
             --text-light: #f0f0f0;
             --text-muted: #888;
             --border-color: rgba(212, 175, 55, 0.3);
-            --border-radius: 6px;
+            --border-radius: 8px;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
             --transition: all 0.3s ease;
@@ -61,6 +61,8 @@
             margin-bottom: 25px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .logo-container {
@@ -107,6 +109,7 @@
         .nav-links {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -124,6 +127,8 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             border: 1px solid rgba(212, 175, 55, 0.2);
+            cursor: pointer;
+            white-space: nowrap;
         }
 
         .nav-link:hover {
@@ -170,6 +175,8 @@
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .content-header h2 {
@@ -187,6 +194,7 @@
         .action-buttons {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -202,6 +210,7 @@
             transition: var(--transition);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -316,6 +325,7 @@
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .filter-btn:hover,
@@ -335,6 +345,7 @@
             box-shadow: var(--shadow);
             background: var(--bg-card);
             backdrop-filter: blur(5px);
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
@@ -415,6 +426,7 @@
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .status-active {
@@ -437,6 +449,7 @@
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .role-superadmin {
@@ -455,7 +468,8 @@
         .action-buttons-cell {
             display: flex;
             gap: 5px;
-            justify-content: center;
+            justify-content: flex-start;
+            flex-wrap: wrap;
         }
 
         .icon-btn {
@@ -608,18 +622,6 @@
             background: rgba(0, 0, 0, 0.8);
         }
 
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--gold);
-        }
-
         .modal-footer {
             padding: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -725,23 +727,20 @@
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
-                gap: 15px;
                 text-align: center;
             }
 
             .user-nav {
-                flex-direction: column;
                 width: 100%;
+                justify-content: center;
             }
 
             .nav-links {
-                flex-wrap: wrap;
                 justify-content: center;
             }
 
             .content-header {
                 flex-direction: column;
-                gap: 15px;
                 text-align: center;
             }
 
@@ -754,17 +753,113 @@
             }
 
             .action-buttons-cell {
-                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .filter-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+
+            th, td {
+                padding: 12px 10px;
+                font-size: 12px;
+            }
+
+            .user-cell {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+
+            .user-details h4 {
+                font-size: 13px;
+            }
+
+            .user-details p {
+                font-size: 10px;
+            }
+
+            .status-badge,
+            .role-badge {
+                font-size: 9px;
+                padding: 3px 8px;
             }
         }
 
         @media (max-width: 480px) {
             body {
-                padding: 10px;
+                padding: 15px;
             }
 
             .modal-container {
                 margin: 10px;
+            }
+
+            .nav-link {
+                padding: 8px 15px;
+                font-size: 12px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .btn {
+                padding: 8px 15px;
+                font-size: 11px;
+            }
+
+            .filter-btn {
+                padding: 8px 15px;
+                font-size: 11px;
+            }
+
+            .action-buttons-cell {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .icon-btn {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .logo-container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .nav-link {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .filter-buttons {
+                flex-direction: column;
+            }
+
+            .filter-btn {
+                width: 100%;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -863,7 +958,6 @@
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
-                    <!-- Users will be loaded here -->
                     <tr>
                         <td colspan="7">
                             <div class="loading">
@@ -904,14 +998,14 @@
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
                         </div>
-                        <div class="row" style="display: flex; gap: 15px;">
-                            <div class="form-group" style="flex: 1;">
+                        <div class="row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="newCollegeId">College (Optional)</label>
                                 <select id="newCollegeId">
                                     <option value="">-- Select College --</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="flex: 1;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="newProgramId">Program (Optional)</label>
                                 <select id="newProgramId" disabled>
                                     <option value="">-- Select College First --</option>
@@ -920,9 +1014,9 @@
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-toggle-on"></i> Status</label>
-                            <div class="checkbox-group">
+                            <div style="display: flex; align-items: center; gap: 10px;">
                                 <input type="checkbox" id="newIsActive" checked>
-                                <label for="newIsActive">Active Account</label>
+                                <label for="newIsActive" style="margin: 0;">Active Account</label>
                             </div>
                         </div>
                     </div>
@@ -959,14 +1053,14 @@
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
                         </div>
-                        <div class="row" style="display: flex; gap: 15px;">
-                            <div class="form-group" style="flex: 1;">
+                        <div class="row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="editCollegeId">College</label>
                                 <select id="editCollegeId">
                                     <option value="">-- Select College --</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="flex: 1;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="editProgramId">Program</label>
                                 <select id="editProgramId" disabled>
                                     <option value="">-- Select College First --</option>
@@ -975,18 +1069,18 @@
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-toggle-on"></i> Status</label>
-                            <div class="checkbox-group">
+                            <div style="display: flex; align-items: center; gap: 10px;">
                                 <input type="checkbox" id="editIsActive">
-                                <label for="editIsActive">Active Account</label>
+                                <label for="editIsActive" style="margin: 0;">Active Account</label>
                             </div>
                         </div>
                         
                         <div class="password-reset-section">
                             <div class="form-group">
                                 <label><i class="fas fa-key"></i> Password Reset</label>
-                                <div class="checkbox-group">
+                                <div style="display: flex; align-items: center; gap: 10px;">
                                     <input type="checkbox" id="editResetPassword">
-                                    <label for="editResetPassword">Reset password (generate new temporary password)</label>
+                                    <label for="editResetPassword" style="margin: 0;">Reset password (generate new temporary password)</label>
                                 </div>
                             </div>
                         </div>
@@ -1028,7 +1122,7 @@
         let collegesData = [];
         let currentAction = {};
         let currentFilter = 'all';
-        let currentUserId = null;
+        let userData = {};
 
         // Initialize on page load
         window.addEventListener('load', function() {
@@ -1036,7 +1130,40 @@
             loadUsers();
             loadCollegesForModal();
             setupSearch();
+            setupFormEvents();
         });
+
+        function setupFormEvents() {
+            // Create user form
+            document.getElementById('createUserForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await createUser();
+            });
+            
+            // Edit user form
+            document.getElementById('editUserForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await updateUser();
+            });
+            
+            // Close modals on outside click
+            window.onclick = function(event) {
+                if (event.target.classList.contains('modal-overlay')) {
+                    const modal = event.target;
+                    closeModal(modal.id);
+                }
+            };
+            
+            // Close modals with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
+                    if (openModal) {
+                        closeModal(openModal.id);
+                    }
+                }
+            });
+        }
 
         // Check authentication
         async function checkAuth() {
@@ -1049,9 +1176,7 @@
             
             try {
                 const response = await fetch('/api/check-session', {
-                    headers: {
-                        'Authorization': sessionToken
-                    }
+                    headers: { 'Authorization': sessionToken }
                 });
                 
                 const data = await response.json();
@@ -1067,10 +1192,8 @@
                     return;
                 }
                 
-                // Set user data
-                document.getElementById('userName').textContent = data.user.full_name;
-                document.getElementById('userAvatar').textContent = 
-                    data.user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                userData = data.user;
+                updateUserInfo();
                 
             } catch (error) {
                 console.error('Auth check error:', error);
@@ -1079,13 +1202,17 @@
             }
         }
 
+        function updateUserInfo() {
+            document.getElementById('userName').textContent = userData.full_name;
+            const initials = userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            document.getElementById('userAvatar').textContent = initials;
+        }
+
         // Load users
         async function loadUsers() {
             try {
                 const response = await fetch('/api/users', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
                 
                 if (response.ok) {
@@ -1102,6 +1229,7 @@
 
         function renderUsers(users) {
             const tbody = document.getElementById('usersTableBody');
+            if (!tbody) return;
             
             if (users.length === 0) {
                 tbody.innerHTML = `
@@ -1122,12 +1250,12 @@
             }
             
             tbody.innerHTML = users.map(user => {
-                const initials = user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const initials = user.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || '??';
                 const lastLogin = user.last_login ? formatDateTime(user.last_login) : 'Never';
                 const created = formatDateTime(user.created_at);
                 
                 // Don't show delete button for current user
-                const showDelete = user.id !== currentUserId;
+                const showDelete = user.id !== userData.id;
                 
                 return `
                     <tr id="user-${user.id}">
@@ -1135,8 +1263,8 @@
                             <div class="user-cell">
                                 <div class="user-avatar-small">${initials}</div>
                                 <div class="user-details">
-                                    <h4>${user.full_name}</h4>
-                                    <p>${user.username} • ${user.email}</p>
+                                    <h4>${user.full_name || 'Unknown User'}</h4>
+                                    <p>${user.username || 'N/A'} • ${user.email || 'N/A'}</p>
                                     ${user.created_by_name ? `<p style="font-size: 10px; color: var(--gold);">Created by: ${user.created_by_name}</p>` : ''}
                                 </div>
                             </div>
@@ -1195,34 +1323,39 @@
                     
                     // For create modal
                     const createCollegeSelect = document.getElementById('newCollegeId');
-                    createCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                    if (createCollegeSelect) {
+                        createCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                        
+                        collegesData.forEach(college => {
+                            const option = document.createElement('option');
+                            option.value = college.id;
+                            option.textContent = `${college.code} - ${college.name}`;
+                            createCollegeSelect.appendChild(option);
+                        });
+                        
+                        createCollegeSelect.addEventListener('change', function() {
+                            const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
+                            updateCreateProgramSelect(selectedCollege);
+                        });
+                    }
                     
                     // For edit modal
                     const editCollegeSelect = document.getElementById('editCollegeId');
-                    editCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
-                    
-                    collegesData.forEach(college => {
-                        const option1 = document.createElement('option');
-                        option1.value = college.id;
-                        option1.textContent = `${college.code} - ${college.name}`;
-                        createCollegeSelect.appendChild(option1);
+                    if (editCollegeSelect) {
+                        editCollegeSelect.innerHTML = '<option value="">-- Select College --</option>';
                         
-                        const option2 = document.createElement('option');
-                        option2.value = college.id;
-                        option2.textContent = `${college.code} - ${college.name}`;
-                        editCollegeSelect.appendChild(option2);
-                    });
-                    
-                    // Update programs when college changes
-                    createCollegeSelect.addEventListener('change', function() {
-                        const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
-                        updateCreateProgramSelect(selectedCollege);
-                    });
-                    
-                    editCollegeSelect.addEventListener('change', function() {
-                        const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
-                        updateEditProgramSelect(selectedCollege);
-                    });
+                        collegesData.forEach(college => {
+                            const option = document.createElement('option');
+                            option.value = college.id;
+                            option.textContent = `${college.code} - ${college.name}`;
+                            editCollegeSelect.appendChild(option);
+                        });
+                        
+                        editCollegeSelect.addEventListener('change', function() {
+                            const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
+                            updateEditProgramSelect(selectedCollege);
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Error loading colleges:', error);
@@ -1231,6 +1364,8 @@
 
         function updateCreateProgramSelect(college) {
             const programSelect = document.getElementById('newProgramId');
+            if (!programSelect) return;
+            
             programSelect.innerHTML = '<option value="">-- Select Program --</option>';
             programSelect.disabled = !college;
             
@@ -1246,6 +1381,8 @@
 
         function updateEditProgramSelect(college) {
             const programSelect = document.getElementById('editProgramId');
+            if (!programSelect) return;
+            
             programSelect.innerHTML = '<option value="">-- Select Program --</option>';
             programSelect.disabled = !college;
             
@@ -1295,6 +1432,8 @@
         // Search functionality
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
+            if (!searchInput) return;
+            
             searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase().trim();
                 
@@ -1304,9 +1443,9 @@
                 }
                 
                 const filteredUsers = usersData.filter(user => {
-                    const nameMatch = user.full_name.toLowerCase().includes(searchTerm);
-                    const usernameMatch = user.username.toLowerCase().includes(searchTerm);
-                    const emailMatch = user.email.toLowerCase().includes(searchTerm);
+                    const nameMatch = user.full_name?.toLowerCase().includes(searchTerm) || false;
+                    const usernameMatch = user.username?.toLowerCase().includes(searchTerm) || false;
+                    const emailMatch = user.email?.toLowerCase().includes(searchTerm) || false;
                     const collegeMatch = user.college_name?.toLowerCase().includes(searchTerm) || false;
                     
                     return nameMatch || usernameMatch || emailMatch || collegeMatch;
@@ -1318,22 +1457,40 @@
 
         // Modal functions
         function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-            document.body.style.overflow = 'auto';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
         }
 
         function openCreateUserModal() {
-            document.getElementById('createUserForm').reset();
-            document.getElementById('newRole').value = 'STUDENT';
-            document.getElementById('newIsActive').checked = true;
-            document.getElementById('newCollegeId').value = '';
-            document.getElementById('newProgramId').innerHTML = '<option value="">-- Select College First --</option>';
-            document.getElementById('newProgramId').disabled = true;
+            const form = document.getElementById('createUserForm');
+            if (form) form.reset();
+            
+            const roleSelect = document.getElementById('newRole');
+            if (roleSelect) roleSelect.value = 'STUDENT';
+            
+            const isActive = document.getElementById('newIsActive');
+            if (isActive) isActive.checked = true;
+            
+            const collegeSelect = document.getElementById('newCollegeId');
+            if (collegeSelect) collegeSelect.value = '';
+            
+            const programSelect = document.getElementById('newProgramId');
+            if (programSelect) {
+                programSelect.innerHTML = '<option value="">-- Select College First --</option>';
+                programSelect.disabled = true;
+            }
+            
             openModal('createUserModal');
         }
 
@@ -1342,9 +1499,9 @@
             if (!user) return;
             
             document.getElementById('editUserId').value = user.id;
-            document.getElementById('editFullName').value = user.full_name;
-            document.getElementById('editEmail').value = user.email;
-            document.getElementById('editRole').value = user.role;
+            document.getElementById('editFullName').value = user.full_name || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editRole').value = user.role || 'STUDENT';
             document.getElementById('editCollegeId').value = user.college_id || '';
             document.getElementById('editIsActive').checked = user.is_active;
             document.getElementById('editResetPassword').checked = false;
@@ -1355,25 +1512,26 @@
                 updateEditProgramSelect(selectedCollege);
                 document.getElementById('editProgramId').value = user.program_id || '';
             } else {
-                document.getElementById('editProgramId').innerHTML = '<option value="">-- Select College First --</option>';
-                document.getElementById('editProgramId').disabled = true;
+                const programSelect = document.getElementById('editProgramId');
+                if (programSelect) {
+                    programSelect.innerHTML = '<option value="">-- Select College First --</option>';
+                    programSelect.disabled = true;
+                }
             }
             
             openModal('editUserModal');
         }
 
         // Create user
-        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
+        async function createUser() {
             const userData = {
-                username: document.getElementById('newUsername').value,
-                full_name: document.getElementById('newFullName').value,
-                email: document.getElementById('newEmail').value,
-                role: document.getElementById('newRole').value,
-                college_id: document.getElementById('newCollegeId').value || null,
-                program_id: document.getElementById('newProgramId').value || null,
-                is_active: document.getElementById('newIsActive').checked
+                username: document.getElementById('newUsername')?.value,
+                full_name: document.getElementById('newFullName')?.value,
+                email: document.getElementById('newEmail')?.value,
+                role: document.getElementById('newRole')?.value,
+                college_id: document.getElementById('newCollegeId')?.value || null,
+                program_id: document.getElementById('newProgramId')?.value || null,
+                is_active: document.getElementById('newIsActive')?.checked
             };
             
             try {
@@ -1389,7 +1547,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showNotification(`User created successfully! Temporary password: ${data.user.temp_password}`, 'success');
+                    showNotification(`User created successfully! Temporary password: ${data.user?.temp_password || 'N/A'}`, 'success');
                     closeModal('createUserModal');
                     
                     // Reload users
@@ -1404,21 +1562,21 @@
                 console.error('Create user error:', error);
                 showNotification('Connection error', 'error');
             }
-        });
+        }
 
-        // Edit user
-        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Update user
+        async function updateUser() {
+            const userId = document.getElementById('editUserId')?.value;
+            if (!userId) return;
             
-            const userId = document.getElementById('editUserId').value;
             const userData = {
-                full_name: document.getElementById('editFullName').value,
-                email: document.getElementById('editEmail').value,
-                role: document.getElementById('editRole').value,
-                college_id: document.getElementById('editCollegeId').value || null,
-                program_id: document.getElementById('editProgramId').value || null,
-                is_active: document.getElementById('editIsActive').checked,
-                reset_password: document.getElementById('editResetPassword').checked
+                full_name: document.getElementById('editFullName')?.value,
+                email: document.getElementById('editEmail')?.value,
+                role: document.getElementById('editRole')?.value,
+                college_id: document.getElementById('editCollegeId')?.value || null,
+                program_id: document.getElementById('editProgramId')?.value || null,
+                is_active: document.getElementById('editIsActive')?.checked,
+                reset_password: document.getElementById('editResetPassword')?.checked
             };
             
             try {
@@ -1454,7 +1612,7 @@
                 console.error('Edit user error:', error);
                 showNotification('Connection error', 'error');
             }
-        });
+        }
 
         // Confirmation functions
         function confirmDeactivateUser(userId) {
@@ -1516,9 +1674,7 @@
             try {
                 const response = await fetch(`/api/users/${userId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
                 
                 const data = await response.json();
@@ -1539,9 +1695,7 @@
             try {
                 const response = await fetch(`/api/users/${userId}/activate`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
                 
                 const data = await response.json();
@@ -1560,7 +1714,6 @@
 
         async function resetPassword(userId) {
             try {
-                const user = usersData.find(u => u.id === userId);
                 const response = await fetch(`/api/users/${userId}`, {
                     method: 'PUT',
                     headers: {
@@ -1600,9 +1753,7 @@
             try {
                 await fetch('/api/logout', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
             } catch (error) {
                 console.error('Logout error:', error);
@@ -1622,17 +1773,21 @@
 
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
+            if (!notification) return;
+            
             const messageEl = document.getElementById('notificationMessage');
             const icon = notification.querySelector('i');
             
-            icon.className = {
-                'success': 'fas fa-check-circle',
-                'error': 'fas fa-exclamation-circle',
-                'info': 'fas fa-info-circle'
-            }[type] || 'fas fa-info-circle';
+            if (icon) {
+                icon.className = {
+                    'success': 'fas fa-check-circle',
+                    'error': 'fas fa-exclamation-circle',
+                    'info': 'fas fa-info-circle'
+                }[type] || 'fas fa-info-circle';
+            }
             
             notification.className = `notification ${type}`;
-            messageEl.textContent = message;
+            if (messageEl) messageEl.textContent = message;
             
             notification.classList.add('show');
             
@@ -1640,26 +1795,6 @@
                 notification.classList.remove('show');
             }, 3000);
         }
-
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const modals = document.querySelectorAll('.modal-overlay');
-            modals.forEach(modal => {
-                if (event.target === modal) {
-                    closeModal(modal.id);
-                }
-            });
-        };
-
-        // Close modals with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
-                if (openModal) {
-                    closeModal(openModal.id);
-                }
-            }
-        });
     </script>
 </body>
 </html>
