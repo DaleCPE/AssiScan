@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>AssiScan | UB LIPA</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -23,16 +23,59 @@
             --danger-red: #f44336;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            height: 100%;
+            scroll-behavior: smooth;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
             background: radial-gradient(circle at 20% 50%, #1a0505 0%, #000000 100%);
             color: var(--text-main);
             margin: 0;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
             display: flex;
+            flex-direction: column;
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            color: var(--primary-gold);
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
         }
 
         @keyframes scanLaser { 
@@ -45,6 +88,7 @@
         /* --- SIDEBAR (Left) --- */
         .sidebar {
             width: 260px;
+            min-width: 260px;
             background: var(--panel-bg);
             border-right: 1px solid var(--border-dim);
             padding: 30px 20px;
@@ -52,9 +96,35 @@
             flex-direction: column;
             backdrop-filter: blur(10px);
             z-index: 20;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
         }
-        .brand-title { font-family: 'Cinzel', serif; color: var(--primary-gold); font-size: 28px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .brand-subtitle { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 5px; padding-bottom: 20px; border-bottom: 1px solid var(--border-dim); }
+
+        .sidebar.mobile-open {
+            transform: translateX(0);
+        }
+
+        .brand-title { 
+            font-family: 'Cinzel', serif; 
+            color: var(--primary-gold); 
+            font-size: 28px; 
+            font-weight: 700; 
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+            line-height: 1.2;
+        }
+        
+        .brand-subtitle { 
+            font-size: 10px; 
+            color: var(--text-muted); 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            margin-top: 5px; 
+            padding-bottom: 20px; 
+            border-bottom: 1px solid var(--border-dim); 
+        }
         
         .user-info {
             margin: 20px 0;
@@ -82,6 +152,7 @@
             font-size: 13px;
             font-weight: 600;
             color: var(--text-main);
+            word-break: break-word;
         }
 
         .user-role {
@@ -107,6 +178,7 @@
             gap: 10px; 
             transition: 0.3s; 
             cursor: pointer;
+            width: 100%;
         }
         
         .btn-access:hover { 
@@ -132,6 +204,7 @@
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
+            width: 100%;
         }
 
         .student-action-btn {
@@ -148,6 +221,7 @@
             gap: 8px;
             transition: 0.3s;
             cursor: pointer;
+            width: 100%;
         }
 
         .student-action-btn:hover {
@@ -161,6 +235,7 @@
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
+            width: 100%;
         }
 
         /* Change Password Modal */
@@ -175,15 +250,18 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .modal-content {
             background: var(--panel-bg);
             border: 1px solid var(--border-dim);
             border-radius: 8px;
-            padding: 30px;
-            width: 90%;
+            padding: 25px;
+            width: 100%;
             max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
@@ -212,6 +290,11 @@
             font-size: 20px;
             cursor: pointer;
             transition: 0.3s;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .close-modal:hover {
@@ -338,6 +421,11 @@
             border: none;
             color: var(--text-muted);
             cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .password-input-wrapper {
@@ -385,21 +473,22 @@
             z-index: 2000;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .force-reset-content {
             background: var(--panel-bg);
             border: 2px solid var(--danger-red);
             border-radius: 10px;
-            padding: 40px 30px;
-            width: 90%;
+            padding: 30px 20px;
+            width: 100%;
             max-width: 500px;
             text-align: center;
             box-shadow: 0 15px 40px rgba(244, 67, 54, 0.3);
         }
 
         .force-reset-icon {
-            font-size: 72px;
+            font-size: 48px;
             color: var(--danger-red);
             margin-bottom: 20px;
         }
@@ -407,7 +496,7 @@
         .force-reset-title {
             font-family: 'Cinzel', serif;
             color: var(--primary-gold);
-            font-size: 24px;
+            font-size: 20px;
             margin-bottom: 10px;
         }
 
@@ -415,6 +504,7 @@
             color: var(--text-muted);
             margin-bottom: 30px;
             line-height: 1.6;
+            font-size: 14px;
         }
 
         .force-reset-warning {
@@ -431,6 +521,14 @@
             gap: 10px;
         }
 
+        /* Main Container */
+        .main-container {
+            display: flex;
+            flex: 1;
+            min-height: 100vh;
+            width: 100%;
+        }
+
         /* --- MAIN AREA (Middle - Scanners) --- */
         .main-scan { 
             flex: 1; 
@@ -441,6 +539,7 @@
             gap: 20px;
             padding: 20px;
             overflow-y: auto;
+            width: 100%;
         }
         
         .scanner-wrapper {
@@ -460,6 +559,7 @@
             display: flex; 
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .scan-frame { 
@@ -476,6 +576,7 @@
             transition: 0.3s; 
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,0,0,0.5); 
+            touch-action: manipulation;
         }
         
         .scan-frame:hover { 
@@ -514,6 +615,7 @@
             color: var(--text-muted); 
             z-index: 2; 
             pointer-events: none; 
+            padding: 20px;
         }
         
         .upload-placeholder i { 
@@ -536,6 +638,7 @@
         /* --- FORM PANEL (Right - Editable) --- */
         .form-panel { 
             width: 450px; 
+            min-width: 450px;
             background: #110303; 
             border-left: 1px solid var(--border-dim); 
             padding: 25px; 
@@ -544,6 +647,8 @@
             flex-direction: column; 
             gap: 10px; 
             height: 100vh; 
+            position: sticky;
+            top: 0;
             z-index: 15; 
         }
         
@@ -560,6 +665,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .operator-info {
@@ -581,8 +687,12 @@
             padding-bottom: 2px;
         }
         
-        .row { display: flex; gap: 10px; }
-        .col-half { flex: 1; }
+        .row { 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap;
+        }
+        .col-half { flex: 1; min-width: 140px; }
 
         input, select, textarea { 
             width: 100%; 
@@ -596,6 +706,9 @@
             outline: none; 
             transition: 0.3s; 
             margin-top: 5px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
         
         input:focus, select:focus, textarea:focus { 
@@ -603,7 +716,13 @@
             background: rgba(212, 175, 55, 0.05); 
         }
         
-        label { font-size: 9px; color: #888; margin-left: 2px; }
+        label { 
+            font-size: 9px; 
+            color: #888; 
+            margin-left: 2px; 
+            display: block;
+            margin-top: 8px;
+        }
 
         /* Custom File Upload Styling */
         .file-upload-group { 
@@ -646,9 +765,7 @@
         }
         
         /* Button Styles */
-        .btn-save { 
-            background: linear-gradient(90deg, #1e3c22, #2e7d32); 
-            color: #fff; 
+        .btn-save, .btn-send { 
             border: none; 
             padding: 15px; 
             font-weight: 600; 
@@ -664,6 +781,13 @@
             align-items: center; 
             justify-content: center; 
             gap: 8px;
+            width: 100%;
+            min-height: 50px;
+        }
+        
+        .btn-save { 
+            background: linear-gradient(90deg, #1e3c22, #2e7d32); 
+            color: #fff; 
         }
         
         .btn-save:hover { 
@@ -675,21 +799,6 @@
         .btn-send { 
             background: linear-gradient(90deg, #1976D2, #2196F3); 
             color: #fff; 
-            border: none; 
-            padding: 15px; 
-            font-weight: 600; 
-            letter-spacing: 1px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            margin-top: 10px;
-            transition: 0.3s; 
-            text-transform: uppercase; 
-            font-size: 13px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 8px;
         }
         
         .btn-send:hover { 
@@ -721,6 +830,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .goodmoral-title {
@@ -749,7 +860,7 @@
             color: #ccc;
         }
         
-        .goodmoral-warning {
+        .goodmoral-warning, .goodmoral-success {
             background: rgba(244, 67, 54, 0.1);
             border: 1px solid rgba(244, 67, 54, 0.3);
             color: #ff6b6b;
@@ -766,13 +877,6 @@
             background: rgba(76, 175, 80, 0.1);
             border: 1px solid rgba(76, 175, 80, 0.3);
             color: #4CAF50;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
         
         /* Other Documents */
@@ -784,11 +888,13 @@
             padding: 8px;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 4px;
+            flex-wrap: wrap;
         }
         
         .other-doc-title {
             flex: 1;
             font-size: 11px;
+            min-width: 150px;
         }
         
         .remove-doc-btn {
@@ -847,26 +953,6 @@
             margin: 5px 0;
         }
         
-        /* College Badge in Dropdown */
-        .college-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-        }
-        
-        .college-code {
-            display: inline-block;
-            background: rgba(212, 175, 55, 0.15);
-            color: var(--primary-gold);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: center;
-        }
-
         /* Access Denied Message */
         .access-denied {
             display: flex;
@@ -882,7 +968,7 @@
         }
 
         .access-denied i {
-            font-size: 72px;
+            font-size: 48px;
             margin-bottom: 20px;
             opacity: 0.7;
         }
@@ -891,6 +977,7 @@
             font-family: 'Cinzel', serif;
             color: var(--primary-gold);
             margin-bottom: 10px;
+            font-size: 24px;
         }
 
         .access-denied p {
@@ -898,6 +985,7 @@
             margin-bottom: 30px;
             max-width: 500px;
             line-height: 1.6;
+            font-size: 14px;
         }
 
         .access-denied .btn-login {
@@ -923,22 +1011,308 @@
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
-        @media (max-width: 1024px) {
-            body { flex-direction: column; overflow-y: auto; height: auto; }
-            .sidebar { 
-                width: 100%; height: auto; flex-direction: row; justify-content: space-between; 
-                align-items: center; padding: 15px 20px; position: sticky; top: 0; border-right: none; border-bottom: 1px solid var(--border-dim);
+        /* Siblings Table */
+        #siblingsTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 5px;
+            font-size: 11px;
+        }
+
+        #siblingsTable th {
+            text-align: left;
+            color: var(--primary-gold);
+            font-size: 9px;
+            padding-bottom: 5px;
+        }
+
+        #siblingsTable input {
+            margin: 0;
+            font-size: 11px;
+            padding: 6px;
+        }
+
+        /* DEBUG BUTTON */
+        .debug-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 9999;
+            background: #ff9800;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
             }
-            .brand-subtitle { display: none; }
-            .user-info { display: none; }
-            .btn-access { margin: 0; padding: 8px 12px; }
-            .main-scan { height: auto; padding: 20px 15px; }
-            .scan-frame { height: 200px; }
-            .form-panel { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border-dim); padding-bottom: 50px; }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border-dim);
+                padding: 20px;
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                grid-template-areas: 
+                    "brand brand menu"
+                    "user actions logout";
+                gap: 15px;
+                align-items: center;
+                min-height: auto;
+            }
+            
+            .brand-title {
+                grid-area: brand;
+            }
+            
+            .brand-subtitle {
+                display: none;
+            }
+            
+            .user-info {
+                grid-area: user;
+                margin: 0;
+                padding: 10px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: transparent;
+                border: none;
+            }
+            
+            .user-avatar {
+                margin: 0;
+            }
+            
+            .student-actions,
+            .admin-actions {
+                grid-area: actions;
+                flex-direction: row;
+                margin: 0;
+                justify-content: flex-end;
+            }
+            
+            .btn-logout {
+                grid-area: logout;
+                margin: 0;
+                width: auto;
+            }
+            
+            .form-panel {
+                width: 100%;
+                min-width: 100%;
+                height: auto;
+                border-left: none;
+                border-top: 1px solid var(--border-dim);
+                position: relative;
+            }
+            
+            .main-scan {
+                padding: 20px 10px;
+            }
+            
+            .scan-frame {
+                height: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                grid-template-columns: 1fr auto;
+                grid-template-areas: 
+                    "brand menu"
+                    "user user"
+                    "actions logout";
+            }
+            
+            .brand-title {
+                font-size: 24px;
+            }
+            
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .student-actions,
+            .admin-actions {
+                flex-direction: column;
+            }
+            
+            .student-action-btn,
+            .btn-access {
+                font-size: 11px;
+                padding: 8px;
+            }
+            
+            .mobile-menu-toggle {
+                display: flex;
+            }
+            
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                top: 0;
+                width: 280px;
+                height: 100vh;
+                z-index: 1001;
+                transition: left 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "brand"
+                    "user"
+                    "actions"
+                    "logout";
+                padding: 80px 20px 30px;
+            }
+            
+            .sidebar.mobile-open {
+                left: 0;
+            }
+            
+            .brand-title {
+                font-size: 28px;
+            }
+            
+            .brand-subtitle {
+                display: block;
+            }
+            
+            .user-info {
+                flex-direction: row;
+                text-align: left;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--border-dim);
+            }
+            
+            .student-actions,
+            .admin-actions {
+                flex-direction: column;
+                justify-content: flex-start;
+            }
+            
+            .mobile-menu-overlay.active {
+                display: block;
+            }
+            
+            .form-panel {
+                padding: 20px 15px;
+            }
+            
+            .form-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .scan-label {
+                font-size: 12px;
+            }
+            
+            .row {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .col-half {
+                width: 100%;
+            }
+            
+            #siblingsTable th:nth-child(3),
+            #siblingsTable td:nth-child(3) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-content {
+                padding: 20px 15px;
+            }
+            
+            .modal-actions {
+                flex-direction: column;
+            }
+            
+            .scan-frame {
+                height: 180px;
+            }
+            
+            .upload-placeholder i {
+                font-size: 24px;
+            }
+            
+            .upload-placeholder div {
+                font-size: 9px;
+            }
+            
+            .btn-save, .btn-send {
+                padding: 12px;
+                font-size: 12px;
+            }
+            
+            .goodmoral-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .goodmoral-score {
+                align-self: flex-start;
+            }
+            
+            .debug-btn {
+                bottom: 10px;
+                left: 10px;
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        button, 
+        input[type="button"],
+        input[type="submit"],
+        .btn-access,
+        .student-action-btn {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        select, 
+        input {
+            font-size: 16px; /* Prevents iOS zoom on focus */
+        }
+        
+        /* Prevent text size adjustment */
+        html {
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
     </style>
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+
     <!-- Change Password Modal -->
     <div id="changePasswordModal" class="modal-overlay">
         <div class="modal-content">
@@ -1057,449 +1431,509 @@
 
     <!-- Main Scanner Interface (Only shown when logged in) -->
     <div id="scannerInterface" style="display: none; width: 100%;">
-        <nav class="sidebar">
-            <div>
+        <div class="main-container">
+            <nav class="sidebar" id="mainSidebar">
                 <div class="brand-title">ASSISCAN</div>
                 <div class="brand-subtitle">University of Batangas Lipa</div>
                 
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">A</div>
-                    <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-role" id="userRole">Loading...</div>
+                    <div>
+                        <div class="user-name" id="userName">Loading...</div>
+                        <div class="user-role" id="userRole">Loading...</div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Student Actions (Only for STUDENT role) -->
-            <div id="studentActions" class="student-actions">
-                <button onclick="openChangePasswordModal()" class="student-action-btn">
-                    <i class="fas fa-key"></i> CHANGE PASSWORD
+                
+                <!-- Student Actions (Only for STUDENT role) -->
+                <div id="studentActions" class="student-actions">
+                    <button onclick="openChangePasswordModal()" class="student-action-btn">
+                        <i class="fas fa-key"></i> CHANGE PASSWORD
+                    </button>
+                    
+                    <button onclick="viewMyRecords()" class="student-action-btn">
+                        <i class="fas fa-history"></i> MY SCANNED RECORDS
+                    </button>
+                </div>
+                
+                <!-- Admin Actions (Only for SUPER_ADMIN role) -->
+                <div id="adminActions" class="admin-actions">
+                    <a href="history.html" class="btn-access">
+                        <i class="fas fa-database"></i> VIEW DATABASE
+                    </a>
+                    
+                    <a href="/admin/colleges" class="btn-access" style="margin-top: 10px;">
+                        <i class="fas fa-university"></i> MANAGE COLLEGES
+                    </a>
+                    
+                    <a href="/admin/users" class="btn-access" style="margin-top: 10px;">
+                        <i class="fas fa-users-cog"></i> MANAGE USERS
+                    </a>
+                </div>
+                
+                <!-- Logout Button (For all roles) -->
+                <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
+                    <i class="fas fa-sign-out-alt"></i> LOGOUT
                 </button>
+            </nav>
+
+            <main class="main-scan">
+                <div class="scanner-wrapper">
+                    <div class="scan-label">
+                        <span><i class="fas fa-baby"></i> PSA BIRTH CERTIFICATE</span>
+                        <span id="psaStatus" class="status-text">Waiting for input...</span>
+                    </div>
+                    <div class="scan-frame" onclick="triggerFileInput('psaInput')">
+                        <div class="scan-laser" id="psaLaser"></div>
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                        
+                        <div class="upload-placeholder" id="psaPlaceholder">
+                            <i class="fas fa-camera"></i>
+                            <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN PSA</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                        </div>
+                        <img id="psaPreview" class="img-preview" alt="PSA Preview">
+                        <input type="file" id="psaInput" hidden accept="image/*,application/pdf" multiple onchange="processPSA(this)">
+                    </div>
+                </div>
+
+                <div class="scanner-wrapper">
+                    <div class="scan-label">
+                        <span><i class="fas fa-file-contract"></i> FORM 137 / SF10</span>
+                        <span id="f137Status" class="status-text">Waiting for input...</span>
+                    </div>
+                    <div class="scan-frame" onclick="triggerFileInput('f137Input')">
+                        <div class="scan-laser" id="f137Laser"></div>
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                        
+                        <div class="upload-placeholder" id="f137Placeholder">
+                            <i class="fas fa-camera"></i>
+                            <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN FORM 137</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                        </div>
+                        <img id="f137Preview" class="img-preview" alt="Form 137 Preview">
+                        <input type="file" id="f137Input" hidden accept="image/*,application/pdf" multiple onchange="processForm137(this)">
+                    </div>
+                </div>
                 
-                <button onclick="viewMyRecords()" class="student-action-btn">
-                    <i class="fas fa-history"></i> MY SCANNED RECORDS
-                </button>
-            </div>
-            
-            <!-- Admin Actions (Only for SUPER_ADMIN role) -->
-            <div id="adminActions" class="admin-actions">
-                <a href="history.html" class="btn-access">
-                    <i class="fas fa-database"></i> VIEW DATABASE
-                </a>
+                <div class="scanner-wrapper">
+                    <div class="scan-label">
+                        <span><i class="fas fa-award"></i> GOOD MORAL CERTIFICATE</span>
+                        <span id="goodmoralStatus" class="status-text">Waiting for input...</span>
+                    </div>
+                    <div class="scan-frame" onclick="triggerFileInput('goodmoralInput')">
+                        <div class="scan-laser" id="goodmoralLaser"></div>
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                        
+                        <div class="upload-placeholder" id="goodmoralPlaceholder">
+                            <i class="fas fa-camera"></i>
+                            <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN GOOD MORAL</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                        </div>
+                        <img id="goodmoralPreview" class="img-preview" alt="Good Moral Preview">
+                        <input type="file" id="goodmoralInput" hidden accept="image/*,application/pdf" multiple onchange="processGoodMoral(this)">
+                    </div>
+                </div>
+            </main>
+
+            <aside class="form-panel">
+                <div class="form-header">
+                    <span>DATA VERIFICATION</span>
+                    <span class="operator-info" id="operatorInfo">
+                        <i class="fas fa-user-check"></i> Operator: <span id="currentOperator">Loading...</span>
+                    </span>
+                </div>
                 
-                <a href="/admin/colleges" class="btn-access" style="margin-top: 10px;">
-                    <i class="fas fa-university"></i> MANAGE COLLEGES
-                </a>
+                <!-- Good Moral Status Display -->
+                <div id="goodmoralStatusDisplay" class="goodmoral-status-container">
+                    <div class="goodmoral-header">
+                        <div class="goodmoral-title">
+                            <i class="fas fa-shield-alt"></i> GOOD MORAL STATUS
+                        </div>
+                        <div id="goodmoralScoreDisplay" class="goodmoral-score score-excellent">0</div>
+                    </div>
+                    <div class="goodmoral-details">
+                        <strong>Status:</strong> <span id="goodmoralStatusText">Not Analyzed</span><br>
+                        <strong>Record:</strong> <span id="goodmoralRecord">Checking...</span>
+                    </div>
+                    <div id="goodmoralWarning" class="goodmoral-warning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="goodmoralWarningText">This student has disciplinary concerns.</span>
+                    </div>
+                    <div id="goodmoralSuccess" class="goodmoral-success" style="display: none;">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Good record - No past incidents in previous school.</span>
+                    </div>
+                </div>
                 
-                <a href="/admin/users" class="btn-access" style="margin-top: 10px;">
-                    <i class="fas fa-users-cog"></i> MANAGE USERS
-                </a>
-            </div>
-            
-            <!-- Logout Button (For all roles) -->
-            <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
-                <i class="fas fa-sign-out-alt"></i> LOGOUT
-            </button>
-        </nav>
-
-        <main class="main-scan">
-            <div class="scanner-wrapper">
-                <div class="scan-label">
-                    <span><i class="fas fa-baby"></i> PSA BIRTH CERTIFICATE</span>
-                    <span id="psaStatus" class="status-text">Waiting for input...</span>
-                </div>
-                <div class="scan-frame" onclick="document.getElementById('psaInput').click()">
-                    <div class="scan-laser" id="psaLaser"></div>
-                    <div class="corner tl"></div>
-                    <div class="corner tr"></div>
-                    <div class="corner bl"></div>
-                    <div class="corner br"></div>
-                    
-                    <div class="upload-placeholder" id="psaPlaceholder">
-                        <i class="fas fa-camera"></i>
-                        <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN PSA</div>
-                        <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                <span class="section-label"><i class="fas fa-university"></i> Enrollment Details</span>
+                <div class="row">
+                    <div class="col-half">
+                        <label>School Year</label>
+                        <input type="text" id="schoolYear" value="2025-2026">
                     </div>
-                    <img id="psaPreview" class="img-preview">
-                    <input type="file" id="psaInput" hidden accept="image/*" multiple onchange="processPSA(this)">
-                </div>
-            </div>
-
-            <div class="scanner-wrapper">
-                <div class="scan-label">
-                    <span><i class="fas fa-file-contract"></i> FORM 137 / SF10</span>
-                    <span id="f137Status" class="status-text">Waiting for input...</span>
-                </div>
-                <div class="scan-frame" onclick="document.getElementById('f137Input').click()">
-                    <div class="scan-laser" id="f137Laser"></div>
-                    <div class="corner tl"></div>
-                    <div class="corner tr"></div>
-                    <div class="corner bl"></div>
-                    <div class="corner br"></div>
-                    
-                    <div class="upload-placeholder" id="f137Placeholder">
-                        <i class="fas fa-camera"></i>
-                        <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN FORM 137</div>
-                        <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                    <div class="col-half">
+                        <label>Type</label>
+                        <select id="studentType">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                            <option value="Transferee">Transferee</option>
+                        </select>
                     </div>
-                    <img id="f137Preview" class="img-preview">
-                    <input type="file" id="f137Input" hidden accept="image/*" multiple onchange="processForm137(this)">
                 </div>
-            </div>
-            
-            <div class="scanner-wrapper">
-                <div class="scan-label">
-                    <span><i class="fas fa-award"></i> GOOD MORAL CERTIFICATE</span>
-                    <span id="goodmoralStatus" class="status-text">Waiting for input...</span>
-                </div>
-                <div class="scan-frame" onclick="document.getElementById('goodmoralInput').click()">
-                    <div class="scan-laser" id="goodmoralLaser"></div>
-                    <div class="corner tl"></div>
-                    <div class="corner tr"></div>
-                    <div class="corner bl"></div>
-                    <div class="corner br"></div>
-                    
-                    <div class="upload-placeholder" id="goodmoralPlaceholder">
-                        <i class="fas fa-camera"></i>
-                        <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN GOOD MORAL</div>
-                        <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                
+                <!-- College and Program Dropdowns - Dynamic from Database -->
+                <div class="row">
+                    <div class="col-half">
+                        <label>College / Department</label>
+                        <select id="collegeSelect" onchange="updatePrograms()">
+                            <option value="">-- Loading Colleges... --</option>
+                        </select>
                     </div>
-                    <img id="goodmoralPreview" class="img-preview">
-                    <input type="file" id="goodmoralInput" hidden accept="image/*" multiple onchange="processGoodMoral(this)">
-                </div>
-            </div>
-        </main>
-
-        <aside class="form-panel">
-            <div class="form-header">
-                <span>DATA VERIFICATION</span>
-                <span class="operator-info" id="operatorInfo">
-                    <i class="fas fa-user-check"></i> Operator: <span id="currentOperator">Loading...</span>
-                </span>
-            </div>
-            
-            <!-- Good Moral Status Display -->
-            <div id="goodmoralStatusDisplay" class="goodmoral-status-container">
-                <div class="goodmoral-header">
-                    <div class="goodmoral-title">
-                        <i class="fas fa-shield-alt"></i> GOOD MORAL STATUS
+                    <div class="col-half">
+                        <label>Program / Course</label>
+                        <select id="programSelect" disabled>
+                            <option value="">-- Select College First --</option>
+                        </select>
                     </div>
-                    <div id="goodmoralScoreDisplay" class="goodmoral-score score-excellent">0</div>
                 </div>
-                <div class="goodmoral-details">
-                    <strong>Status:</strong> <span id="goodmoralStatusText">Not Analyzed</span><br>
-                    <strong>Record:</strong> <span id="goodmoralRecord">Checking...</span>
-                </div>
-                <div id="goodmoralWarning" class="goodmoral-warning" style="display: none;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span id="goodmoralWarningText">This student has disciplinary concerns.</span>
-                </div>
-                <div id="goodmoralSuccess" class="goodmoral-success" style="display: none;">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Good record - No past incidents in previous school.</span>
-                </div>
-            </div>
-            
-            <span class="section-label"><i class="fas fa-university"></i> Enrollment Details</span>
-            <div class="row">
-                <div class="col-half">
-                    <label>School Year</label>
-                    <input type="text" id="schoolYear" value="2025-2026">
-                </div>
-                <div class="col-half">
-                    <label>Type</label>
-                    <select id="studentType">
-                        <option value="Regular">Regular</option>
-                        <option value="Irregular">Irregular</option>
-                        <option value="Transferee">Transferee</option>
-                    </select>
-                </div>
-            </div>
-            
-            <!-- College and Program Dropdowns - Dynamic from Database -->
-            <div class="row">
-                <div class="col-half">
-                    <label>College / Department</label>
-                    <select id="collegeSelect" onchange="updatePrograms()">
-                        <option value="">-- Loading Colleges... --</option>
-                    </select>
-                </div>
-                <div class="col-half">
-                    <label>Program / Course</label>
-                    <select id="programSelect" disabled>
-                        <option value="">-- Select College First --</option>
-                    </select>
-                </div>
-            </div>
-            
-            <input type="text" id="lastLevel" placeholder="Last Level Attended (e.g. Grade 12)">
+                
+                <label>Last Level Attended</label>
+                <input type="text" id="lastLevel" placeholder="e.g. Grade 12">
 
-            <span class="section-label"><i class="fas fa-user"></i> Personal Information</span>
-            <input type="text" id="childName" placeholder="Full Name">
-            
-            <div class="row">
-                <div class="col-half">
-                    <label>Date of Birth</label>
-                    <input type="date" id="childBirthdate" onchange="calculateAge()">
+                <span class="section-label"><i class="fas fa-user"></i> Personal Information</span>
+                <label>Full Name</label>
+                <input type="text" id="childName" placeholder="Full Name">
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Date of Birth</label>
+                        <input type="date" id="childBirthdate" onchange="calculateAge()">
+                    </div>
+                    <div class="col-half">
+                        <label>Age</label>
+                        <input type="number" id="childAge" placeholder="0" min="0" max="100">
+                    </div>
                 </div>
-                <div class="col-half">
-                    <label>Age</label>
-                    <input type="number" id="childAge" placeholder="0">
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Sex</label>
+                        <input type="text" id="childSex" placeholder="Sex">
+                    </div>
+                    <div class="col-half">
+                        <label>Birth Order</label>
+                        <input type="text" id="birthOrder" placeholder="Birth Order">
+                    </div>
                 </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-half"><input type="text" id="childSex" placeholder="Sex"></div>
-                <div class="col-half"><input type="text" id="birthOrder" placeholder="Birth Order"></div>
-            </div>
-            
-            <div class="row">
-                <div class="col-half"><input type="text" id="childCivilStatus" placeholder="Civil Status"></div>
-                <div class="col-half">
-                    <label>Religion</label>
-                    <select id="childReligion">
-                        <option value="">-- Select Religion --</option>
-                        <option value="Roman Catholic">Roman Catholic</option>
-                        <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
-                        <option value="Baptist">Baptist</option>
-                        <option value="Christian">Christian</option>
-                        <option value="Born Again Christian">Born Again Christian</option>
-                        <option value="Seventh Day Adventist">Seventh Day Adventist</option>
-                        <option value="Islam">Islam</option>
-                        <option value="Jehovah's Witness">Jehovah's Witness</option>
-                        <option value="Mormon">Mormon</option>
-                        <option value="Protestant">Protestant</option>
-                        <option value="Methodist">Methodist</option>
-                        <option value="Ang Dating Daan">Ang Dating Daan</option>
-                        <option value="Buddhism">Buddhism</option>
-                        <option value="Hinduism">Hinduism</option>
-                        <option value="Judaism">Judaism</option>
-                        <option value="Atheist">Atheist</option>
-                        <option value="Agnostic">Agnostic</option>
-                        <option value="None">None</option>
-                        <option value="Other">Other (Please specify)</option>
-                    </select>
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Civil Status</label>
+                        <input type="text" id="childCivilStatus" placeholder="Civil Status">
+                    </div>
+                    <div class="col-half">
+                        <label>Religion</label>
+                        <select id="childReligion">
+                            <option value="">-- Select Religion --</option>
+                            <option value="Roman Catholic">Roman Catholic</option>
+                            <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
+                            <option value="Baptist">Baptist</option>
+                            <option value="Christian">Christian</option>
+                            <option value="Born Again Christian">Born Again Christian</option>
+                            <option value="Seventh Day Adventist">Seventh Day Adventist</option>
+                            <option value="Islam">Islam</option>
+                            <option value="Jehovah's Witness">Jehovah's Witness</option>
+                            <option value="Mormon">Mormon</option>
+                            <option value="Protestant">Protestant</option>
+                            <option value="Methodist">Methodist</option>
+                            <option value="Ang Dating Daan">Ang Dating Daan</option>
+                            <option value="Buddhism">Buddhism</option>
+                            <option value="Hinduism">Hinduism</option>
+                            <option value="Judaism">Judaism</option>
+                            <option value="Atheist">Atheist</option>
+                            <option value="Agnostic">Agnostic</option>
+                            <option value="None">None</option>
+                            <option value="Other">Other (Please specify)</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <input type="text" id="childMobile" placeholder="Mobile No.">
+                
+                <label>Mobile No.</label>
+                <input type="tel" id="childMobile" placeholder="Mobile No.">
 
-            <input type="text" id="childBirthplace" placeholder="Place of Birth">
+                <label>Place of Birth</label>
+                <input type="text" id="childBirthplace" placeholder="Place of Birth">
 
-            <span class="section-label"><i class="fas fa-notes-medical"></i> Special Groups & Health</span>
-            <div class="row">
-                <div class="col-half">
-                    <label>IP Member?</label>
-                    <select id="isIP"><option value="No">No</option><option value="Yes">Yes</option></select>
+                <span class="section-label"><i class="fas fa-notes-medical"></i> Special Groups & Health</span>
+                <div class="row">
+                    <div class="col-half">
+                        <label>IP Member?</label>
+                        <select id="isIP"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
+                    <div class="col-half">
+                        <label>PWD?</label>
+                        <select id="isPWD"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
                 </div>
-                <div class="col-half">
-                    <label>PWD?</label>
-                    <select id="isPWD"><option value="No">No</option><option value="Yes">Yes</option></select>
+                <div class="row">
+                    <div class="col-half">
+                        <label>Medication?</label>
+                        <select id="hasMedication"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
+                    <div class="col-half">
+                        <label>Working Student?</label>
+                        <select id="isWorking"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-half">
-                    <label>Medication?</label>
-                    <select id="hasMedication"><option value="No">No</option><option value="Yes">Yes</option></select>
+                <div class="row">
+                    <div class="col-half">
+                        <label>Gifted Child?</label>
+                        <select id="isGifted"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
+                    <div class="col-half">
+                        <label>Needs Assistance?</label>
+                        <select id="needsAssistance"><option value="No">No</option><option value="Yes">Yes</option></select>
+                    </div>
                 </div>
-                <div class="col-half">
-                    <label>Working Student?</label>
-                    <select id="isWorking"><option value="No">No</option><option value="Yes">Yes</option></select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-half">
-                    <label>Gifted Child?</label>
-                    <select id="isGifted"><option value="No">No</option><option value="Yes">Yes</option></select>
-                </div>
-                <div class="col-half">
-                    <label>Needs Assistance?</label>
-                    <select id="needsAssistance"><option value="No">No</option><option value="Yes">Yes</option></select>
-                </div>
-            </div>
 
-            <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
-            <div class="row">
-                <div class="col-half">
-                    <label>Region</label>
-                    <select id="addressRegion" onchange="updateProvinces()">
-                        <option value="">Select Region</option>
-                    </select>
+                <span class="section-label"><i class="fas fa-map-marker-alt"></i> Address & Residence</span>
+                <div class="row">
+                    <div class="col-half">
+                        <label>Region</label>
+                        <select id="addressRegion" onchange="updateProvinces()">
+                            <option value="">Select Region</option>
+                        </select>
+                    </div>
+                    <div class="col-half">
+                        <label>Province</label>
+                        <select id="addressProvince">
+                            <option value="">Select Region First</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-half">
-                    <label>Province</label>
-                    <select id="addressProvince">
-                        <option value="">Select Region First</option>
-                    </select>
+                
+                <label>House No. / Street / Brgy / City</label>
+                <input type="text" id="addressSpecific" placeholder="House No. / Street / Brgy / City">
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Residence Type</label>
+                        <select id="residenceType">
+                            <option value="With Parents">With Parents</option>
+                            <option value="Boarding House">Boarding House</option>
+                            <option value="Relative">Relative</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <input type="text" id="addressSpecific" placeholder="House No. / Street / Brgy / City">
-            
-            <div class="row">
-                <div class="col-half">
-                    <label>Residence Type</label>
-                    <select id="residenceType">
-                        <option value="With Parents">With Parents</option>
-                        <option value="Boarding House">Boarding House</option>
-                        <option value="Relative">Relative</option>
-                        <option value="Others">Others</option>
-                    </select>
+
+                <span class="section-label"><i class="fas fa-briefcase"></i> Employer (If Working)</span>
+                <label>Employer Name</label>
+                <input type="text" id="employerName" placeholder="Employer Name">
+
+                <span class="section-label"><i class="fas fa-users"></i> Family Background</span>
+                
+                <label>Parents' Marital Status</label>
+                <select id="maritalStatus">
+                    <option value="Married">Married</option>
+                    <option value="Living Together">Living Together</option>
+                    <option value="Separated">Separated</option>
+                    <option value="Single Parent">Single Parent</option>
+                    <option value="Widowed">Widowed</option>
+                </select>
+
+                <div style="margin-top:10px;"></div>
+                <span class="file-label">Mother's Info</span>
+                <label>Mother's Maiden Name</label>
+                <input type="text" id="motherName" placeholder="Mother's Maiden Name">
+                <div class="row">
+                    <div class="col-half">
+                        <label>Citizenship</label>
+                        <input type="text" id="motherCitizenship" placeholder="Citizenship">
+                    </div>
+                    <div class="col-half">
+                        <label>Occupation</label>
+                        <input type="text" id="motherOccupation" placeholder="Occupation">
+                    </div>
                 </div>
-            </div>
+                <label>Mother's Contact No.</label>
+                <input type="tel" id="motherContact" placeholder="Mother's Contact No.">
 
-            <span class="section-label"><i class="fas fa-briefcase"></i> Employer (If Working)</span>
-            <input type="text" id="employerName" placeholder="Employer Name">
+                <div style="margin-top:10px;"></div>
+                <span class="file-label">Father's Info</span>
+                <label>Father's Name</label>
+                <input type="text" id="fatherName" placeholder="Father's Name">
+                <div class="row">
+                    <div class="col-half">
+                        <label>Citizenship</label>
+                        <input type="text" id="fatherCitizenship" placeholder="Citizenship">
+                    </div>
+                    <div class="col-half">
+                        <label>Occupation</label>
+                        <input type="text" id="fatherOccupation" placeholder="Occupation">
+                    </div>
+                </div>
+                <label>Father's Contact No.</label>
+                <input type="tel" id="fatherContact" placeholder="Father's Contact No.">
 
-            <span class="section-label"><i class="fas fa-users"></i> Family Background</span>
-            
-            <label>Parents' Marital Status</label>
-            <select id="maritalStatus">
-                <option value="Married">Married</option>
-                <option value="Living Together">Living Together</option>
-                <option value="Separated">Separated</option>
-                <option value="Single Parent">Single Parent</option>
-                <option value="Widowed">Widowed</option>
-            </select>
+                <span class="section-label"><i class="fas fa-user-shield"></i> Guardian Info</span>
+                <label>Guardian Name</label>
+                <input type="text" id="guardianName" placeholder="Guardian Name">
+                <div class="row">
+                    <div class="col-half">
+                        <label>Relationship</label>
+                        <input type="text" id="guardianRelation" placeholder="Relationship">
+                    </div>
+                    <div class="col-half">
+                        <label>Contact No.</label>
+                        <input type="tel" id="guardianContact" placeholder="Contact No.">
+                    </div>
+                </div>
 
-            <div style="margin-top:10px;"></div>
-            <span class="file-label">Mother's Info</span>
-            <input type="text" id="motherName" placeholder="Mother's Maiden Name">
-            <div class="row">
-                <input type="text" id="motherCitizenship" placeholder="Citizenship">
-                <input type="text" id="motherOccupation" placeholder="Occupation">
-            </div>
-            <input type="text" id="motherContact" placeholder="Mother's Contact No.">
-
-            <div style="margin-top:10px;"></div>
-            <span class="file-label">Father's Info</span>
-            <input type="text" id="fatherName" placeholder="Father's Name">
-            <div class="row">
-                <input type="text" id="fatherCitizenship" placeholder="Citizenship">
-                <input type="text" id="fatherOccupation" placeholder="Occupation">
-            </div>
-            <input type="text" id="fatherContact" placeholder="Father's Contact No.">
-
-            <span class="section-label"><i class="fas fa-user-shield"></i> Guardian Info</span>
-            <input type="text" id="guardianName" placeholder="Guardian Name">
-            <div class="row">
-                <div class="col-half"><input type="text" id="guardianRelation" placeholder="Relationship"></div>
-                <div class="col-half"><input type="text" id="guardianContact" placeholder="Contact No."></div>
-            </div>
-
-            <div style="margin-top: 15px;"></div>
-            <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
-            
-            <div class="file-upload-group" style="padding: 0; background: transparent; border: none;">
-                <table id="siblingsTable" style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
-                    <thead>
-                        <tr style="text-align: left; font-size: 9px; color: var(--primary-gold);">
-                            <th>Name</th>
-                            <th style="width: 50px;">Age</th>
-                            <th>Work/School</th>
-                            <th style="width: 25px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div style="margin-top: 15px;"></div>
+                <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
+                
+                <div class="file-upload-group" style="padding: 0; background: transparent; border: none;">
+                    <table id="siblingsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th style="width: 60px;">Age</th>
+                                <th>Work/School</th>
+                                <th style="width: 30px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be added here -->
                         </tbody>
-                </table>
+                    </table>
+                    
+                    <button type="button" onclick="addSiblingRow()" style="
+                        width: 100%; 
+                        background: rgba(212, 175, 55, 0.1); 
+                        border: 1px dashed var(--border-dim); 
+                        color: var(--primary-gold); 
+                        padding: 10px; 
+                        font-size: 12px; 
+                        cursor: pointer; 
+                        margin-top: 10px;
+                        transition: 0.3s;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;">
+                        <i class="fas fa-plus"></i> ADD SIBLING
+                    </button>
+                </div>
                 
-                <button type="button" onclick="addSiblingRow()" style="
+                <span class="section-label"><i class="fas fa-envelope"></i> Contact Notification</span>
+                <label>Email Address</label>
+                <input type="email" id="contactEmail" placeholder="Enter Email (for copy of record)">
+                
+                <span class="section-label"><i class="fas fa-school"></i> School Record (F137)</span>
+                <label>Learner Reference No. (LRN)</label>
+                <input type="text" id="lrn" placeholder="Learner Reference No. (LRN)">
+                
+                <label>School Name</label>
+                <input type="text" id="schoolName" placeholder="School Name">
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>School Address</label>
+                        <input type="text" id="schoolAddress" placeholder="School Address">
+                    </div>
+                    <div class="col-half">
+                        <label>School Type</label>
+                        <select id="schoolType">
+                            <option value="Public">Public</option>
+                            <option value="Private">Private</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Year Attended</label>
+                        <input type="text" id="yearAttended" placeholder="e.g. 2023-2024">
+                    </div>
+                    <div class="col-half">
+                        <label>Final Gen. Average</label>
+                        <input type="text" id="genAverage" placeholder="e.g. 92.5">
+                    </div>
+                </div>
+                
+                <span class="section-label"><i class="fas fa-star"></i> Additional Info</span>
+                <label>Special Talents / Skills</label>
+                <input type="text" id="specialTalents" placeholder="Special Talents / Skills">
+                
+                <div class="row">
+                    <div class="col-half">
+                        <label>Scholar?</label>
+                        <select id="isScholar">
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
+                <div class="file-upload-group">
+                    <span class="file-label">Form 138 (Report Card)</span>
+                    <input type="file" id="fileForm138" accept="image/*,application/pdf">
+                </div>
+                
+                <!-- Other Documents Section -->
+                <div id="otherDocumentsContainer">
+                    <!-- Other documents will be added here -->
+                </div>
+                
+                <button type="button" onclick="addOtherDocumentField()" style="
                     width: 100%; 
-                    background: rgba(212, 175, 55, 0.1); 
+                    background: rgba(212, 175, 55, 0.05); 
                     border: 1px dashed var(--border-dim); 
                     color: var(--primary-gold); 
-                    padding: 8px; 
-                    font-size: 10px; 
+                    padding: 12px; 
+                    font-size: 12px; 
                     cursor: pointer; 
-                    margin-top: 5px;
-                    transition: 0.3s;">
-                    <i class="fas fa-plus"></i> ADD SIBLING
+                    margin-top: 10px;
+                    transition: 0.3s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;">
+                    <i class="fas fa-plus"></i> ADD OTHER DOCUMENT
                 </button>
-            </div>
-            <span class="section-label"><i class="fas fa-envelope"></i> Contact Notification</span>
-            <input type="email" id="contactEmail" placeholder="Enter Email (for copy of record)">
-            
-            <span class="section-label"><i class="fas fa-school"></i> School Record (F137)</span>
-            <input type="text" id="lrn" placeholder="Learner Reference No. (LRN)">
-            <input type="text" id="schoolName" placeholder="School Name">
-            <div class="row">
-                <div class="col-half"><input type="text" id="schoolAddress" placeholder="School Address"></div>
-                <div class="col-half"><select id="schoolType"><option value="Public">Public</option><option value="Private">Private</option></select></div>
-            </div>
-            <div class="row">
-                <div class="col-half">
-                     <label>Year Attended</label>
-                     <input type="text" id="yearAttended" placeholder="e.g. 2023-2024">
-                </div>
-                <div class="col-half">
-                     <label>Final Gen. Average</label>
-                     <input type="text" id="genAverage" placeholder="e.g. 92.5">
-                </div>
-            </div>
-            
-            <span class="section-label"><i class="fas fa-star"></i> Additional Info</span>
-            <input type="text" id="specialTalents" placeholder="Special Talents / Skills">
-            <div class="row">
-                <div class="col-half">
-                    <label>Scholar?</label>
-                    <select id="isScholar"><option value="No">No</option><option value="Yes">Yes</option></select>
-                </div>
-            </div>
 
-            <span class="section-label"><i class="fas fa-paperclip"></i> Additional Files</span>
-            <div class="file-upload-group">
-                <span class="file-label">Form 138 (Report Card)</span>
-                <input type="file" id="fileForm138" accept="image/*">
-            </div>
-            
-            <!-- Other Documents Section -->
-            <div id="otherDocumentsContainer">
-                <!-- Other documents will be added here -->
-            </div>
-            
-            <button type="button" onclick="addOtherDocumentField()" style="
-                width: 100%; 
-                background: rgba(212, 175, 55, 0.05); 
-                border: 1px dashed var(--border-dim); 
-                color: var(--primary-gold); 
-                padding: 10px; 
-                font-size: 11px; 
-                cursor: pointer; 
-                margin-top: 5px;
-                transition: 0.3s;">
-                <i class="fas fa-plus"></i> ADD OTHER DOCUMENT
-            </button>
-
-            <!-- SAVE BUTTON -->
-            <button class="btn-save" onclick="saveRecord()" id="saveBtn">
-                <i class="fas fa-database"></i> Save to Database
-            </button>
-            
-            <div id="saveStatus" class="save-status"></div>
-            
-            <!-- SEND EMAIL BUTTON -->
-            <button class="btn-send" onclick="sendEmail()" id="sendBtn" disabled>
-                <i class="fas fa-paper-plane"></i> Send Email to Student
-            </button>
-            
-            <div id="sendStatus" class="save-status"></div>
-        </aside>
+                <!-- SAVE BUTTON -->
+                <button class="btn-save" onclick="saveRecord()" id="saveBtn">
+                    <i class="fas fa-database"></i> Save to Database
+                </button>
+                
+                <div id="saveStatus" class="save-status"></div>
+                
+                <!-- SEND EMAIL BUTTON -->
+                <button class="btn-send" onclick="sendEmail()" id="sendBtn" disabled>
+                    <i class="fas fa-paper-plane"></i> Send Email to Student
+                </button>
+                
+                <div id="sendStatus" class="save-status"></div>
+            </aside>
+        </div>
     </div>
 
     <!-- DEBUG BUTTON -->
-    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
-        <button onclick="showDebugInfo()" style="
-            background: #ff9800;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;">
-            ℹ️ Debug Info
-        </button>
-    </div>
+    <button class="debug-btn" onclick="showDebugInfo()">
+        ℹ️ Debug Info
+    </button>
 
     <script>
         // ================= SCANNER VARIABLES =================
@@ -1511,6 +1945,7 @@
         let otherDocuments = [];
         let currentUser = null;
         let requiresPasswordReset = false;
+        let isMobileMenuOpen = false;
         
         // Store Good Moral data
         let goodmoralData = {
@@ -1537,6 +1972,44 @@
             "Region X": ["Bukidnon", "Misamis Oriental"],
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
+
+        // ================= MOBILE MENU FUNCTIONS =================
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const toggleBtn = document.querySelector('.mobile-menu-toggle');
+            
+            isMobileMenuOpen = !isMobileMenuOpen;
+            
+            if (isMobileMenuOpen) {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
+            } else {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        }
+
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const toggleBtn = document.querySelector('.mobile-menu-toggle');
+            
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            isMobileMenuOpen = false;
+        }
+
+        // ================= FILE INPUT TRIGGER =================
+        function triggerFileInput(inputId) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.click();
+            }
+        }
 
         // ================= CHECK SESSION STATUS =================
         async function checkSession() {
@@ -1599,6 +2072,7 @@
             document.getElementById('forcePasswordResetModal').style.display = 'flex';
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'none';
+            closeMobileMenu();
         }
 
         function showScanner(user) {
@@ -1606,7 +2080,7 @@
             
             document.getElementById('forcePasswordResetModal').style.display = 'none';
             document.getElementById('accessDenied').style.display = 'none';
-            document.getElementById('scannerInterface').style.display = 'flex';
+            document.getElementById('scannerInterface').style.display = 'block';
             
             // Update user info
             document.getElementById('userName').textContent = user.full_name || user.username;
@@ -1630,6 +2104,9 @@
             // Load colleges and populate regions
             loadDynamicColleges();
             populateRegions();
+            
+            // Initialize form
+            initializeForm();
         }
 
         function showAccessDenied() {
@@ -1637,6 +2114,17 @@
             document.getElementById('accessDenied').style.display = 'flex';
             document.getElementById('scannerInterface').style.display = 'none';
             document.getElementById('forcePasswordResetModal').style.display = 'none';
+            closeMobileMenu();
+        }
+
+        function initializeForm() {
+            // Set current year for school year
+            const currentYear = new Date().getFullYear();
+            const nextYear = currentYear + 1;
+            document.getElementById('schoolYear').value = `${currentYear}-${nextYear}`;
+            
+            // Add initial sibling row
+            addSiblingRow();
         }
 
         // ================= CHANGE PASSWORD FUNCTIONS =================
@@ -1646,6 +2134,7 @@
             document.getElementById('passwordAlert').style.display = 'none';
             document.getElementById('changePasswordForm').reset();
             checkPasswordStrength();
+            closeMobileMenu();
         }
 
         function closeChangePasswordModal() {
@@ -1812,12 +2301,11 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= FIXED LOGOUT FUNCTION =================
+        // ================= LOGOUT FUNCTION =================
         async function logout() {
             try {
                 console.log("🚪 Attempting logout...");
                 
-                // FIRST: Try the correct endpoint from your backend which is /logout
                 const response = await fetch('/logout', {
                     method: 'POST',
                     headers: {
@@ -1830,7 +2318,6 @@
                 
                 if (response.ok) {
                     console.log("✅ Logout successful via /logout");
-                    // Clear local storage
                     localStorage.clear();
                     sessionStorage.clear();
                     
@@ -1844,9 +2331,7 @@
                     return;
                 }
                 
-                // If /logout fails with POST, try GET
-                console.log("⚠️ /logout POST failed, trying GET method");
-                
+                // Try GET method as fallback
                 try {
                     const getResponse = await fetch('/logout', {
                         method: 'GET',
@@ -1862,61 +2347,27 @@
                     console.log("❌ GET /logout failed:", getError.message);
                 }
                 
-                // LAST RESORT: Clear everything and redirect
+                // Last resort: force redirect
                 console.log("⚠️ Both methods failed, forcing logout...");
-                
-                // Clear all storage
                 localStorage.clear();
                 sessionStorage.clear();
                 document.cookie.split(";").forEach(function(c) {
                     document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
                 });
                 
-                // Try to invalidate session via API
-                try {
-                    await fetch('/api/logout', { method: 'POST' });
-                } catch (apiError) {
-                    console.log("API logout failed, continuing...");
-                }
-                
-                // Force redirect
-                alert('Logging out... Redirecting to login page.');
                 window.location.href = 'login.html';
                 
             } catch (error) {
                 console.error('Logout error:', error);
-                
-                // Clear everything and redirect anyway
-                localStorage.clear();
-                sessionStorage.clear();
-                document.cookie.split(";").forEach(function(c) {
-                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                });
-                
-                alert('Logging out... Redirecting to login page.');
                 window.location.href = 'login.html';
             }
-        }
-
-        // Alternative simple logout (direct redirect)
-        function simpleLogout() {
-            // Clear all storage
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            // Clear cookies
-            document.cookie.split(";").forEach(function(c) {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-            });
-            
-            // Force redirect to login page - Use the Flask route that exists
-            window.location.href = '/logout';  // This is the correct route in your backend
         }
 
         // ================= OTHER FUNCTIONS =================
         function viewMyRecords() {
             // For students to view their own records
             window.location.href = '/my-records';
+            closeMobileMenu();
         }
 
         // ================= COLLEGE MANAGEMENT FUNCTIONS =================
@@ -2057,9 +2508,14 @@
             if (files && files.length > 0) {
                 const reader = new FileReader();
                 reader.onload = e => {
-                    document.getElementById(imgId).src = e.target.result;
-                    document.getElementById(imgId).style.display = 'block';
-                    document.getElementById(placeholderId).style.display = 'none';
+                    const img = document.getElementById(imgId);
+                    const placeholder = document.getElementById(placeholderId);
+                    
+                    if (img && placeholder) {
+                        img.src = e.target.result;
+                        img.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    }
                 }
                 reader.readAsDataURL(files[0]);
             }
@@ -2067,22 +2523,38 @@
 
         function addSiblingRow() {
             const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
+            if (!table) return;
+            
             const newRow = table.insertRow();
             
             newRow.innerHTML = `
-                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0;"></td>
-                <td><input type="number" class="sib-age" placeholder="0" style="margin:0;"></td>
-                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0;"></td>
+                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0; width: 100%;"></td>
+                <td><input type="number" class="sib-age" placeholder="0" min="0" max="100" style="margin:0; width: 100%;"></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0; width: 100%;"></td>
                 <td style="text-align: center;">
                     <button type="button" onclick="this.closest('tr').remove()" style="
                         background: #331010; 
                         color: #ff6b6b; 
                         border: none; 
                         cursor: pointer; 
-                        font-size: 12px; 
-                        padding: 5px;">&times;</button>
+                        font-size: 14px; 
+                        padding: 5px 8px;
+                        border-radius: 4px;">&times;</button>
                 </td>
             `;
+            
+            // Add focus styles for mobile
+            const inputs = newRow.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.style.borderColor = 'var(--primary-gold)';
+                    this.style.backgroundColor = 'rgba(212, 175, 55, 0.05)';
+                });
+                input.addEventListener('blur', function() {
+                    this.style.borderColor = '#331010';
+                    this.style.backgroundColor = 'var(--input-bg)';
+                });
+            });
         }
 
         async function processPSA(input) {
@@ -2107,12 +2579,14 @@
                     const d = data.structured_data;
                     document.getElementById('psaStatus').innerText = "✅ Data Extracted";
                     
+                    // Fill form fields
                     document.getElementById('childName').value = d.Name || "";
                     document.getElementById('childSex').value = d.Sex || "";
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
                     document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
                     document.getElementById('birthOrder').value = d.BirthOrder || "";
-                    // NOTE: Religion is not extracted from PSA, it's selected separately
+                    
+                    // Family information
                     document.getElementById('motherName').value = d.Mother_MaidenName || "";
                     document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
                     document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
@@ -2126,6 +2600,7 @@
                     document.getElementById('psaStatus').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
+                console.error("PSA processing error:", e);
                 document.getElementById('psaLaser').style.display = 'none';
                 document.getElementById('psaStatus').innerText = "❌ Error";
             }
@@ -2152,6 +2627,7 @@
                 if (data.structured_data) {
                     const d = data.structured_data;
                     document.getElementById('f137Status').innerText = "✅ Data Extracted";
+                    
                     document.getElementById('lrn').value = d.lrn || "";
                     document.getElementById('schoolName').value = d.school_name || "";
                     document.getElementById('schoolAddress').value = d.school_address || "";
@@ -2161,6 +2637,7 @@
                     document.getElementById('f137Status').innerText = "❌ Scan Failed";
                 }
             } catch (e) {
+                console.error("Form 137 processing error:", e);
                 document.getElementById('f137Laser').style.display = 'none';
                 document.getElementById('f137Status').innerText = "❌ Error";
             }
@@ -2209,6 +2686,7 @@
                     alert('Failed to analyze Good Moral Certificate.');
                 }
             } catch (e) {
+                console.error("Good Moral processing error:", e);
                 document.getElementById('goodmoralLaser').style.display = 'none';
                 document.getElementById('goodmoralStatus').innerText = "❌ Error";
                 alert('Error scanning Good Moral Certificate.');
@@ -2290,10 +2768,10 @@
             docDiv.className = 'file-upload-group';
             docDiv.id = `otherDoc-${docId}`;
             docDiv.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
                     <span class="file-label">Document Title</span>
                     <button type="button" onclick="removeOtherDocument(${docId})" class="remove-doc-btn">
-                        Remove
+                        <i class="fas fa-times"></i> Remove
                     </button>
                 </div>
                 <input type="text" id="otherDocTitle-${docId}" placeholder="e.g. Medical Certificate, NSO, etc." 
@@ -2324,6 +2802,8 @@
 
         function updateStatus(elementId, message, type = 'info') {
             const element = document.getElementById(elementId);
+            if (!element) return;
+            
             element.textContent = message;
             element.className = 'save-status ' + type;
             element.style.display = 'block';
@@ -2346,12 +2826,7 @@
             
             // Check if elements exist
             if (!btn || !nameElement || !collegeElement || !programElement) {
-                console.error('Required elements not found:', {
-                    btn: !!btn,
-                    nameElement: !!nameElement,
-                    collegeElement: !!collegeElement,
-                    programElement: !!programElement
-                });
+                console.error('Required elements not found');
                 alert("System error: Required form elements not found. Please refresh the page.");
                 return;
             }
@@ -2362,18 +2837,21 @@
             
             console.log("📝 Form data:", { name, college, program });
             
-            if(!name) {
+            if(!name || name.trim() === "") {
                 alert("Student Name is required!");
+                nameElement.focus();
                 return;
             }
 
-            if (!college) {
+            if (!college || college === "") {
                 alert("Please select a College/Department!");
+                collegeElement.focus();
                 return;
             }
             
-            if (!program) {
+            if (!program || program === "") {
                 alert("Please select a Program/Course!");
+                programElement.focus();
                 return;
             }
 
@@ -2394,20 +2872,26 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
 
+            // Gather siblings data
             let siblingsList = [];
             const siblingsTable = document.getElementById('siblingsTable');
             if (siblingsTable) {
                 siblingsTable.querySelectorAll('tbody tr').forEach(row => {
-                    let sName = row.querySelector('.sib-name') ? row.querySelector('.sib-name').value : '';
-                    let sAge = row.querySelector('.sib-age') ? row.querySelector('.sib-age').value : '';
-                    let sOcc = row.querySelector('.sib-occ') ? row.querySelector('.sib-occ').value : '';
+                    let sName = row.querySelector('.sib-name') ? row.querySelector('.sib-name').value.trim() : '';
+                    let sAge = row.querySelector('.sib-age') ? row.querySelector('.sib-age').value.trim() : '';
+                    let sOcc = row.querySelector('.sib-occ') ? row.querySelector('.sib-occ').value.trim() : '';
                     
-                    if(sName && sName.trim() !== "") { 
-                        siblingsList.push({ name: sName, age: sAge, occupation: sOcc });
+                    if(sName && sName !== "") { 
+                        siblingsList.push({ 
+                            name: sName, 
+                            age: sAge, 
+                            occupation: sOcc 
+                        });
                     }
                 });
             }
 
+            // Prepare Good Moral data
             let goodmoralPayload = {};
             if (goodmoralAnalysis) {
                 goodmoralPayload = {
@@ -2422,9 +2906,10 @@
             // Helper function to safely get element value
             function getValue(id) {
                 const element = document.getElementById(id);
-                return element ? element.value : "";
+                return element ? element.value.trim() : "";
             }
 
+            // Prepare record data
             const recordData = {
                 school_year: getValue('schoolYear'),
                 student_type: getValue('studentType'),
@@ -2439,7 +2924,6 @@
                 religion: getValue('childReligion'),
                 age: getValue('childAge'),
                 civil_status: getValue('childCivilStatus'),
-                nationality: getValue('childNationality'),
                 mobile_no: getValue('childMobile'),
                 is_ip: getValue('isIP'),
                 is_pwd: getValue('isPWD'),
@@ -2501,11 +2985,13 @@
                 if(result.status === "success") {
                     currentRecordId = result.db_id;
                     
+                    // Upload Form 138 if selected
                     const form138File = document.getElementById('fileForm138').files[0];
                     if (form138File && currentRecordId) {
                         await uploadAdditionalFile(currentRecordId, 'form138', form138File);
                     }
                     
+                    // Upload other documents
                     for (const doc of otherDocuments) {
                         const titleInput = document.getElementById(`otherDocTitle-${doc.id}`);
                         const fileInput = document.getElementById(`otherDocFile-${doc.id}`);
@@ -2534,21 +3020,6 @@
                     btn.style.background = 'linear-gradient(90deg, #2E7D32, #388E3C)';
                     
                     console.log(`Record saved with ID: ${currentRecordId}`);
-                    
-                    if (goodmoralData.score > 0) {
-                        let statusMsg = `Good Moral Score: ${goodmoralData.score}/100 - `;
-                        if (goodmoralData.score >= 70) {
-                            statusMsg += "Good record - No past incidents in previous school";
-                        } else {
-                            statusMsg += "Bad record";
-                            if (goodmoralData.disciplinaryDetails) {
-                                statusMsg += ` - ${goodmoralData.disciplinaryDetails}`;
-                            } else {
-                                statusMsg += " - Reason not specified";
-                            }
-                        }
-                        alert(statusMsg);
-                    }
                     
                 } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
                     updateStatus('saveStatus', '⚠️ Record already exists in the system!', 'error');
@@ -2749,7 +3220,9 @@
                 program: document.getElementById('programSelect') ? document.getElementById('programSelect').value : "Not found",
                 email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : "Not found",
                 otherDocumentsCount: otherDocuments.length,
-                requiresPasswordReset: requiresPasswordReset ? "Yes" : "No"
+                requiresPasswordReset: requiresPasswordReset ? "Yes" : "No",
+                screenWidth: window.innerWidth,
+                deviceType: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? "Mobile" : "Desktop"
             };
             
             alert(`DEBUG INFORMATION:\n\n
@@ -2767,22 +3240,16 @@
 📚 Program: ${info.program}
 📧 Email: ${info.email}
 📎 Other Documents: ${info.otherDocumentsCount}
-🔐 Password Reset Required: ${info.requiresPasswordReset}`);
+🔐 Password Reset Required: ${info.requiresPasswordReset}
+📱 Device: ${info.deviceType} (${info.screenWidth}px)`);
         }
 
-        // Safely attach event listeners
-        const fileForm138 = document.getElementById('fileForm138');
-        if (fileForm138) {
-            fileForm138.addEventListener('change', function(e) {
-                if (currentRecordId && e.target.files.length > 0) {
-                    console.log("Form 138 selected, will be uploaded on save");
-                }
-            });
-        }
-        
+        // ================= FORM FUNCTIONS =================
         function populateRegions() {
             const regionSelect = document.getElementById("addressRegion");
             if (!regionSelect) return;
+            
+            regionSelect.innerHTML = '<option value="">Select Region</option>';
             
             for (const region in philippineLocations) {
                 const option = document.createElement("option");
@@ -2800,6 +3267,7 @@
             
             const selectedRegion = regionSelect.value;
             provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            
             if (selectedRegion && philippineLocations[selectedRegion]) {
                 philippineLocations[selectedRegion].forEach(province => {
                     const option = document.createElement("option");
@@ -2829,18 +3297,69 @@
                 confirmPasswordField.addEventListener('input', checkPasswordMatch);
             }
             
-            // Alternative logout button event
-            const logoutBtn = document.querySelector('.btn-logout');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    simpleLogout(); // Use the simple logout function
+            // Setup search input for records
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    filterRecords(this.value.toLowerCase());
                 });
             }
             
-            // Add initial sibling row
-            addSiblingRow();
+            // Add touch event for file inputs on mobile
+            const scanFrames = document.querySelectorAll('.scan-frame');
+            scanFrames.forEach(frame => {
+                frame.addEventListener('touchstart', function(e) {
+                    this.style.transform = 'scale(0.98)';
+                });
+                
+                frame.addEventListener('touchend', function(e) {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const sidebar = document.getElementById('mainSidebar');
+                const toggleBtn = document.querySelector('.mobile-menu-toggle');
+                
+                if (isMobileMenuOpen && 
+                    !sidebar.contains(event.target) && 
+                    !toggleBtn.contains(event.target)) {
+                    closeMobileMenu();
+                }
+            });
+            
+            // Handle window resize
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768 && isMobileMenuOpen) {
+                        closeMobileMenu();
+                    }
+                }, 250);
+            });
         });
+
+        // ================= FILTER RECORDS FUNCTION =================
+        function filterRecords(searchTerm) {
+            const records = document.querySelectorAll('.record-card');
+            
+            records.forEach(record => {
+                const name = record.querySelector('.record-info h3').textContent.toLowerCase();
+                const college = record.querySelector('.record-subtitle:nth-child(3)').textContent.toLowerCase();
+                const program = record.querySelector('.detail-value:nth-child(2)').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || 
+                    college.includes(searchTerm) || 
+                    program.includes(searchTerm) ||
+                    searchTerm === '') {
+                    record.style.display = 'block';
+                } else {
+                    record.style.display = 'none';
+                }
+            });
+        }
     </script>
 </body>
 </html>
