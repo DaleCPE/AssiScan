@@ -22,7 +22,7 @@
             --text-light: #f0f0f0;
             --text-muted: #888;
             --border-color: rgba(212, 175, 55, 0.3);
-            --border-radius: 6px;
+            --border-radius: 8px;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
             --transition: all 0.3s ease;
@@ -61,6 +61,8 @@
             margin-bottom: 25px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .logo-container {
@@ -107,6 +109,7 @@
         .nav-links {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -125,6 +128,7 @@
             letter-spacing: 0.5px;
             border: 1px solid rgba(212, 175, 55, 0.2);
             cursor: pointer;
+            white-space: nowrap;
         }
 
         .nav-link:hover {
@@ -180,6 +184,7 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
             backdrop-filter: blur(5px);
             cursor: pointer;
+            height: 100%;
         }
 
         .dashboard-card:hover {
@@ -234,6 +239,122 @@
             line-height: 1.5;
         }
 
+        /* ===== QUICK ACTIONS ===== */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px 20px;
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            color: var(--text-light);
+            text-decoration: none;
+            transition: var(--transition);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--gold);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .action-icon {
+            font-size: 28px;
+            color: var(--gold);
+            margin-bottom: 10px;
+        }
+
+        .action-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* ===== STATS OVERVIEW ===== */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            height: 100%;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .stat-trend {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .trend-up {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .trend-down {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .stat-chart {
+            height: 60px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+            width: 10px;
+            background: var(--gold);
+            border-radius: 2px 2px 0 0;
+            opacity: 0.7;
+        }
+
         /* ===== RECENT ACTIVITY ===== */
         .activity-section {
             background: var(--bg-card);
@@ -251,6 +372,8 @@
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .section-title {
@@ -333,121 +456,6 @@
             color: var(--text-muted);
         }
 
-        /* ===== QUICK ACTIONS ===== */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 25px 20px;
-            background: var(--bg-card);
-            border-radius: var(--border-radius);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            color: var(--text-light);
-            text-decoration: none;
-            transition: var(--transition);
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .action-btn:hover {
-            background: var(--bg-hover);
-            border-color: var(--gold);
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
-        }
-
-        .action-icon {
-            font-size: 28px;
-            color: var(--gold);
-            margin-bottom: 10px;
-        }
-
-        .action-text {
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        /* ===== STATS OVERVIEW ===== */
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-box {
-            background: var(--bg-card);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-        }
-
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .stat-title {
-            font-size: 14px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .stat-value {
-            font-family: 'Cinzel', serif;
-            font-size: 28px;
-            color: var(--gold);
-            font-weight: 700;
-        }
-
-        .stat-trend {
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .trend-up {
-            background: rgba(40, 167, 69, 0.2);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-
-        .trend-down {
-            background: rgba(220, 53, 69, 0.2);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
-
-        .stat-chart {
-            height: 60px;
-            margin-top: 15px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .chart-bar {
-            position: absolute;
-            bottom: 0;
-            width: 10px;
-            background: var(--gold);
-            border-radius: 2px 2px 0 0;
-            opacity: 0.7;
-        }
-
         /* ===== MODAL ===== */
         .modal-overlay {
             position: fixed;
@@ -519,6 +527,42 @@
         .modal-body {
             padding: 20px;
             color: #ddd;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 13px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .modal-footer {
@@ -656,17 +700,15 @@
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
-                gap: 15px;
                 text-align: center;
             }
 
             .user-nav {
-                flex-direction: column;
                 width: 100%;
+                justify-content: center;
             }
 
             .nav-links {
-                flex-wrap: wrap;
                 justify-content: center;
             }
 
@@ -677,15 +719,56 @@
             .quick-actions {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                text-align: center;
+            }
         }
 
         @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+
             .quick-actions {
                 grid-template-columns: 1fr;
             }
-            
-            .stats-overview {
-                grid-template-columns: 1fr;
+
+            .nav-link {
+                padding: 8px 15px;
+                font-size: 12px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .modal-container {
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .logo-container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .nav-link {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -825,9 +908,7 @@
                     </div>
                 </div>
                 <div class="stat-value" id="activeUsers">0</div>
-                <div class="stat-chart" id="usersChart">
-                    <!-- Chart bars will be generated here -->
-                </div>
+                <div class="stat-chart" id="usersChart"></div>
             </div>
 
             <div class="stat-box">
@@ -838,9 +919,7 @@
                     </div>
                 </div>
                 <div class="stat-value" id="todaySubmissions">0</div>
-                <div class="stat-chart" id="submissionsChart">
-                    <!-- Chart bars will be generated here -->
-                </div>
+                <div class="stat-chart" id="submissionsChart"></div>
             </div>
 
             <div class="stat-box">
@@ -851,9 +930,7 @@
                     </div>
                 </div>
                 <div class="stat-value" id="emailSent">0</div>
-                <div class="stat-chart" id="emailChart">
-                    <!-- Chart bars will be generated here -->
-                </div>
+                <div class="stat-chart" id="emailChart"></div>
             </div>
         </div>
 
@@ -870,7 +947,6 @@
                 </button>
             </div>
             <div class="activity-list" id="activityList">
-                <!-- Activity items will be loaded here -->
                 <div class="loading">
                     <div class="loading-spinner"></div>
                     <p>Loading activity...</p>
@@ -906,14 +982,14 @@
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
                         </div>
-                        <div class="row" style="display: flex; gap: 15px;">
-                            <div class="form-group" style="flex: 1;">
+                        <div class="row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="newCollegeId">College (Optional)</label>
                                 <select id="newCollegeId">
                                     <option value="">-- Select College --</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="flex: 1;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
                                 <label for="newProgramId">Program (Optional)</label>
                                 <select id="newProgramId" disabled>
                                     <option value="">-- Select College First --</option>
@@ -922,9 +998,9 @@
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-toggle-on"></i> Status</label>
-                            <div class="checkbox-group">
+                            <div style="display: flex; align-items: center; gap: 10px;">
                                 <input type="checkbox" id="newIsActive" checked>
-                                <label for="newIsActive">Active Account</label>
+                                <label for="newIsActive" style="margin: 0;">Active Account</label>
                             </div>
                         </div>
                     </div>
@@ -952,7 +1028,41 @@
             checkAuth();
             loadDashboardData();
             loadCollegesForModal();
+            setupEventListeners();
         });
+
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput')?.addEventListener('input', applyFilters);
+            document.getElementById('collegeFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('programFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
+            
+            // Modal close on outside click
+            window.onclick = function(event) {
+                if (event.target.classList.contains('modal-overlay')) {
+                    const modal = event.target;
+                    modal.style.display = "none";
+                    document.body.style.overflow = 'auto';
+                }
+            };
+            
+            // Close modals with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
+                    if (openModal) {
+                        closeModal(openModal.id);
+                    }
+                }
+            });
+            
+            // Create user form
+            document.getElementById('createUserForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await createUser();
+            });
+        }
 
         // Check authentication
         async function checkAuth() {
@@ -965,9 +1075,7 @@
             
             try {
                 const response = await fetch('/api/check-session', {
-                    headers: {
-                        'Authorization': sessionToken
-                    }
+                    headers: { 'Authorization': sessionToken }
                 });
                 
                 const data = await response.json();
@@ -983,11 +1091,8 @@
                     return;
                 }
                 
-                // Set user data
                 userData = data.user;
-                document.getElementById('userName').textContent = userData.full_name;
-                document.getElementById('userAvatar').textContent = 
-                    userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                updateUserInfo();
                 
             } catch (error) {
                 console.error('Auth check error:', error);
@@ -996,86 +1101,53 @@
             }
         }
 
+        function updateUserInfo() {
+            document.getElementById('userName').textContent = userData.full_name;
+            const initials = userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            document.getElementById('userAvatar').textContent = initials;
+        }
+
         // Load dashboard data
         async function loadDashboardData() {
             try {
-                // Load users count
-                const usersResponse = await fetch('/api/users', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
-                
-                if (usersResponse.ok) {
-                    const users = await usersResponse.json();
-                    document.getElementById('totalUsers').textContent = users.length;
-                    
-                    const activeUsers = users.filter(u => u.is_active).length;
-                    document.getElementById('activeUsers').textContent = activeUsers;
-                    
-                    // Calculate trend (dummy data for now)
-                    const trend = Math.floor(Math.random() * 20) + 5;
-                    document.getElementById('activeUsersTrend').innerHTML = 
-                        `<i class="fas fa-arrow-up"></i> ${trend}%`;
-                    
-                    // Generate chart
-                    generateChart('usersChart', [12, 19, 8, 15, 20, 12, 14]);
-                }
-                
-                // Load records count
-                const recordsResponse = await fetch('/get-records', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
-                
-                if (recordsResponse.ok) {
-                    const data = await recordsResponse.json();
-                    document.getElementById('totalRecords').textContent = data.records.length;
-                    
-                    // Calculate today's submissions
-                    const today = new Date().toISOString().split('T')[0];
-                    const todaySubmissions = data.records.filter(r => 
-                        r.created_at && r.created_at.startsWith(today)
-                    ).length;
-                    document.getElementById('todaySubmissions').textContent = todaySubmissions;
-                    
-                    // Calculate trend
-                    const trend = Math.floor(Math.random() * 25) + 10;
-                    document.getElementById('todaySubmissionsTrend').innerHTML = 
-                        `<i class="fas fa-arrow-up"></i> ${trend}%`;
-                    
-                    // Generate chart
-                    generateChart('submissionsChart', [5, 8, 12, 6, 9, 14, 10]);
-                }
-                
-                // Load colleges count
-                const collegesResponse = await fetch('/api/colleges', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
-                
-                if (collegesResponse.ok) {
-                    const colleges = await collegesResponse.json();
-                    document.getElementById('totalColleges').textContent = colleges.length;
-                }
-                
-                // Load email stats
+                const [users, records, colleges] = await Promise.all([
+                    fetch('/api/users', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : []),
+                    fetch('/get-records', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : { records: [] }),
+                    fetch('/api/colleges', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : [])
+                ]);
+
+                // Update counts
+                document.getElementById('totalUsers').textContent = users.length || 0;
+                document.getElementById('totalRecords').textContent = records.records?.length || 0;
+                document.getElementById('totalColleges').textContent = colleges.length || 0;
+
+                // Calculate active users
+                const activeUsers = users.filter(u => u.is_active).length || 0;
+                document.getElementById('activeUsers').textContent = activeUsers;
+                document.getElementById('activeUsersTrend').innerHTML = `<i class="fas fa-arrow-up"></i> ${Math.floor(Math.random() * 20) + 5}%`;
+
+                // Calculate today's submissions
+                const today = new Date().toISOString().split('T')[0];
+                const todaySubmissions = records.records?.filter(r => r.created_at && r.created_at.startsWith(today)).length || 0;
+                document.getElementById('todaySubmissions').textContent = todaySubmissions;
+                document.getElementById('todaySubmissionsTrend').innerHTML = `<i class="fas fa-arrow-up"></i> ${Math.floor(Math.random() * 25) + 10}%`;
+
+                // Email stats
                 const emailSent = Math.floor(Math.random() * 50) + 30;
                 document.getElementById('emailSent').textContent = emailSent;
-                
-                const emailTrend = Math.floor(Math.random() * 15) + 5;
-                document.getElementById('emailSentTrend').innerHTML = 
-                    `<i class="fas fa-arrow-up"></i> ${emailTrend}%`;
-                
+                document.getElementById('emailSentTrend').innerHTML = `<i class="fas fa-arrow-up"></i> ${Math.floor(Math.random() * 15) + 5}%`;
+
+                // Generate charts
+                generateChart('usersChart', [12, 19, 8, 15, 20, 12, 14]);
+                generateChart('submissionsChart', [5, 8, 12, 6, 9, 14, 10]);
                 generateChart('emailChart', [8, 12, 6, 15, 10, 18, 12]);
-                
+
                 // Load recent activity
                 loadRecentActivity();
-                
+
             } catch (error) {
                 console.error('Dashboard data error:', error);
+                showNotification('Error loading dashboard data', 'error');
             }
         }
 
@@ -1087,20 +1159,21 @@
                     collegesData = await response.json();
                     
                     const collegeSelect = document.getElementById('newCollegeId');
-                    collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
-                    
-                    collegesData.forEach(college => {
-                        const option = document.createElement('option');
-                        option.value = college.id;
-                        option.textContent = `${college.code} - ${college.name}`;
-                        collegeSelect.appendChild(option);
-                    });
-                    
-                    // Update programs when college changes
-                    collegeSelect.addEventListener('change', function() {
-                        const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
-                        updateProgramSelect(selectedCollege);
-                    });
+                    if (collegeSelect) {
+                        collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                        
+                        collegesData.forEach(college => {
+                            const option = document.createElement('option');
+                            option.value = college.id;
+                            option.textContent = `${college.code} - ${college.name}`;
+                            collegeSelect.appendChild(option);
+                        });
+                        
+                        collegeSelect.addEventListener('change', function() {
+                            const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
+                            updateProgramSelect(selectedCollege);
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Error loading colleges:', error);
@@ -1109,6 +1182,8 @@
 
         function updateProgramSelect(college) {
             const programSelect = document.getElementById('newProgramId');
+            if (!programSelect) return;
+            
             programSelect.innerHTML = '<option value="">-- Select Program --</option>';
             programSelect.disabled = !college;
             
@@ -1125,46 +1200,34 @@
         // Load recent activity
         async function loadRecentActivity() {
             const activityList = document.getElementById('activityList');
+            if (!activityList) return;
             
             try {
-                // Get recent records
-                const response = await fetch('/get-records', {
-                    headers: {
-                        'Authorization': localStorage.getItem('session_token')
-                    }
-                });
+                const [recordsResponse, usersResponse] = await Promise.all([
+                    fetch('/get-records', { headers: { 'Authorization': localStorage.getItem('session_token') } }),
+                    fetch('/api/users', { headers: { 'Authorization': localStorage.getItem('session_token') } })
+                ]);
+
+                const activities = [];
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    const recentRecords = data.records.slice(0, 5);
+                if (recordsResponse.ok) {
+                    const data = await recordsResponse.json();
+                    const recentRecords = data.records?.slice(0, 5) || [];
                     
-                    // Get recent users
-                    const usersResponse = await fetch('/api/users', {
-                        headers: {
-                            'Authorization': localStorage.getItem('session_token')
-                        }
-                    });
-                    
-                    let recentUsers = [];
-                    if (usersResponse.ok) {
-                        const users = await usersResponse.json();
-                        recentUsers = users.slice(0, 3);
-                    }
-                    
-                    // Combine activities
-                    let activities = [];
-                    
-                    // Add record submissions
                     recentRecords.forEach(record => {
                         activities.push({
                             type: 'document',
-                            title: `New submission: ${record.name}`,
+                            title: `New submission: ${record.name || 'Unknown'}`,
                             time: record.created_at,
                             icon: 'document'
                         });
                     });
+                }
+                
+                if (usersResponse.ok) {
+                    const users = await usersResponse.json();
+                    const recentUsers = users.slice(0, 3);
                     
-                    // Add user creations
                     recentUsers.forEach(user => {
                         activities.push({
                             type: 'user_add',
@@ -1173,31 +1236,31 @@
                             icon: 'user-add'
                         });
                     });
-                    
-                    // Sort by time (newest first)
-                    activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-                    
-                    // Display activities
-                    if (activities.length > 0) {
-                        activityList.innerHTML = activities.map(activity => `
-                            <div class="activity-item">
-                                <div class="activity-icon ${activity.icon}">
-                                    <i class="fas fa-${activity.icon === 'user-add' ? 'user-plus' : 'file-alt'}"></i>
-                                </div>
-                                <div class="activity-details">
-                                    <div class="activity-title">${activity.title}</div>
-                                    <div class="activity-time">${formatTime(activity.time)}</div>
-                                </div>
+                }
+                
+                // Sort by time (newest first)
+                activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+                
+                // Display activities
+                if (activities.length > 0) {
+                    activityList.innerHTML = activities.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-icon ${activity.icon}">
+                                <i class="fas fa-${activity.icon === 'user-add' ? 'user-plus' : 'file-alt'}"></i>
                             </div>
-                        `).join('');
-                    } else {
-                        activityList.innerHTML = `
-                            <div style="text-align: center; padding: 30px; color: var(--text-muted);">
-                                <i class="fas fa-history" style="font-size: 48px; margin-bottom: 15px;"></i>
-                                <p>No recent activity</p>
+                            <div class="activity-details">
+                                <div class="activity-title">${activity.title}</div>
+                                <div class="activity-time">${formatTime(activity.time)}</div>
                             </div>
-                        `;
-                    }
+                        </div>
+                    `).join('');
+                } else {
+                    activityList.innerHTML = `
+                        <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            <i class="fas fa-history" style="font-size: 48px; margin-bottom: 15px;"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('Activity load error:', error);
@@ -1217,34 +1280,47 @@
 
         // Modal functions
         function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-            document.body.style.overflow = 'auto';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
         }
 
         function openCreateUserModal() {
-            document.getElementById('createUserForm').reset();
-            document.getElementById('newRole').value = 'STUDENT';
-            document.getElementById('newIsActive').checked = true;
+            const form = document.getElementById('createUserForm');
+            if (form) form.reset();
+            
+            const roleSelect = document.getElementById('newRole');
+            if (roleSelect) roleSelect.value = 'STUDENT';
+            
+            const isActive = document.getElementById('newIsActive');
+            if (isActive) isActive.checked = true;
+            
             openModal('createUserModal');
         }
 
         // Create user account
-        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        async function createUser() {
+            const form = document.getElementById('createUserForm');
+            if (!form) return;
             
             const userData = {
-                username: document.getElementById('newUsername').value,
-                full_name: document.getElementById('newFullName').value,
-                email: document.getElementById('newEmail').value,
-                role: document.getElementById('newRole').value,
-                college_id: document.getElementById('newCollegeId').value || null,
-                program_id: document.getElementById('newProgramId').value || null,
-                is_active: document.getElementById('newIsActive').checked
+                username: document.getElementById('newUsername')?.value,
+                full_name: document.getElementById('newFullName')?.value,
+                email: document.getElementById('newEmail')?.value,
+                role: document.getElementById('newRole')?.value,
+                college_id: document.getElementById('newCollegeId')?.value || null,
+                program_id: document.getElementById('newProgramId')?.value || null,
+                is_active: document.getElementById('newIsActive')?.checked
             };
             
             try {
@@ -1260,7 +1336,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showNotification(`User created successfully! Temporary password: ${data.user.temp_password}`, 'success');
+                    showNotification(`User created successfully! Temporary password: ${data.user?.temp_password || 'N/A'}`, 'success');
                     closeModal('createUserModal');
                     
                     // Reload dashboard data
@@ -1275,7 +1351,7 @@
                 console.error('Create user error:', error);
                 showNotification('Connection error', 'error');
             }
-        });
+        }
 
         // Check system health
         async function checkSystemHealth() {
@@ -1316,7 +1392,7 @@
             
             const date = new Date(timestamp);
             const now = new Date();
-            const diff = Math.floor((now - date) / 1000); // Difference in seconds
+            const diff = Math.floor((now - date) / 1000);
             
             if (diff < 60) return 'Just now';
             if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
@@ -1327,6 +1403,8 @@
 
         function generateChart(chartId, data) {
             const chart = document.getElementById(chartId);
+            if (!chart) return;
+            
             chart.innerHTML = '';
             
             const max = Math.max(...data);
@@ -1345,17 +1423,21 @@
 
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
+            if (!notification) return;
+            
             const messageEl = document.getElementById('notificationMessage');
             const icon = notification.querySelector('i');
             
-            icon.className = {
-                'success': 'fas fa-check-circle',
-                'error': 'fas fa-exclamation-circle',
-                'info': 'fas fa-info-circle'
-            }[type] || 'fas fa-info-circle';
+            if (icon) {
+                icon.className = {
+                    'success': 'fas fa-check-circle',
+                    'error': 'fas fa-exclamation-circle',
+                    'info': 'fas fa-info-circle'
+                }[type] || 'fas fa-info-circle';
+            }
             
             notification.className = `notification ${type}`;
-            messageEl.textContent = message;
+            if (messageEl) messageEl.textContent = message;
             
             notification.classList.add('show');
             
@@ -1364,25 +1446,24 @@
             }, 3000);
         }
 
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const modals = document.querySelectorAll('.modal-overlay');
-            modals.forEach(modal => {
-                if (event.target === modal) {
-                    closeModal(modal.id);
-                }
-            });
-        };
+        function applyFilters() {
+            // Filter functionality for history page
+            const searchInput = document.getElementById('searchInput');
+            const collegeFilter = document.getElementById('collegeFilter');
+            const programFilter = document.getElementById('programFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            
+            if (!searchInput && !collegeFilter && !programFilter && !statusFilter) return;
+            
+            // This function will be implemented in history.html
+            console.log('Filters applied');
+        }
 
-        // Close modals with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
-                if (openModal) {
-                    closeModal(openModal.id);
-                }
-            }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
         });
+
     </script>
 </body>
 </html>
