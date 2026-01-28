@@ -171,7 +171,7 @@ def get_db_connection():
         return None
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables with UNIQUE constraints to prevent duplicates"""
     print("🔧 Initializing database...")
     conn = get_db_connection()
     if conn:
@@ -212,11 +212,12 @@ def init_db():
                 )
             ''')
             
-            # Create main records table with COLLEGE field
+            # Create main records table with UNIQUE constraint on user_id
+            # Kailangan natin ng isa lang na entry kada user!
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS records (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
                     name VARCHAR(255),
                     sex VARCHAR(50),
                     birthdate DATE,
@@ -239,6 +240,7 @@ def init_db():
                     form138_path TEXT,
                     goodmoral_path TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     email_sent BOOLEAN DEFAULT FALSE,
                     email_sent_at TIMESTAMP,
                     email VARCHAR(100),
@@ -278,7 +280,8 @@ def init_db():
                     has_disciplinary_record BOOLEAN DEFAULT FALSE,
                     disciplinary_details TEXT,
                     other_documents JSONB,
-                    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))
+                    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                    CONSTRAINT one_record_per_user UNIQUE (user_id)
                 )
             ''')
             
@@ -437,96 +440,37 @@ def check_and_add_columns(cur, conn):
     print("🔍 Checking for missing columns...")
     
     try:
-        # Check and add columns to users table
-        users_columns = [
-            ("requires_password_reset", "BOOLEAN DEFAULT TRUE"),
-            ("college_id", "INTEGER REFERENCES colleges(id) ON DELETE SET NULL"),
-            ("program_id", "INTEGER REFERENCES programs(id) ON DELETE SET NULL"),
-            ("is_active", "BOOLEAN DEFAULT TRUE"),
-            ("last_login", "TIMESTAMP"),
-            ("created_by", "INTEGER REFERENCES users(id)"),
-            ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-        ]
-        
-        for column_name, column_type in users_columns:
+        # Add UNIQUE constraint for user_id in records table if not exists
+        cur.execute("""
+            SELECT constraint_name 
+            FROM information_schema.table_constraints 
+            WHERE table_name='records' AND constraint_name='one_record_per_user'
+        """)
+        if not cur.fetchone():
+            print("   🔧 Adding unique constraint for one record per user...")
             try:
-                # Check if column exists first
-                cur.execute(f"""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='users' AND column_name='{column_name}'
-                """)
-                if not cur.fetchone():
-                    cur.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
-                    print(f"   ✅ Added users column: {column_name}")
-                else:
-                    print(f"   ⚠️ Users column already exists: {column_name}")
+                cur.execute("ALTER TABLE records ADD CONSTRAINT one_record_per_user UNIQUE (user_id)")
+                print("   ✅ Added UNIQUE constraint for user_id")
             except Exception as e:
-                print(f"   ❌ Error with users column {column_name}: {e}")
+                print(f"   ⚠️ Could not add constraint (may already exist in different form): {e}")
         
-        # Check and add columns to records table
-        records_columns = [
-            ("user_id", "INTEGER REFERENCES users(id) ON DELETE SET NULL"),
-            ("status", "VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))"),
-            ("email_sent", "BOOLEAN DEFAULT FALSE"),
-            ("email_sent_at", "TIMESTAMP"),
-            ("email", "VARCHAR(100)"),
-            ("civil_status", "VARCHAR(50)"),
-            ("nationality", "VARCHAR(100)"),
-            ("mother_contact", "VARCHAR(50)"),
-            ("father_contact", "VARCHAR(50)"),
-            ("guardian_name", "VARCHAR(255)"),
-            ("guardian_relation", "VARCHAR(100)"),
-            ("guardian_contact", "VARCHAR(50)"),
-            ("region", "VARCHAR(100)"),
-            ("province", "VARCHAR(100)"),
-            ("specific_address", "TEXT"),
-            ("mobile_no", "VARCHAR(50)"),
-            ("school_year", "VARCHAR(50)"),
-            ("student_type", "VARCHAR(50)"),
-            ("college", "VARCHAR(150)"),
-            ("program", "VARCHAR(150)"),
-            ("last_level_attended", "VARCHAR(100)"),
-            ("is_ip", "VARCHAR(10)"),
-            ("is_pwd", "VARCHAR(10)"),
-            ("has_medication", "VARCHAR(10)"),
-            ("is_working", "VARCHAR(10)"),
-            ("residence_type", "VARCHAR(50)"),
-            ("employer_name", "VARCHAR(255)"),
-            ("marital_status", "VARCHAR(50)"),
-            ("is_gifted", "VARCHAR(10)"),
-            ("needs_assistance", "VARCHAR(10)"),
-            ("school_type", "VARCHAR(50)"),
-            ("year_attended", "VARCHAR(50)"),
-            ("special_talents", "TEXT"),
-            ("is_scholar", "VARCHAR(10)"),
-            ("siblings", "TEXT"),
-            ("goodmoral_analysis", "JSONB"),
-            ("disciplinary_status", "VARCHAR(50)"),
-            ("goodmoral_score", "INTEGER DEFAULT 0"),
-            ("has_disciplinary_record", "BOOLEAN DEFAULT FALSE"),
-            ("disciplinary_details", "TEXT"),
-            ("other_documents", "JSONB")
-        ]
-        
-        for column_name, column_type in records_columns:
-            try:
-                # Check if column exists first
-                cur.execute(f"""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='records' AND column_name='{column_name}'
-                """)
-                if not cur.fetchone():
-                    cur.execute(f"ALTER TABLE records ADD COLUMN {column_name} {column_type}")
-                    print(f"   ✅ Added records column: {column_name}")
-                else:
-                    print(f"   ⚠️ Records column already exists: {column_name}")
-            except Exception as e:
-                print(f"   ❌ Error with records column {column_name}: {e}")
+        # Add updated_at column if missing
+        try:
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='records' AND column_name='updated_at'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE records ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                print("   ✅ Added records column: updated_at")
+            else:
+                print("   ⚠️ Records column already exists: updated_at")
+        except Exception as e:
+            print(f"   ❌ Error with records column updated_at: {e}")
         
         conn.commit()
-        print("✅ All columns verified")
+        print("✅ All columns and constraints verified")
         
     except Exception as e:
         print(f"❌ Error in check_and_add_columns: {e}")
@@ -2087,13 +2031,12 @@ def get_colleges_dropdown():
     finally:
         conn.close()
 
-# ================= NEW STUDENT RECORDS API ENDPOINTS =================
-
+# ================= FIXED: GET STUDENT RECORDS (ONE PER STUDENT) =================
 @app.route('/api/my-records', methods=['GET'])
 @login_required
 @role_required('STUDENT')
 def get_my_records():
-    """Get only the records of the currently logged-in student"""
+    """Get only ONE record of the currently logged-in student"""
     conn = get_db_connection()
     if not conn: 
         return jsonify({"records": [], "error": "Database connection failed"})
@@ -2101,11 +2044,12 @@ def get_my_records():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get only records of the current student user
+        # Get ONLY ONE record of the current student user
         cur.execute("""
             SELECT * FROM records 
             WHERE user_id = %s 
-            ORDER BY created_at DESC
+            ORDER BY updated_at DESC
+            LIMIT 1
         """, (session['user_id'],))
         
         rows = cur.fetchall()
@@ -2113,6 +2057,8 @@ def get_my_records():
         for r in rows:
             if r['created_at']: 
                 r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['updated_at']: 
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
             if r['birthdate']: 
                 r['birthdate'] = str(r['birthdate'])
             if r['email_sent_at']: 
@@ -2160,183 +2106,341 @@ def get_my_records():
     finally:
         conn.close()
 
-@app.route('/api/student/record/<int:record_id>', methods=['GET'])
+# ================= FIXED: GET ALL RECORDS (ONE PER USER) =================
+@app.route('/get-records', methods=['GET'])
 @login_required
-@role_required('STUDENT')
-def get_student_record(record_id):
-    """Get a specific record for a student (with document URLs)"""
+def get_records():
+    """Get records - Students see their own, Super Admin sees all (ONE PER USER)"""
     conn = get_db_connection()
     if not conn: 
-        return jsonify({"error": "Database connection failed"}), 500
+        return jsonify({"records": [], "error": "Database connection failed"})
     
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get record and ensure it belongs to the current student
-        cur.execute("""
-            SELECT * FROM records 
-            WHERE id = %s AND user_id = %s
-        """, (record_id, session['user_id']))
-        
-        record = cur.fetchone()
-        
-        if not record:
-            return jsonify({"error": "Record not found or unauthorized"}), 404
-        
-        # Format dates
-        if record['created_at']: 
-            record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        if record['birthdate']: 
-            record['birthdate'] = str(record['birthdate'])
-        if record['email_sent_at']: 
-            record['email_sent_at'] = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Parse Good Moral analysis JSON
-        if record.get('goodmoral_analysis'):
-            try:
-                record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
-            except:
-                record['goodmoral_analysis'] = {}
-        
-        # Parse other_documents JSON
-        if record.get('other_documents'):
-            try:
-                record['other_documents'] = json.loads(record['other_documents'])
-            except:
-                record['other_documents'] = []
+        # Students see only their own record
+        user_role = session.get('role', '').upper()
+        if user_role == 'STUDENT':
+            cur.execute("""
+                SELECT r.*, u.username, u.email as user_email, u.full_name as user_full_name
+                FROM records r
+                JOIN users u ON r.user_id = u.id
+                WHERE r.user_id = %s 
+                ORDER BY r.updated_at DESC
+                LIMIT 1
+            """, (session['user_id'],))
+        # Super Admin sees all records (ONE PER USER)
+        elif user_role == 'SUPER_ADMIN':
+            cur.execute("""
+                SELECT DISTINCT ON (r.user_id) 
+                       r.*, u.username, u.email as user_email, u.full_name as user_full_name
+                FROM records r
+                JOIN users u ON r.user_id = u.id
+                WHERE u.role = 'STUDENT'
+                ORDER BY r.user_id, r.updated_at DESC
+            """)
         else:
-            record['other_documents'] = []
+            return jsonify({"records": [], "error": "Unknown user role"})
         
-        # Add document URLs for student access
-        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
-        for field in image_fields:
-            if record.get(field):
-                # Split multiple files if comma-separated
-                paths = str(record[field]).split(',')
-                if paths and paths[0].strip():
-                    first_path = paths[0].strip()
-                    # Create full URL for frontend access
-                    record[f'{field}_url'] = f"{request.host_url}uploads/{first_path}"
-                else:
-                    record[f'{field}_url'] = None
+        rows = cur.fetchall()
+        
+        for r in rows:
+            if r['created_at']: 
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['updated_at']: 
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: 
+                r['birthdate'] = str(r['birthdate'])
+            if r['email_sent_at']: 
+                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-d %H:%M:%S')
+            
+            # Parse Good Moral analysis JSON
+            if r.get('goodmoral_analysis'):
+                try:
+                    r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                except:
+                    r['goodmoral_analysis'] = {}
+            
+            # Parse other_documents JSON
+            if r.get('other_documents'):
+                try:
+                    r['other_documents'] = json.loads(r['other_documents'])
+                except:
+                    r['other_documents'] = []
             else:
-                record[f'{field}_url'] = None
-        
-        # Add URLs for other documents
-        if record['other_documents']:
-            for doc in record['other_documents']:
-                if doc.get('filename'):
-                    doc['download_url'] = f"{request.host_url}uploads/{doc['filename']}"
+                r['other_documents'] = []
+            
+            # Process image paths
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            for field in image_fields:
+                if r.get(field):
+                    paths = str(r[field]).split(',')
+                    if paths and paths[0].strip():
+                        first_path = paths[0].strip()
+                        if '/' in first_path:
+                            first_path = first_path.split('/')[-1]
+                        r[field] = first_path
+                    else:
+                        r[field] = None
+                else:
+                    r[field] = None
         
         return jsonify({
-            "record": record,
-            "server_url": request.host_url.rstrip('/')
+            "records": rows,
+            "server_url": request.host_url.rstrip('/'),
+            "user_role": user_role
         })
     except Exception as e:
-        print(f"❌ Error in get_student_record: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error in get-records: {e}")
+        return jsonify({"records": [], "error": str(e)})
     finally:
         conn.close()
 
-@app.route('/api/student/documents/<int:record_id>', methods=['GET'])
+# ================= FIXED: SAVE RECORD ENDPOINT (UPSERT - UPDATE OR INSERT) =================
+@app.route('/save-record', methods=['POST'])
 @login_required
-@role_required('STUDENT')
-def get_student_documents(record_id):
-    """Get all documents for a specific student record"""
-    conn = get_db_connection()
-    if not conn: 
-        return jsonify({"error": "Database connection failed"}), 500
-    
+@permission_required('access_scanner')
+def save_record():
+    """Save or UPDATE record - Only ONE record per student (UPSERT)"""
+    conn = None
     try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        d = request.json
+        print(f"📥 Saving/UPDATING record for user: {session['user_id']}")
         
-        # Check if record belongs to student
-        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
+        # Check if Good Moral data is included
+        goodmoral_analysis = d.get('goodmoral_analysis')
+        disciplinary_status = d.get('disciplinary_status')
+        goodmoral_score = d.get('goodmoral_score')
+        disciplinary_details = d.get('disciplinary_details')
+        has_disciplinary_record = d.get('has_disciplinary_record', False)
         
-        if not record:
-            return jsonify({"error": "Record not found"}), 404
+        # Get religion from frontend dropdown
+        religion = d.get('religion', '')
         
-        if record['user_id'] != session['user_id']:
-            return jsonify({"error": "Unauthorized access"}), 403
+        # Parse other_documents if provided
+        other_documents = d.get('other_documents')
+        if other_documents and isinstance(other_documents, list):
+            other_documents_json = json.dumps(other_documents)
+        else:
+            other_documents_json = None
         
-        # Get record with document paths
-        cur.execute("""
-            SELECT image_path, form137_path, form138_path, goodmoral_path, other_documents
-            FROM records WHERE id = %s
-        """, (record_id,))
+        siblings_list = d.get('siblings', [])
+        siblings_json = json.dumps(siblings_list)
         
-        record_data = cur.fetchone()
+        # Get college and program data from frontend
+        college = d.get('college', '')
+        program = d.get('program', '')
         
-        # Prepare document URLs
-        documents = {
-            "psa_documents": [],
-            "form137_documents": [],
-            "form138_documents": [],
-            "goodmoral_documents": [],
-            "other_documents": []
-        }
+        print(f"🎓 College selected: {college}")
+        print(f"📚 Program selected: {program}")
+        print(f"🙏 Religion selected: {religion}")
         
-        # PSA Documents
-        if record_data['image_path']:
-            paths = str(record_data['image_path']).split(',')
-            for path in paths:
-                if path.strip():
-                    documents['psa_documents'].append({
-                        "filename": path.strip(),
-                        "download_url": f"{request.host_url}uploads/{path.strip()}"
-                    })
+        conn = get_db_connection()
+        if not conn: 
+            return jsonify({"error": "DB Connection Failed"}), 500
         
-        # Form 137 Documents
-        if record_data['form137_path']:
-            paths = str(record_data['form137_path']).split(',')
-            for path in paths:
-                if path.strip():
-                    documents['form137_documents'].append({
-                        "filename": path.strip(),
-                        "download_url": f"{request.host_url}uploads/{path.strip()}"
-                    })
+        cur = conn.cursor()
         
-        # Form 138 Documents
-        if record_data['form138_path']:
-            paths = str(record_data['form138_path']).split(',')
-            for path in paths:
-                if path.strip():
-                    documents['form138_documents'].append({
-                        "filename": path.strip(),
-                        "download_url": f"{request.host_url}uploads/{path.strip()}"
-                    })
+        # Check if record already exists for this user
+        cur.execute("SELECT id FROM records WHERE user_id = %s", (session['user_id'],))
+        existing_record = cur.fetchone()
         
-        # Good Moral Documents
-        if record_data['goodmoral_path']:
-            paths = str(record_data['goodmoral_path']).split(',')
-            for path in paths:
-                if path.strip():
-                    documents['goodmoral_documents'].append({
-                        "filename": path.strip(),
-                        "download_url": f"{request.host_url}uploads/{path.strip()}"
-                    })
-        
-        # Other Documents
-        if record_data['other_documents']:
-            try:
-                other_docs = json.loads(record_data['other_documents'])
-                for doc in other_docs:
-                    if doc.get('filename'):
-                        doc['download_url'] = f"{request.host_url}uploads/{doc['filename']}"
-                        documents['other_documents'].append(doc)
-            except:
-                documents['other_documents'] = []
-        
-        return jsonify({
-            "documents": documents,
-            "record_id": record_id
-        })
+        if existing_record:
+            print(f"🔄 Updating existing record ID: {existing_record[0]} for user: {session['user_id']}")
+            
+            # Convert goodmoral_analysis to JSON string if it's a dict
+            goodmoral_analysis_json = None
+            if goodmoral_analysis:
+                if isinstance(goodmoral_analysis, dict):
+                    goodmoral_analysis_json = json.dumps(goodmoral_analysis)
+                else:
+                    goodmoral_analysis_json = goodmoral_analysis
+            
+            # UPDATE existing record
+            cur.execute('''
+                UPDATE records SET
+                    name = %s, sex = %s, birthdate = %s, birthplace = %s, 
+                    birth_order = %s, religion = %s, age = %s,
+                    mother_name = %s, mother_citizenship = %s, mother_occupation = %s, 
+                    father_name = %s, father_citizenship = %s, father_occupation = %s, 
+                    lrn = %s, school_name = %s, school_address = %s, final_general_average = %s,
+                    image_path = COALESCE(%s, image_path), 
+                    form137_path = COALESCE(%s, form137_path), 
+                    goodmoral_path = COALESCE(%s, goodmoral_path),
+                    email = %s, mobile_no = %s, civil_status = %s, nationality = %s,
+                    mother_contact = %s, father_contact = %s,
+                    guardian_name = %s, guardian_relation = %s, guardian_contact = %s,
+                    region = %s, province = %s, specific_address = %s,
+                    school_year = %s, student_type = %s, college = %s, program = %s, last_level_attended = %s,
+                    is_ip = %s, is_pwd = %s, has_medication = %s, is_working = %s,
+                    residence_type = %s, employer_name = %s, marital_status = %s,
+                    is_gifted = %s, needs_assistance = %s, school_type = %s, year_attended = %s, 
+                    special_talents = %s, is_scholar = %s, siblings = %s,
+                    goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
+                    has_disciplinary_record = %s, disciplinary_details = %s,
+                    other_documents = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s
+                RETURNING id
+            ''', (
+                d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
+                d.get('birth_order'), religion, d.get('age'),
+                d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
+                d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
+                d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
+                d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
+                d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
+                d.get('mother_contact'), d.get('father_contact'),
+                d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
+                d.get('region'), d.get('province'), d.get('specific_address'),
+                d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),
+                d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
+                d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
+                d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
+                d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
+                siblings_json,
+                goodmoral_analysis_json,
+                disciplinary_status,
+                goodmoral_score,
+                has_disciplinary_record,
+                disciplinary_details,
+                other_documents_json,
+                session['user_id']
+            ))
+            
+            updated_id = cur.fetchone()[0]
+            conn.commit()
+            
+            print(f"✅ Record UPDATED with ID: {updated_id}")
+            print(f"👤 User ID: {session['user_id']}")
+            print(f"🔄 This was an UPDATE of existing record")
+            
+            return jsonify({
+                "status": "success", 
+                "db_id": updated_id,
+                "college": college,
+                "program": program,
+                "religion": religion,
+                "goodmoral_score": goodmoral_score,
+                "disciplinary_status": disciplinary_status,
+                "has_disciplinary_record": has_disciplinary_record,
+                "message": "Record UPDATED successfully.",
+                "operation": "update"
+            })
+            
+        else:
+            print(f"🆕 Creating NEW record for user: {session['user_id']}")
+            
+            # Convert goodmoral_analysis to JSON string if it's a dict
+            goodmoral_analysis_json = None
+            if goodmoral_analysis:
+                if isinstance(goodmoral_analysis, dict):
+                    goodmoral_analysis_json = json.dumps(goodmoral_analysis)
+                else:
+                    goodmoral_analysis_json = goodmoral_analysis
+            
+            # INSERT new record
+            cur.execute('''
+                INSERT INTO records (
+                    user_id, name, sex, birthdate, birthplace, birth_order, religion, age,
+                    mother_name, mother_citizenship, mother_occupation, 
+                    father_name, father_citizenship, father_occupation, 
+                    lrn, school_name, school_address, final_general_average,
+                    image_path, form137_path, goodmoral_path,
+                    email, mobile_no, civil_status, nationality,
+                    mother_contact, father_contact,
+                    guardian_name, guardian_relation, guardian_contact,
+                    region, province, specific_address,
+                    school_year, student_type, college, program, last_level_attended,
+                    is_ip, is_pwd, has_medication, is_working,
+                    residence_type, employer_name, marital_status,
+                    is_gifted, needs_assistance, school_type, year_attended, 
+                    special_talents, is_scholar, siblings,
+                    goodmoral_analysis, disciplinary_status, goodmoral_score,
+                    has_disciplinary_record, disciplinary_details,
+                    other_documents
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, 
+                    %s, %s, %s, 
+                    %s, %s, %s, %s, 
+                    %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    %s,
+                    %s, %s, %s,
+                    %s, %s,
+                    %s
+                ) 
+                RETURNING id
+            ''', (
+                session['user_id'],  # Add user_id
+                d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
+                d.get('birth_order'), religion, d.get('age'),
+                d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
+                d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
+                d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
+                d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
+                d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
+                d.get('mother_contact'), d.get('father_contact'),
+                d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
+                d.get('region'), d.get('province'), d.get('specific_address'),
+                d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),
+                d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
+                d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
+                d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
+                d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
+                siblings_json,
+                goodmoral_analysis_json,
+                disciplinary_status,
+                goodmoral_score,
+                has_disciplinary_record,
+                disciplinary_details,
+                other_documents_json
+            ))
+            
+            new_id = cur.fetchone()[0]
+            conn.commit()
+
+            print(f"✅ Record CREATED with ID: {new_id}")
+            print(f"👤 User ID: {session['user_id']}")
+            print(f"🎓 College: {college}")
+            print(f"📚 Program: {program}")
+            print(f"🙏 Religion: {religion}")
+            print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
+            
+            if has_disciplinary_record:
+                print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
+
+            return jsonify({
+                "status": "success", 
+                "db_id": new_id,
+                "college": college,
+                "program": program,
+                "religion": religion,
+                "goodmoral_score": goodmoral_score,
+                "disciplinary_status": disciplinary_status,
+                "has_disciplinary_record": has_disciplinary_record,
+                "message": "Record CREATED successfully.",
+                "operation": "create"
+            })
+            
     except Exception as e:
-        print(f"❌ Error in get_student_documents: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ SAVE ERROR: {e}")
+        traceback.print_exc()
+        if conn: 
+            conn.rollback()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
     finally:
-        conn.close()
+        if conn: 
+            conn.close()
 
 # ================= FIXED ROUTES WITH ROLE-BASED ACCESS =================
 
@@ -2675,254 +2779,6 @@ def extract_data():
             }), 500
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
-
-# ================= UPDATED SAVE RECORD ENDPOINT WITH USER ID =================
-@app.route('/save-record', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def save_record():
-    conn = None
-    try:
-        d = request.json
-        print(f"📥 Saving record for user: {session['user_id']}")
-        
-        # Check if Good Moral data is included
-        goodmoral_analysis = d.get('goodmoral_analysis')
-        disciplinary_status = d.get('disciplinary_status')
-        goodmoral_score = d.get('goodmoral_score')
-        disciplinary_details = d.get('disciplinary_details')
-        has_disciplinary_record = d.get('has_disciplinary_record', False)
-        
-        # Get religion from frontend dropdown
-        religion = d.get('religion', '')
-        
-        # Parse other_documents if provided
-        other_documents = d.get('other_documents')
-        if other_documents and isinstance(other_documents, list):
-            other_documents_json = json.dumps(other_documents)
-        else:
-            other_documents_json = None
-        
-        siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list)
-        
-        # Get college and program data from frontend
-        college = d.get('college', '')
-        program = d.get('program', '')
-        
-        print(f"🎓 College selected: {college}")
-        print(f"📚 Program selected: {program}")
-        print(f"🙏 Religion selected: {religion}")
-        
-        conn = get_db_connection()
-        if not conn: 
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor()
-        
-        # Check for duplicates
-        if d.get('name') and d.get('birthdate'):
-            cur.execute("SELECT id FROM records WHERE LOWER(name) = LOWER(%s) AND birthdate = %s", 
-                       (d.get('name'), d.get('birthdate')))
-            if cur.fetchone():
-                return jsonify({
-                    "status": "error", 
-                    "error": "DUPLICATE_ENTRY", 
-                    "message": "Record already exists."
-                }), 409
-
-        # Convert goodmoral_analysis to JSON string if it's a dict
-        goodmoral_analysis_json = None
-        if goodmoral_analysis:
-            if isinstance(goodmoral_analysis, dict):
-                goodmoral_analysis_json = json.dumps(goodmoral_analysis)
-            else:
-                goodmoral_analysis_json = goodmoral_analysis
-        
-        # Insert record with Good Moral data AND user_id
-        cur.execute('''
-            INSERT INTO records (
-                user_id, name, sex, birthdate, birthplace, birth_order, religion, age,
-                mother_name, mother_citizenship, mother_occupation, 
-                father_name, father_citizenship, father_occupation, 
-                lrn, school_name, school_address, final_general_average,
-                image_path, form137_path, goodmoral_path,
-                email, mobile_no, civil_status, nationality,
-                mother_contact, father_contact,
-                guardian_name, guardian_relation, guardian_contact,
-                region, province, specific_address,
-                school_year, student_type, college, program, last_level_attended,
-                is_ip, is_pwd, has_medication, is_working,
-                residence_type, employer_name, marital_status,
-                is_gifted, needs_assistance, school_type, year_attended, 
-                special_talents, is_scholar, siblings,
-                -- Good Moral fields
-                goodmoral_analysis, disciplinary_status, goodmoral_score,
-                has_disciplinary_record, disciplinary_details,
-                -- Other documents
-                other_documents
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, 
-                %s, %s, %s, 
-                %s, %s, %s, %s, 
-                %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s, %s, %s,
-                %s,
-                -- Good Moral fields
-                %s, %s, %s,
-                %s, %s,
-                -- Other documents
-                %s
-            ) 
-            RETURNING id
-        ''', (
-            session['user_id'],  # Add user_id
-            d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-            d.get('birth_order'), religion, d.get('age'),  # Use religion from frontend
-            d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
-            d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
-            d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-            d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
-            d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
-            d.get('mother_contact'), d.get('father_contact'),
-            d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
-            d.get('region'), d.get('province'), d.get('specific_address'),
-            d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),
-            d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-            d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
-            d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
-            d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-            siblings_json,
-            # Good Moral fields
-            goodmoral_analysis_json,
-            disciplinary_status,
-            goodmoral_score,
-            has_disciplinary_record,
-            disciplinary_details,
-            # Other documents
-            other_documents_json
-        ))
-        
-        new_id = cur.fetchone()[0]
-        conn.commit()
-
-        print(f"✅ Record saved with ID: {new_id}")
-        print(f"👤 User ID: {session['user_id']}")
-        print(f"🎓 College: {college}")
-        print(f"📚 Program: {program}")
-        print(f"🙏 Religion: {religion}")
-        print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
-        
-        if has_disciplinary_record:
-            print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
-
-        return jsonify({
-            "status": "success", 
-            "db_id": new_id,
-            "college": college,
-            "program": program,
-            "religion": religion,
-            "goodmoral_score": goodmoral_score,
-            "disciplinary_status": disciplinary_status,
-            "has_disciplinary_record": has_disciplinary_record,
-            "message": "Record saved successfully."
-        })
-    except Exception as e:
-        print(f"❌ SAVE ERROR: {e}")
-        traceback.print_exc()
-        if conn: 
-            conn.rollback()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-    finally:
-        if conn: 
-            conn.close()
-
-# ================= UPDATED GET RECORDS ENDPOINT WITH ROLE-BASED ACCESS =================
-@app.route('/get-records', methods=['GET'])
-@login_required
-def get_records():
-    """Get records - Students see their own, Super Admin sees all"""
-    conn = get_db_connection()
-    if not conn: 
-        return jsonify({"records": [], "error": "Database connection failed"})
-    
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Students see only their own records
-        user_role = session.get('role', '').upper()
-        if user_role == 'STUDENT':
-            cur.execute("""
-                SELECT * FROM records 
-                WHERE user_id = %s 
-                ORDER BY id DESC
-            """, (session['user_id'],))
-        # Super Admin sees all records
-        elif user_role == 'SUPER_ADMIN':
-            cur.execute("SELECT * FROM records ORDER BY id DESC")
-        else:
-            return jsonify({"records": [], "error": "Unknown user role"})
-        
-        rows = cur.fetchall()
-        
-        for r in rows:
-            if r['created_at']: 
-                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-            if r['birthdate']: 
-                r['birthdate'] = str(r['birthdate'])
-            if r['email_sent_at']: 
-                r['email_sent_at'] = r['email_sent_at'].strftime('%Y-%m-d %H:%M:%S')
-            
-            # Parse Good Moral analysis JSON
-            if r.get('goodmoral_analysis'):
-                try:
-                    r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
-                except:
-                    r['goodmoral_analysis'] = {}
-            
-            # Parse other_documents JSON
-            if r.get('other_documents'):
-                try:
-                    r['other_documents'] = json.loads(r['other_documents'])
-                except:
-                    r['other_documents'] = []
-            else:
-                r['other_documents'] = []
-            
-            # Process image paths
-            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
-            for field in image_fields:
-                if r.get(field):
-                    paths = str(r[field]).split(',')
-                    if paths and paths[0].strip():
-                        first_path = paths[0].strip()
-                        if '/' in first_path:
-                            first_path = first_path.split('/')[-1]
-                        r[field] = first_path
-                    else:
-                        r[field] = None
-                else:
-                    r[field] = None
-        
-        return jsonify({
-            "records": rows,
-            "server_url": request.host_url.rstrip('/'),
-            "user_role": user_role
-        })
-    except Exception as e:
-        print(f"❌ Error in get-records: {e}")
-        return jsonify({"records": [], "error": str(e)})
-    finally:
-        conn.close()
 
 # ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
 @app.route('/upload-other-document/<int:record_id>', methods=['POST'])
@@ -3538,7 +3394,8 @@ def health_check():
             "goodmoral_analysis": "ENABLED",
             "religion_dropdown": "ENABLED",
             "student_records": "ENABLED",
-            "document_access": "ENABLED"
+            "document_access": "ENABLED",
+            "one_record_per_user": "ENABLED"
         }
     })
 
@@ -3620,6 +3477,8 @@ def get_single_record(record_id):
         # Format dates
         if record['created_at']: 
             record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        if record['updated_at']: 
+            record['updated_at'] = record['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
         if record['birthdate']: 
             record['birthdate'] = str(record['birthdate'])
         if record['email_sent_at']: 
@@ -3665,7 +3524,7 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH STUDENT RECORDS FIX")
+    print("🚀 ASSISCAN WITH ONE RECORD PER USER FIX")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3678,10 +3537,10 @@ if __name__ == '__main__':
     print("   • STUDENT: Scanner access + View own records + Download documents")
     print("="*60)
     print("🔄 FIXED FEATURES:")
-    print("   • Student can now view their own records")
-    print("   • Document URLs are properly generated")
-    print("   • File download links work correctly")
-    print("   • API endpoints for student records added")
+    print("   • ONE RECORD PER USER enforced")
+    print("   • Students can UPDATE existing records")
+    print("   • Admin sees ONE record per student")
+    print("   • No duplicate entries anymore")
     print("="*60)
     print("🔐 SECURITY FEATURES:")
     print("   • Role-based access control")
