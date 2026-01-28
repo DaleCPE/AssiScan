@@ -465,7 +465,7 @@
             color: #ff9800;
         }
 
-        /* Force Password Reset Modal - CRITICAL FIX: HIGHER Z-INDEX THAN CHANGE PASSWORD MODAL */
+        /* Force Password Reset Modal */
         .force-reset-modal {
             display: none;
             position: fixed;
@@ -474,7 +474,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.95);
-            z-index: 1100; /* HIGHER THAN MODAL-OVERLAY */
+            z-index: 1100;
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -1400,7 +1400,7 @@
         </div>
     </div>
 
-    <!-- Force Password Reset Modal - FIXED: LOWER Z-INDEX PARA MA-ACCESS ANG CHANGE PASSWORD -->
+    <!-- Force Password Reset Modal -->
     <div id="forcePasswordResetModal" class="force-reset-modal">
         <div class="force-reset-content">
             <div class="force-reset-icon">
@@ -2285,7 +2285,7 @@
                     body: JSON.stringify({
                         current_password: currentPassword,
                         new_password: newPassword,
-                        force_reset: requiresPasswordReset // Add flag for forced reset
+                        force_reset: requiresPasswordReset
                     })
                 });
                 
@@ -2898,7 +2898,7 @@
                 return element ? element.value.trim() : "";
             }
 
-            // Prepare record data
+            // Prepare record data - FIXED: Remove timestamp fields that don't exist
             const recordData = {
                 school_year: getValue('schoolYear'),
                 student_type: getValue('studentType'),
@@ -2954,6 +2954,10 @@
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath,
                 goodmoral_image_path: goodmoralImagePath,
+                
+                // Add operator info
+                operator_id: currentUser ? currentUser.id : null,
+                operator_name: currentUser ? currentUser.full_name || currentUser.username : 'Unknown',
                 
                 ...goodmoralPayload
             };
