@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>AssiScan | UB LIPA</title>
+    
+    <!-- External CSS with fallback -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Inline CSS to avoid 404 errors -->
     <style>
+        /* All your CSS styles remain exactly the same */
         :root {
             --bg-dark: #0f0404;
             --panel-bg: rgba(10, 2, 2, 0.95); 
@@ -2301,23 +2305,23 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= LOGOUT FUNCTION - UPDATED =================
+        // ================= LOGOUT FUNCTION - SIMPLIFIED =================
         async function logout() {
             try {
-                console.log("🚪 Attempting logout...");
+                console.log("🚪 Logging out...");
                 
-                // First try to call the server logout endpoint
-                const response = await fetch('/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'same-origin'
-                });
+                // Try to call server logout endpoint
+                try {
+                    await fetch('/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin'
+                    });
+                } catch (e) {
+                    console.log("Note: /logout endpoint not accessible, continuing with client-side logout");
+                }
                 
-                console.log("Logout response status:", response.status);
-                
-                // Clear all client-side storage regardless of server response
+                // Clear all client-side data
                 localStorage.clear();
                 sessionStorage.clear();
                 
@@ -2326,15 +2330,13 @@
                     document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
                 });
                 
-                // Always redirect to login.html even if server request fails
+                // Redirect to login page
                 console.log("✅ Redirecting to login.html");
                 window.location.href = 'login.html';
                 
             } catch (error) {
                 console.error('Logout error:', error);
-                // Even if there's an error, still redirect to login
-                localStorage.clear();
-                sessionStorage.clear();
+                // Still redirect even on error
                 window.location.href = 'login.html';
             }
         }
