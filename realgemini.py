@@ -1019,6 +1019,21 @@ def logout_user():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    """Simple logout route that redirects to login page"""
+    print("🔍 /logout route accessed")
+    
+    # Clear session
+    session_token = session.get('session_token')
+    if session_token:
+        logout_session(session_token)
+    
+    session.clear()
+    
+    print("✅ Session cleared, redirecting to login page")
+    return redirect('/login')
+
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
     """Check if user session is valid"""
@@ -2386,16 +2401,6 @@ def login():
     elif request.method == 'POST':
         print("🔍 POST to login form, redirecting to API")
         return redirect('/api/login')
-
-@app.route('/logout')
-def logout():
-    """Logout user"""
-    session_token = session.get('session_token')
-    if session_token:
-        logout_session(session_token)
-    
-    session.clear()
-    return redirect('/login')
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
