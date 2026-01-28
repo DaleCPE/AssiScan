@@ -465,7 +465,7 @@
             color: #ff9800;
         }
 
-        /* Force Password Reset Modal */
+        /* Force Password Reset Modal - UPDATED WITH HIGHER Z-INDEX */
         .force-reset-modal {
             display: none;
             position: fixed;
@@ -474,7 +474,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.95);
-            z-index: 2000;
+            z-index: 9999; /* HIGHER Z-INDEX TO PREVENT CLOSING */
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -1400,7 +1400,7 @@
         </div>
     </div>
 
-    <!-- Force Password Reset Modal -->
+    <!-- Force Password Reset Modal - IMPORTANT: HIGHER Z-INDEX -->
     <div id="forcePasswordResetModal" class="force-reset-modal">
         <div class="force-reset-content">
             <div class="force-reset-icon">
@@ -2073,16 +2073,30 @@
 
         function showForcePasswordReset() {
             console.log("🔒 Showing force password reset modal");
-            document.getElementById('forcePasswordResetModal').style.display = 'flex';
+            const forceResetModal = document.getElementById('forcePasswordResetModal');
+            if (forceResetModal) {
+                forceResetModal.style.display = 'flex';
+            }
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'none';
             closeMobileMenu();
         }
 
+        function hideForcePasswordReset() {
+            console.log("🔓 Hiding force password reset modal");
+            const forceResetModal = document.getElementById('forcePasswordResetModal');
+            if (forceResetModal) {
+                forceResetModal.style.display = 'none';
+            }
+        }
+
         function showScanner(user) {
             console.log("👤 Showing scanner for user:", user);
             
-            document.getElementById('forcePasswordResetModal').style.display = 'none';
+            // Hide all modals first
+            hideForcePasswordReset();
+            closeChangePasswordModal();
+            
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'block';
             
@@ -2117,7 +2131,7 @@
             console.log("🔒 Showing access denied screen");
             document.getElementById('accessDenied').style.display = 'flex';
             document.getElementById('scannerInterface').style.display = 'none';
-            document.getElementById('forcePasswordResetModal').style.display = 'none';
+            hideForcePasswordReset();
             closeMobileMenu();
         }
 
@@ -2273,9 +2287,10 @@
                     setTimeout(() => {
                         closeChangePasswordModal();
                         
-                        // If this was a forced reset, show scanner now
+                        // If this was a forced reset, update flag and show scanner
                         if (requiresPasswordReset) {
                             requiresPasswordReset = false;
+                            hideForcePasswordReset();
                             showScanner(currentUser);
                         }
                     }, 2000);
