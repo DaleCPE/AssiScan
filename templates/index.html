@@ -2301,11 +2301,12 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= LOGOUT FUNCTION =================
+        // ================= LOGOUT FUNCTION - UPDATED =================
         async function logout() {
             try {
                 console.log("🚪 Attempting logout...");
                 
+                // First try to call the server logout endpoint
                 const response = await fetch('/logout', {
                     method: 'POST',
                     headers: {
@@ -2316,49 +2317,24 @@
                 
                 console.log("Logout response status:", response.status);
                 
-                if (response.ok) {
-                    console.log("✅ Logout successful via /logout");
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    
-                    // Clear cookies
-                    document.cookie.split(";").forEach(function(c) {
-                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                    });
-                    
-                    // Redirect to login page
-                    window.location.href = 'login.html';
-                    return;
-                }
-                
-                // Try GET method as fallback
-                try {
-                    const getResponse = await fetch('/logout', {
-                        method: 'GET',
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (getResponse.ok) {
-                        console.log("✅ Logout successful via GET /logout");
-                        window.location.href = 'login.html';
-                        return;
-                    }
-                } catch (getError) {
-                    console.log("❌ GET /logout failed:", getError.message);
-                }
-                
-                // Last resort: force redirect
-                console.log("⚠️ Both methods failed, forcing logout...");
+                // Clear all client-side storage regardless of server response
                 localStorage.clear();
                 sessionStorage.clear();
+                
+                // Clear cookies
                 document.cookie.split(";").forEach(function(c) {
                     document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
                 });
                 
+                // Always redirect to login.html even if server request fails
+                console.log("✅ Redirecting to login.html");
                 window.location.href = 'login.html';
                 
             } catch (error) {
                 console.error('Logout error:', error);
+                // Even if there's an error, still redirect to login
+                localStorage.clear();
+                sessionStorage.clear();
                 window.location.href = 'login.html';
             }
         }
