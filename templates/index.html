@@ -2305,40 +2305,11 @@
         // Attach form submit event
         document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
 
-        // ================= LOGOUT FUNCTION - SIMPLIFIED =================
-        async function logout() {
-            try {
-                console.log("🚪 Logging out...");
-                
-                // Try to call server logout endpoint
-                try {
-                    await fetch('/logout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'same-origin'
-                    });
-                } catch (e) {
-                    console.log("Note: /logout endpoint not accessible, continuing with client-side logout");
-                }
-                
-                // Clear all client-side data
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // Clear cookies
-                document.cookie.split(";").forEach(function(c) {
-                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                });
-                
-                // Redirect to login page
-                console.log("✅ Redirecting to login.html");
-                window.location.href = 'login.html';
-                
-            } catch (error) {
-                console.error('Logout error:', error);
-                // Still redirect even on error
-                window.location.href = 'login.html';
-            }
+        // ================= FIXED LOGOUT FUNCTION =================
+        function logout() {
+            console.log("🚪 Logging out...");
+            // Simple redirect to logout endpoint
+            window.location.href = '/logout';
         }
 
         // ================= OTHER FUNCTIONS =================
