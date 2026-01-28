@@ -465,7 +465,7 @@
             color: #ff9800;
         }
 
-        /* Force Password Reset Modal - UPDATED WITH HIGHER Z-INDEX */
+        /* Force Password Reset Modal - CRITICAL FIX: HIGHER Z-INDEX THAN CHANGE PASSWORD MODAL */
         .force-reset-modal {
             display: none;
             position: fixed;
@@ -474,7 +474,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.95);
-            z-index: 9999; /* HIGHER Z-INDEX TO PREVENT CLOSING */
+            z-index: 1100; /* HIGHER THAN MODAL-OVERLAY */
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -1400,7 +1400,7 @@
         </div>
     </div>
 
-    <!-- Force Password Reset Modal - IMPORTANT: HIGHER Z-INDEX -->
+    <!-- Force Password Reset Modal - FIXED: LOWER Z-INDEX PARA MA-ACCESS ANG CHANGE PASSWORD -->
     <div id="forcePasswordResetModal" class="force-reset-modal">
         <div class="force-reset-content">
             <div class="force-reset-icon">
@@ -2148,6 +2148,11 @@
         // ================= CHANGE PASSWORD FUNCTIONS =================
         function openChangePasswordModal() {
             console.log("Opening change password modal");
+            
+            // IMPORTANT: Hide the force reset modal FIRST before showing change password
+            hideForcePasswordReset();
+            
+            // Then show the change password modal
             document.getElementById('changePasswordModal').style.display = 'flex';
             document.getElementById('passwordAlert').style.display = 'none';
             document.getElementById('changePasswordForm').reset();
@@ -2157,6 +2162,11 @@
 
         function closeChangePasswordModal() {
             document.getElementById('changePasswordModal').style.display = 'none';
+            
+            // If password reset is still required, show the force reset modal again
+            if (requiresPasswordReset) {
+                showForcePasswordReset();
+            }
         }
 
         function togglePassword(fieldId, button) {
@@ -2274,7 +2284,8 @@
                     },
                     body: JSON.stringify({
                         current_password: currentPassword,
-                        new_password: newPassword
+                        new_password: newPassword,
+                        force_reset: requiresPasswordReset // Add flag for forced reset
                     })
                 });
                 
@@ -2298,12 +2309,26 @@
                     showPasswordAlert(data.error || 'Failed to change password', 'error');
                     btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
                     btn.disabled = false;
+                    
+                    // If force reset is still required, show the modal again
+                    if (requiresPasswordReset) {
+                        setTimeout(() => {
+                            showForcePasswordReset();
+                        }, 500);
+                    }
                 }
             } catch (error) {
                 console.error('Password change error:', error);
                 showPasswordAlert('Connection error. Please try again.', 'error');
                 btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
                 btn.disabled = false;
+                
+                // If force reset is still required, show the modal again
+                if (requiresPasswordReset) {
+                    setTimeout(() => {
+                        showForcePasswordReset();
+                    }, 500);
+                }
             }
         }
 
