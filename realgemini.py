@@ -2256,7 +2256,7 @@ def save_record():
                 else:
                     goodmoral_analysis_json = goodmoral_analysis
             
-            # UPDATE existing record
+            # FIXED UPDATE QUERY - Remove updated_at field since it has DEFAULT
             cur.execute('''
                 UPDATE records SET
                     name = %s, sex = %s, birthdate = %s, birthplace = %s, 
@@ -2278,8 +2278,7 @@ def save_record():
                     special_talents = %s, is_scholar = %s, siblings = %s,
                     goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
                     has_disciplinary_record = %s, disciplinary_details = %s,
-                    other_documents = %s,
-                    updated_at = CURRENT_TIMESTAMP
+                    other_documents = %s
                 WHERE user_id = %s
                 RETURNING id
             ''', (
