@@ -1642,7 +1642,17 @@
                 <div class="row">
                     <div class="col-half">
                         <label>Civil Status</label>
-                        <input type="text" id="childCivilStatus" placeholder="Civil Status">
+                        <!-- CHANGED: Text input to dropdown -->
+                        <select id="childCivilStatus">
+                            <option value="">-- Select Civil Status --</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Separated">Separated</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Legally Separated">Legally Separated</option>
+                            <option value="Annulled">Annulled</option>
+                            <option value="Divorced">Divorced</option>
+                        </select>
                     </div>
                     <div class="col-half">
                         <label>Religion</label>
@@ -1755,39 +1765,53 @@
                     <option value="Widowed">Widowed</option>
                 </select>
 
-                <div style="margin-top:10px;"></div>
-                <span class="file-label">Mother's Info</span>
-                <label>Mother's Maiden Name</label>
-                <input type="text" id="motherName" placeholder="Mother's Maiden Name">
-                <div class="row">
-                    <div class="col-half">
-                        <label>Citizenship</label>
-                        <input type="text" id="motherCitizenship" placeholder="Citizenship">
+                <!-- IMPROVED: Mother's Info Section - Cleaner Layout -->
+                <div class="file-upload-group" style="margin-top: 10px; background: rgba(212, 175, 55, 0.03); border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <span class="file-label" style="color: var(--primary-gold); font-weight: 600;">
+                        <i class="fas fa-female"></i> Mother's Information
+                    </span>
+                    
+                    <label>Mother's Maiden Name</label>
+                    <input type="text" id="motherName" placeholder="Mother's Maiden Name">
+                    
+                    <div class="row">
+                        <div class="col-half">
+                            <label>Citizenship</label>
+                            <input type="text" id="motherCitizenship" placeholder="Citizenship">
+                        </div>
+                        <div class="col-half">
+                            <label>Occupation</label>
+                            <input type="text" id="motherOccupation" placeholder="Occupation">
+                        </div>
                     </div>
-                    <div class="col-half">
-                        <label>Occupation</label>
-                        <input type="text" id="motherOccupation" placeholder="Occupation">
-                    </div>
+                    
+                    <label>Mother's Contact No.</label>
+                    <input type="tel" id="motherContact" placeholder="Mother's Contact No.">
                 </div>
-                <label>Mother's Contact No.</label>
-                <input type="tel" id="motherContact" placeholder="Mother's Contact No.">
 
-                <div style="margin-top:10px;"></div>
-                <span class="file-label">Father's Info</span>
-                <label>Father's Name</label>
-                <input type="text" id="fatherName" placeholder="Father's Name">
-                <div class="row">
-                    <div class="col-half">
-                        <label>Citizenship</label>
-                        <input type="text" id="fatherCitizenship" placeholder="Citizenship">
+                <!-- IMPROVED: Father's Info Section - Cleaner Layout -->
+                <div class="file-upload-group" style="margin-top: 10px; background: rgba(212, 175, 55, 0.03); border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <span class="file-label" style="color: var(--primary-gold); font-weight: 600;">
+                        <i class="fas fa-male"></i> Father's Information
+                    </span>
+                    
+                    <label>Father's Name</label>
+                    <input type="text" id="fatherName" placeholder="Father's Name">
+                    
+                    <div class="row">
+                        <div class="col-half">
+                            <label>Citizenship</label>
+                            <input type="text" id="fatherCitizenship" placeholder="Citizenship">
+                        </div>
+                        <div class="col-half">
+                            <label>Occupation</label>
+                            <input type="text" id="fatherOccupation" placeholder="Occupation">
+                        </div>
                     </div>
-                    <div class="col-half">
-                        <label>Occupation</label>
-                        <input type="text" id="fatherOccupation" placeholder="Occupation">
-                    </div>
+                    
+                    <label>Father's Contact No.</label>
+                    <input type="tel" id="fatherContact" placeholder="Father's Contact No.">
                 </div>
-                <label>Father's Contact No.</label>
-                <input type="tel" id="fatherContact" placeholder="Father's Contact No.">
 
                 <span class="section-label"><i class="fas fa-user-shield"></i> Guardian Info</span>
                 <label>Guardian Name</label>
@@ -2821,8 +2845,8 @@
             }
             
             const name = nameElement.value;
-            const college = collegeElement ? collegeElement.value : "";
-            const program = programElement ? programElement.value : "";
+            const college = collegeElement.value;
+            const program = programElement.value;
             
             console.log("📝 Form data:", { name, college, program });
             
@@ -2910,9 +2934,9 @@
                 birthdate: getValue('childBirthdate'),
                 birthplace: getValue('childBirthplace'),
                 birth_order: getValue('birthOrder'),
+                civil_status: getValue('childCivilStatus'),
                 religion: getValue('childReligion'),
                 age: getValue('childAge'),
-                civil_status: getValue('childCivilStatus'),
                 mobile_no: getValue('childMobile'),
                 is_ip: getValue('isIP'),
                 is_pwd: getValue('isPWD'),
