@@ -15,6 +15,7 @@ import io
 import hashlib
 import secrets
 from functools import wraps
+import time
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -154,332 +155,413 @@ def generate_temp_password(length=8):
 
 # ================= DATABASE FUNCTIONS =================
 def get_db_connection():
-    """Get database connection for Render PostgreSQL"""
-    try:
-        if DATABASE_URL:
-            if DATABASE_URL.startswith("postgres://"):
-                DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-                conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
+    """Get database connection for Render PostgreSQL with retry logic"""
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            if DATABASE_URL:
+                if DATABASE_URL.startswith("postgres://"):
+                    DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+                    conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
+                else:
+                    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+                print(f"✅ Database connection successful (attempt {attempt + 1})")
+                return conn
             else:
-                conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-            return conn
-        else:
-            print("❌ DATABASE_URL not found in environment")
-            return None
+                print("❌ DATABASE_URL not found in environment")
+                return None
+        except Exception as e:
+            print(f"❌ DB Connection Error (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                return None
+
+def drop_all_tables():
+    """Drop all existing tables to start fresh"""
+    print("🗑️  Dropping all existing tables...")
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database for dropping tables")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Disable foreign key checks temporarily (PostgreSQL doesn't have this directly, but we'll use CASCADE)
+        # Drop tables in correct order to avoid foreign key constraints
+        tables = [
+            'user_sessions',
+            'records',
+            'programs',
+            'colleges',
+            'users'
+        ]
+        
+        for table in tables:
+            try:
+                cur.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+                print(f"   ✅ Dropped table: {table}")
+            except Exception as e:
+                print(f"   ⚠️ Could not drop table {table}: {e}")
+        
+        conn.commit()
+        print("✅ All tables dropped successfully")
+        return True
     except Exception as e:
-        print(f"❌ DB Connection Error: {e}")
-        return None
+        print(f"❌ Error dropping tables: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 def init_db():
     """Initialize database tables with UNIQUE constraints to prevent duplicates"""
-    print("🔧 Initializing database...")
+    print("🔧 Initializing database from scratch...")
+    
+    # First, drop all existing tables
+    if not drop_all_tables():
+        print("❌ Failed to drop existing tables")
+        return False
+    
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            
-            # Create users table with requires_password_reset column
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username VARCHAR(50) UNIQUE NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    full_name VARCHAR(100) NOT NULL,
-                    email VARCHAR(100) UNIQUE NOT NULL,
-                    role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'STUDENT')),
-                    college_id INTEGER REFERENCES colleges(id) ON DELETE SET NULL,
-                    program_id INTEGER REFERENCES programs(id) ON DELETE SET NULL,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    requires_password_reset BOOLEAN DEFAULT TRUE,
-                    last_login TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_by INTEGER REFERENCES users(id),
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Create user_sessions table
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS user_sessions (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                    session_token VARCHAR(255) UNIQUE NOT NULL,
-                    ip_address VARCHAR(45),
-                    user_agent TEXT,
-                    login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    logout_at TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            ''')
-            
-            # Create main records table with UNIQUE constraint on user_id
-            # Kailangan natin ng isa lang na entry kada user!
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS records (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-                    name VARCHAR(255),
-                    sex VARCHAR(50),
-                    birthdate DATE,
-                    birthplace TEXT,
-                    birth_order VARCHAR(50),
-                    religion VARCHAR(100),
-                    age INTEGER,
-                    mother_name VARCHAR(255),
-                    mother_citizenship VARCHAR(100),
-                    mother_occupation VARCHAR(100),
-                    father_name VARCHAR(255),
-                    father_citizenship VARCHAR(100),
-                    father_occupation VARCHAR(100),
-                    lrn VARCHAR(50),
-                    school_name TEXT,
-                    school_address TEXT,
-                    final_general_average VARCHAR(50),
-                    image_path TEXT,
-                    form137_path TEXT,
-                    form138_path TEXT,
-                    goodmoral_path TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    email_sent BOOLEAN DEFAULT FALSE,
-                    email_sent_at TIMESTAMP,
-                    email VARCHAR(100),
-                    civil_status VARCHAR(50),
-                    nationality VARCHAR(100),
-                    mother_contact VARCHAR(50),
-                    father_contact VARCHAR(50),
-                    guardian_name VARCHAR(255),
-                    guardian_relation VARCHAR(100),
-                    guardian_contact VARCHAR(50),
-                    region VARCHAR(100),
-                    province VARCHAR(100),
-                    specific_address TEXT,
-                    mobile_no VARCHAR(50),
-                    school_year VARCHAR(50),
-                    student_type VARCHAR(50),
-                    college VARCHAR(150),
-                    program VARCHAR(150),
-                    last_level_attended VARCHAR(100),
-                    is_ip VARCHAR(10),
-                    is_pwd VARCHAR(10),
-                    has_medication VARCHAR(10),
-                    is_working VARCHAR(10),
-                    residence_type VARCHAR(50),
-                    employer_name VARCHAR(255),
-                    marital_status VARCHAR(50),
-                    is_gifted VARCHAR(10),
-                    needs_assistance VARCHAR(10),
-                    school_type VARCHAR(50),
-                    year_attended VARCHAR(50),
-                    special_talents TEXT,
-                    is_scholar VARCHAR(10),
-                    siblings TEXT,
-                    goodmoral_analysis JSONB,
-                    disciplinary_status VARCHAR(50),
-                    goodmoral_score INTEGER DEFAULT 0,
-                    has_disciplinary_record BOOLEAN DEFAULT FALSE,
-                    disciplinary_details TEXT,
-                    other_documents JSONB,
-                    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
-                    CONSTRAINT one_record_per_user UNIQUE (user_id)
-                )
-            ''')
-            
-            # Create colleges table
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS colleges (
-                    id SERIAL PRIMARY KEY,
-                    code VARCHAR(20) UNIQUE NOT NULL,
-                    name VARCHAR(150) NOT NULL,
-                    description TEXT,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    display_order INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_by INTEGER REFERENCES users(id)
-                )
-            ''')
-            
-            # Create programs table
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS programs (
-                    id SERIAL PRIMARY KEY,
-                    college_id INTEGER REFERENCES colleges(id) ON DELETE CASCADE,
-                    code VARCHAR(50),
-                    name VARCHAR(150) NOT NULL,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    display_order INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_by INTEGER REFERENCES users(id)
-                )
-            ''')
-            
-            conn.commit()
-            print("✅ Database tables created/verified")
-            
-            # Check for missing columns in all tables
-            check_and_add_columns(cur, conn)
-            
-            # Check if super admin exists, if not create default
-            cur.execute("SELECT id, password_hash FROM users WHERE username = %s", (ADMIN_USERNAME,))
-            admin_user = cur.fetchone()
-            
-            if not admin_user:
-                print("👑 Creating default Super Admin...")
-                default_password = ADMIN_PASSWORD
-                password_hash = hash_password(default_password)
-                
-                print(f"🔑 Creating admin with password: {default_password}")
-                print(f"🔑 Password hash: {password_hash}")
-                
-                cur.execute("""
-                    INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    ADMIN_USERNAME,
-                    password_hash,
-                    'System Administrator',
-                    'admin@assiscan.com',
-                    'SUPER_ADMIN',
-                    True,
-                    False  # Super admin doesn't need password reset
-                ))
-                conn.commit()
-                print("✅ Default Super Admin created")
-            else:
-                print(f"✅ Super Admin already exists with ID: {admin_user[0]}")
-                print(f"🔑 Existing admin password hash: {admin_user[1]}")
-                # Test if the password verification works
-                test_verified = verify_password(admin_user[1], ADMIN_PASSWORD)
-                print(f"🔑 Password verification test: {'✅ SUCCESS' if test_verified else '❌ FAILED'}")
-                
-                # If password verification fails, reset the password
-                if not test_verified:
-                    print("⚠️ Admin password doesn't match. Resetting to default...")
-                    new_hash = hash_password(ADMIN_PASSWORD)
-                    cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, admin_user[0]))
-                    conn.commit()
-                    print(f"✅ Admin password reset. New hash: {new_hash}")
-            
-            # Insert default colleges if empty
-            cur.execute("SELECT COUNT(*) FROM colleges")
-            if cur.fetchone()[0] == 0:
-                print("📝 Inserting default colleges...")
-                default_colleges = [
-                    ("CCJE", "College of Criminal Justice Education", "College of Criminal Justice Education", 1),
-                    ("CEAS", "College of Education, Arts and Sciences", "College of Education, Arts and Sciences", 2),
-                    ("CITEC", "College of Information Technology, Entertainment and Communication", "College of IT, Entertainment & Communication", 3),
-                    ("CENAR", "College of Engineering and Architecture", "College of Engineering and Architecture", 4),
-                    ("CBAA", "College of Business, Accountancy and Auditing", "College of Business, Accountancy & Auditing", 5)
-                ]
-                
-                for code, name, desc, order in default_colleges:
-                    cur.execute("""
-                        INSERT INTO colleges (code, name, description, display_order, created_by) 
-                        VALUES (%s, %s, %s, %s, 1) 
-                        RETURNING id
-                    """, (code, name, desc, order))
-                    college_id = cur.fetchone()[0]
-                    
-                    # Insert default programs based on college
-                    if code == "CCJE":
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                   (college_id, "Bachelor of Science in Criminology", 1))
-                    elif code == "CEAS":
-                        programs = [
-                            "Bachelor of Elementary Education",
-                            "Bachelor of Secondary Education", 
-                            "Bachelor of Science in Psychology",
-                            "Bachelor of Science in Legal Management",
-                            "Bachelor of Science in Social Work"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CITEC":
-                        programs = [
-                            "Bachelor of Science in Information Technology",
-                            "Bachelor of Arts in Multimedia Arts"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CENAR":
-                        programs = [
-                            "Bachelor of Science in Industrial Engineering",
-                            "Bachelor of Science in Computer Engineering",
-                            "Bachelor of Science in Architecture"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                    elif code == "CBAA":
-                        programs = [
-                            "Bachelor of Science in Business Administration",
-                            "Bachelor of Science in Accountancy",
-                            "Bachelor of Science in Internal Auditing"
-                        ]
-                        for i, program in enumerate(programs):
-                            cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, 1)",
-                                       (college_id, program, i+1))
-                
-                conn.commit()
-                print("✅ Default colleges and programs inserted")
-            else:
-                print("✅ Colleges and programs already exist")
-            
-        except Exception as e:
-            print(f"❌ Database initialization error: {e}")
-            traceback.print_exc()
-            conn.rollback()  # Rollback on error
-        finally:
-            cur.close()
-            conn.close()
-
-def check_and_add_columns(cur, conn):
-    """Check and add missing columns to all tables"""
-    print("🔍 Checking for missing columns...")
+    if not conn:
+        print("❌ Failed to connect to database for initialization")
+        return False
     
     try:
-        # Add UNIQUE constraint for user_id in records table if not exists
-        cur.execute("""
-            SELECT constraint_name 
-            FROM information_schema.table_constraints 
-            WHERE table_name='records' AND constraint_name='one_record_per_user'
-        """)
-        if not cur.fetchone():
-            print("   🔧 Adding unique constraint for one record per user...")
-            try:
-                cur.execute("ALTER TABLE records ADD CONSTRAINT one_record_per_user UNIQUE (user_id)")
-                print("   ✅ Added UNIQUE constraint for user_id")
-            except Exception as e:
-                print(f"   ⚠️ Could not add constraint (may already exist in different form): {e}")
+        cur = conn.cursor()
         
-        # Add updated_at column if missing
-        try:
-            cur.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name='records' AND column_name='updated_at'
-            """)
-            if not cur.fetchone():
-                cur.execute("ALTER TABLE records ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-                print("   ✅ Added records column: updated_at")
-            else:
-                print("   ⚠️ Records column already exists: updated_at")
-        except Exception as e:
-            print(f"   ❌ Error with records column updated_at: {e}")
+        print("📝 Creating users table...")
+        # Create users table with requires_password_reset column
+        cur.execute('''
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'STUDENT')),
+                college_id INTEGER,
+                program_id INTEGER,
+                is_active BOOLEAN DEFAULT TRUE,
+                requires_password_reset BOOLEAN DEFAULT TRUE,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print("   ✅ Created users table")
+        
+        print("📝 Creating user_sessions table...")
+        # Create user_sessions table
+        cur.execute('''
+            CREATE TABLE user_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                session_token VARCHAR(255) UNIQUE NOT NULL,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                logout_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created user_sessions table")
+        
+        print("📝 Creating colleges table...")
+        # Create colleges table
+        cur.execute('''
+            CREATE TABLE colleges (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                description TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES users(id)
+            )
+        ''')
+        print("   ✅ Created colleges table")
+        
+        print("📝 Creating programs table...")
+        # Create programs table
+        cur.execute('''
+            CREATE TABLE programs (
+                id SERIAL PRIMARY KEY,
+                college_id INTEGER,
+                code VARCHAR(50),
+                name VARCHAR(150) NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES users(id),
+                FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created programs table")
+        
+        print("📝 Creating records table...")
+        # Create main records table with UNIQUE constraint on user_id
+        cur.execute('''
+            CREATE TABLE records (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE,
+                name VARCHAR(255),
+                sex VARCHAR(50),
+                birthdate DATE,
+                birthplace TEXT,
+                birth_order VARCHAR(50),
+                religion VARCHAR(100),
+                age INTEGER,
+                mother_name VARCHAR(255),
+                mother_citizenship VARCHAR(100),
+                mother_occupation VARCHAR(100),
+                father_name VARCHAR(255),
+                father_citizenship VARCHAR(100),
+                father_occupation VARCHAR(100),
+                lrn VARCHAR(50),
+                school_name TEXT,
+                school_address TEXT,
+                final_general_average VARCHAR(50),
+                image_path TEXT,
+                form137_path TEXT,
+                form138_path TEXT,
+                goodmoral_path TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email_sent BOOLEAN DEFAULT FALSE,
+                email_sent_at TIMESTAMP,
+                email VARCHAR(100),
+                civil_status VARCHAR(50),
+                nationality VARCHAR(100),
+                mother_contact VARCHAR(50),
+                father_contact VARCHAR(50),
+                guardian_name VARCHAR(255),
+                guardian_relation VARCHAR(100),
+                guardian_contact VARCHAR(50),
+                region VARCHAR(100),
+                province VARCHAR(100),
+                specific_address TEXT,
+                mobile_no VARCHAR(50),
+                school_year VARCHAR(50),
+                student_type VARCHAR(50),
+                college VARCHAR(150),
+                program VARCHAR(150),
+                last_level_attended VARCHAR(100),
+                is_ip VARCHAR(10),
+                is_pwd VARCHAR(10),
+                has_medication VARCHAR(10),
+                is_working VARCHAR(10),
+                residence_type VARCHAR(50),
+                employer_name VARCHAR(255),
+                marital_status VARCHAR(50),
+                is_gifted VARCHAR(10),
+                needs_assistance VARCHAR(10),
+                school_type VARCHAR(50),
+                year_attended VARCHAR(50),
+                special_talents TEXT,
+                is_scholar VARCHAR(10),
+                siblings TEXT,
+                goodmoral_analysis JSONB,
+                disciplinary_status VARCHAR(50),
+                goodmoral_score INTEGER DEFAULT 0,
+                has_disciplinary_record BOOLEAN DEFAULT FALSE,
+                disciplinary_details TEXT,
+                other_documents JSONB,
+                status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT one_record_per_user UNIQUE (user_id)
+            )
+        ''')
+        print("   ✅ Created records table")
+        
+        # Now add foreign key constraints to users table
+        print("🔗 Adding foreign key constraints...")
+        cur.execute('''
+            ALTER TABLE users 
+            ADD CONSTRAINT fk_users_college 
+            FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
+        ''')
+        
+        cur.execute('''
+            ALTER TABLE users 
+            ADD CONSTRAINT fk_users_program 
+            FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE SET NULL
+        ''')
+        
+        cur.execute('''
+            ALTER TABLE users 
+            ADD CONSTRAINT fk_users_created_by 
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        ''')
+        
+        print("   ✅ Added foreign key constraints")
         
         conn.commit()
-        print("✅ All columns and constraints verified")
+        print("✅ Database tables created successfully")
+        
+        # Create default super admin
+        print("👑 Creating default Super Admin...")
+        cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
+        admin_user = cur.fetchone()
+        
+        if not admin_user:
+            password_hash = hash_password(ADMIN_PASSWORD)
+            
+            cur.execute("""
+                INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                ADMIN_USERNAME,
+                password_hash,
+                'System Administrator',
+                'admin@assiscan.com',
+                'SUPER_ADMIN',
+                True,
+                False  # Super admin doesn't need password reset
+            ))
+            admin_id = cur.fetchone()[0]
+            print(f"✅ Default Super Admin created with ID: {admin_id}")
+            
+            # Insert default colleges
+            print("📝 Inserting default colleges...")
+            default_colleges = [
+                ("CCJE", "College of Criminal Justice Education", "College of Criminal Justice Education", 1),
+                ("CEAS", "College of Education, Arts and Sciences", "College of Education, Arts and Sciences", 2),
+                ("CITEC", "College of Information Technology, Entertainment and Communication", "College of IT, Entertainment & Communication", 3),
+                ("CENAR", "College of Engineering and Architecture", "College of Engineering and Architecture", 4),
+                ("CBAA", "College of Business, Accountancy and Auditing", "College of Business, Accountancy & Auditing", 5)
+            ]
+            
+            for code, name, desc, order in default_colleges:
+                cur.execute("""
+                    INSERT INTO colleges (code, name, description, display_order, created_by) 
+                    VALUES (%s, %s, %s, %s, %s) 
+                    RETURNING id
+                """, (code, name, desc, order, admin_id))
+                college_id = cur.fetchone()[0]
+                
+                # Insert default programs based on college
+                if code == "CCJE":
+                    cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                               (college_id, "Bachelor of Science in Criminology", 1, admin_id))
+                elif code == "CEAS":
+                    programs = [
+                        "Bachelor of Elementary Education",
+                        "Bachelor of Secondary Education", 
+                        "Bachelor of Science in Psychology",
+                        "Bachelor of Science in Legal Management",
+                        "Bachelor of Science in Social Work"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CITEC":
+                    programs = [
+                        "Bachelor of Science in Information Technology",
+                        "Bachelor of Arts in Multimedia Arts"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CENAR":
+                    programs = [
+                        "Bachelor of Science in Industrial Engineering",
+                        "Bachelor of Science in Computer Engineering",
+                        "Bachelor of Science in Architecture"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CBAA":
+                    programs = [
+                        "Bachelor of Science in Business Administration",
+                        "Bachelor of Science in Accountancy",
+                        "Bachelor of Science in Internal Auditing"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+            
+            print("✅ Default colleges and programs inserted")
+        else:
+            print("✅ Super Admin already exists")
+        
+        conn.commit()
+        print("🎉 Database initialization COMPLETE!")
+        return True
         
     except Exception as e:
-        print(f"❌ Error in check_and_add_columns: {e}")
+        print(f"❌ Database initialization error: {e}")
         traceback.print_exc()
         conn.rollback()
-        raise e
+        return False
+    finally:
+        cur.close()
+        conn.close()
 
-# Initialize database
-init_db()
+def check_tables_exist():
+    """Check if all required tables exist"""
+    print("🔍 Checking if tables exist...")
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Check for each table
+        tables = ['users', 'user_sessions', 'colleges', 'programs', 'records']
+        missing_tables = []
+        
+        for table in tables:
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s
+                )
+            """, (table,))
+            exists = cur.fetchone()[0]
+            
+            if not exists:
+                missing_tables.append(table)
+        
+        if missing_tables:
+            print(f"❌ Missing tables: {missing_tables}")
+            return False
+        
+        print("✅ All tables exist")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error checking tables: {e}")
+        return False
+    finally:
+        conn.close()
+
+# Initialize database on startup
+print("\n" + "="*60)
+print("🔄 DATABASE INITIALIZATION")
+print("="*60)
+
+# First check if tables exist
+if not check_tables_exist():
+    print("⚠️ Tables missing, initializing database...")
+    if init_db():
+        print("✅ Database initialization successful!")
+    else:
+        print("❌ Database initialization failed!")
+else:
+    print("✅ Database tables already exist")
 
 # ================= USER MANAGEMENT FUNCTIONS =================
 def create_session(user_id, ip_address=None, user_agent=None):
@@ -856,6 +938,71 @@ def log_request_info():
         print(f"📱 IP: {request.remote_addr}")
         print(f"{'='*60}")
 
+# ================= DATABASE INITIALIZATION ENDPOINT =================
+@app.route('/api/init-db', methods=['POST'])
+def initialize_database():
+    """Endpoint to manually initialize database"""
+    try:
+        # Simple authentication check
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or auth_header != f"Bearer {app.secret_key}":
+            return jsonify({"error": "Unauthorized"}), 401
+        
+        print("🔄 Manual database initialization requested...")
+        
+        if init_db():
+            return jsonify({
+                "status": "success",
+                "message": "Database initialized successfully"
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Database initialization failed"
+            }), 500
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/check-db', methods=['GET'])
+def check_database():
+    """Check database status"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({
+                "status": "error",
+                "message": "Cannot connect to database"
+            }), 500
+        
+        cur = conn.cursor()
+        
+        # Check if tables exist
+        tables = ['users', 'colleges', 'programs', 'records', 'user_sessions']
+        table_status = {}
+        
+        for table in tables:
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM {table}")
+                count = cur.fetchone()[0]
+                table_status[table] = {"exists": True, "count": count}
+            except Exception:
+                table_status[table] = {"exists": False, "count": 0}
+        
+        conn.close()
+        
+        return jsonify({
+            "status": "success",
+            "database": "connected",
+            "tables": table_status,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 # ================= USER AUTHENTICATION ROUTES =================
 
 @app.route('/api/login', methods=['POST'])
@@ -870,6 +1017,9 @@ def login_user():
             return jsonify({"error": "Username and password required"}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get user with password hash
@@ -883,17 +1033,19 @@ def login_user():
         user = cur.fetchone()
         
         if not user:
+            conn.close()
             return jsonify({"error": "Invalid credentials"}), 401
         
         if not user['is_active']:
+            conn.close()
             return jsonify({"error": "Account is deactivated"}), 403
         
         # Verify password using the correct verification method
         print(f"🔑 Login attempt: username={username}")
-        print(f"🔑 Stored hash: {user['password_hash']}")
         
         if not verify_password(user['password_hash'], password):
             print(f"❌ Password mismatch for user {username}")
+            conn.close()
             return jsonify({"error": "Invalid credentials"}), 401
         
         # Create session
@@ -902,11 +1054,13 @@ def login_user():
         session_token = create_session(user['id'], ip_address, user_agent)
         
         if not session_token:
+            conn.close()
             return jsonify({"error": "Failed to create session"}), 500
         
         # Update last login
         cur.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s", (user['id'],))
         conn.commit()
+        conn.close()
         
         # Set session data - ENSURE role is stored in UPPERCASE
         session['user_id'] = user['id']
@@ -941,8 +1095,6 @@ def login_user():
         print(f"❌ Login error: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
@@ -1042,6 +1194,9 @@ def change_password():
             return jsonify({"error": "Password must contain at least one number"}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get current password hash
@@ -1049,10 +1204,12 @@ def change_password():
         user = cur.fetchone()
         
         if not user:
+            conn.close()
             return jsonify({"error": "User not found"}), 404
         
         # Verify current password
         if not verify_password(user['password_hash'], current_password):
+            conn.close()
             return jsonify({"error": "Current password is incorrect"}), 401
         
         # Update to new password
@@ -1064,6 +1221,7 @@ def change_password():
         """, (new_hash, session['user_id']))
         
         conn.commit()
+        conn.close()
         
         # Update session
         session['requires_password_reset'] = False
@@ -1076,8 +1234,6 @@ def change_password():
     except Exception as e:
         print(f"❌ Password change error: {e}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/check-password-reset', methods=['GET'])
 @login_required
@@ -1085,10 +1241,15 @@ def check_password_reset():
     """Check if user needs to reset password"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("SELECT requires_password_reset FROM users WHERE id = %s", (session['user_id'],))
         user = cur.fetchone()
+        
+        conn.close()
         
         if not user:
             return jsonify({"error": "User not found"}), 404
@@ -1100,8 +1261,6 @@ def check_password_reset():
     except Exception as e:
         print(f"❌ Password reset check error: {e}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= CHANGE PASSWORD PAGE =================
 
@@ -1126,6 +1285,9 @@ def get_users():
     """Get all users (Super Admin only)"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get all users with college/program info
@@ -1143,6 +1305,8 @@ def get_users():
         
         users = cur.fetchall()
         
+        conn.close()
+        
         # Format dates
         for user in users:
             if user['last_login']:
@@ -1155,14 +1319,13 @@ def get_users():
     except Exception as e:
         print(f"❌ Get users error: {e}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/users', methods=['POST'])
 @login_required
 @permission_required('manage_users')
 def create_user():
     """Create new user (Super Admin only)"""
+    conn = None
     try:
         data = request.json
         
@@ -1176,13 +1339,17 @@ def create_user():
         if data['role'] not in ['SUPER_ADMIN', 'STUDENT']:
             return jsonify({"error": "Invalid role"}), 400
         
-        # Check if username or email already exists
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor()
         
+        # Check if username or email already exists
         cur.execute("SELECT id FROM users WHERE username = %s OR email = %s", 
                    (data['username'], data['email']))
         if cur.fetchone():
+            conn.close()
             return jsonify({"error": "Username or email already exists"}), 409
         
         # Generate temporary password
@@ -1217,6 +1384,7 @@ def create_user():
         
         new_user = cur.fetchone()
         conn.commit()
+        conn.close()
         
         # Prepare response (don't include password)
         user_response = {
@@ -1240,15 +1408,15 @@ def create_user():
         print(f"❌ Create user error: {e}")
         if conn:
             conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 @login_required
 @permission_required('manage_users')
 def update_user(user_id):
     """Update user (Super Admin only)"""
+    conn = None
     try:
         data = request.json
         
@@ -1256,6 +1424,9 @@ def update_user(user_id):
             return jsonify({"error": "No data provided"}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Check if user exists
@@ -1263,10 +1434,12 @@ def update_user(user_id):
         user = cur.fetchone()
         
         if not user:
+            conn.close()
             return jsonify({"error": "User not found"}), 404
         
         # Super Admin cannot modify their own role or status
         if user['id'] == session['user_id'] and 'role' in data:
+            conn.close()
             return jsonify({"error": "Cannot change your own role"}), 400
         
         # Build update query
@@ -1282,12 +1455,14 @@ def update_user(user_id):
             cur.execute("SELECT id FROM users WHERE email = %s AND id != %s", 
                        (data['email'], user_id))
             if cur.fetchone():
+                conn.close()
                 return jsonify({"error": "Email already in use"}), 409
             updates.append("email = %s")
             values.append(data['email'])
         
         if 'role' in data:
             if data['role'] not in ['SUPER_ADMIN', 'STUDENT']:
+                conn.close()
                 return jsonify({"error": "Invalid role"}), 400
             updates.append("role = %s")
             values.append(data['role'])
@@ -1316,6 +1491,7 @@ def update_user(user_id):
             temp_password_return = None
         
         if not updates:
+            conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
         updates.append("updated_at = CURRENT_TIMESTAMP")
@@ -1326,6 +1502,7 @@ def update_user(user_id):
         
         updated_user = cur.fetchone()
         conn.commit()
+        conn.close()
         
         # Prepare response
         user_response = {
@@ -1355,9 +1532,8 @@ def update_user(user_id):
         print(f"❌ Update user error: {e}")
         if conn:
             conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 @login_required
@@ -1370,15 +1546,20 @@ def delete_user(user_id):
             return jsonify({"error": "Cannot delete your own account"}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor()
         
         # Soft delete by setting is_active to false
         cur.execute("UPDATE users SET is_active = FALSE WHERE id = %s RETURNING id", (user_id,))
         
         if cur.rowcount == 0:
+            conn.close()
             return jsonify({"error": "User not found"}), 404
         
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1389,9 +1570,8 @@ def delete_user(user_id):
         print(f"❌ Delete user error: {e}")
         if conn:
             conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/users/<int:user_id>/activate', methods=['POST'])
 @login_required
@@ -1400,14 +1580,19 @@ def activate_user(user_id):
     """Activate user (Super Admin only)"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor()
         
         cur.execute("UPDATE users SET is_active = TRUE WHERE id = %s RETURNING id", (user_id,))
         
         if cur.rowcount == 0:
+            conn.close()
             return jsonify({"error": "User not found"}), 404
         
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1418,9 +1603,8 @@ def activate_user(user_id):
         print(f"❌ Activate user error: {e}")
         if conn:
             conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= PROFILE ROUTES =================
 
@@ -1430,6 +1614,9 @@ def get_profile():
     """Get current user profile"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
@@ -1444,6 +1631,7 @@ def get_profile():
         """, (session['user_id'],))
         
         profile = cur.fetchone()
+        conn.close()
         
         if not profile:
             return jsonify({"error": "Profile not found"}), 404
@@ -1462,13 +1650,12 @@ def get_profile():
     except Exception as e:
         print(f"❌ Get profile error: {e}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/profile', methods=['PUT'])
 @login_required
 def update_profile():
     """Update current user profile"""
+    conn = None
     try:
         data = request.json
         
@@ -1476,6 +1663,9 @@ def update_profile():
             return jsonify({"error": "No data provided"}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cur = conn.cursor()
         
         # Build update query
@@ -1491,11 +1681,13 @@ def update_profile():
             cur.execute("SELECT id FROM users WHERE email = %s AND id != %s", 
                        (data['email'], session['user_id']))
             if cur.fetchone():
+                conn.close()
                 return jsonify({"error": "Email already in use"}), 409
             updates.append("email = %s")
             values.append(data['email'])
         
         if not updates:
+            conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
         updates.append("updated_at = CURRENT_TIMESTAMP")
@@ -1506,6 +1698,7 @@ def update_profile():
         
         updated_profile = cur.fetchone()
         conn.commit()
+        conn.close()
         
         # Update session data
         if 'full_name' in data:
@@ -1528,9 +1721,8 @@ def update_profile():
         print(f"❌ Update profile error: {e}")
         if conn:
             conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= COLLEGE MANAGEMENT ROUTES =================
 
@@ -1564,12 +1756,13 @@ def get_colleges():
             """, (college['id'],))
             college['programs'] = cur.fetchall()
         
+        conn.close()
         return jsonify(colleges)
     except Exception as e:
         print(f"❌ Error getting colleges: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges/all', methods=['GET'])
 @login_required
@@ -1601,12 +1794,13 @@ def get_all_colleges():
             """, (college['id'],))
             college['programs'] = cur.fetchall()
         
+        conn.close()
         return jsonify(colleges)
     except Exception as e:
         print(f"❌ Error getting all colleges: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges', methods=['POST'])
 @login_required
@@ -1627,6 +1821,7 @@ def create_college():
         # Check if code already exists
         cur.execute("SELECT id FROM colleges WHERE code = %s", (data['code'],))
         if cur.fetchone():
+            conn.close()
             return jsonify({"error": "College code already exists"}), 409
         
         # Insert new college
@@ -1645,6 +1840,7 @@ def create_college():
         
         new_college = cur.fetchone()
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1653,10 +1849,10 @@ def create_college():
         })
     except Exception as e:
         print(f"❌ Error creating college: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges/<int:college_id>', methods=['PUT'])
 @login_required
@@ -1682,6 +1878,7 @@ def update_college(college_id):
             # Check if new code conflicts with another college
             cur.execute("SELECT id FROM colleges WHERE code = %s AND id != %s", (data['code'], college_id))
             if cur.fetchone():
+                conn.close()
                 return jsonify({"error": "College code already exists"}), 409
             updates.append("code = %s")
             values.append(data['code'])
@@ -1703,6 +1900,7 @@ def update_college(college_id):
             values.append(data['display_order'])
         
         if not updates:
+            conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
         values.append(college_id)
@@ -1711,6 +1909,7 @@ def update_college(college_id):
         cur.execute(update_query, values)
         updated_college = cur.fetchone()
         conn.commit()
+        conn.close()
         
         if not updated_college:
             return jsonify({"error": "College not found"}), 404
@@ -1722,10 +1921,10 @@ def update_college(college_id):
         })
     except Exception as e:
         print(f"❌ Error updating college: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges/<int:college_id>', methods=['DELETE'])
 @login_required
@@ -1743,9 +1942,11 @@ def delete_college(college_id):
         cur.execute("UPDATE colleges SET is_active = FALSE WHERE id = %s RETURNING id", (college_id,))
         
         if cur.rowcount == 0:
+            conn.close()
             return jsonify({"error": "College not found"}), 404
         
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1753,10 +1954,10 @@ def delete_college(college_id):
         })
     except Exception as e:
         print(f"❌ Error deleting college: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges/<int:college_id>/restore', methods=['POST'])
 @login_required
@@ -1773,9 +1974,11 @@ def restore_college(college_id):
         cur.execute("UPDATE colleges SET is_active = TRUE WHERE id = %s RETURNING id", (college_id,))
         
         if cur.rowcount == 0:
+            conn.close()
             return jsonify({"error": "College not found"}), 404
         
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1783,10 +1986,10 @@ def restore_college(college_id):
         })
     except Exception as e:
         print(f"❌ Error restoring college: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/colleges/<int:college_id>/programs', methods=['GET'])
 @login_required
@@ -1802,6 +2005,7 @@ def get_college_programs(college_id):
         # Check if college exists
         cur.execute("SELECT id FROM colleges WHERE id = %s", (college_id,))
         if not cur.fetchone():
+            conn.close()
             return jsonify({"error": "College not found"}), 404
         
         # Get all programs for this college
@@ -1813,12 +2017,13 @@ def get_college_programs(college_id):
         """, (college_id,))
         
         programs = cur.fetchall()
+        conn.close()
         return jsonify(programs)
     except Exception as e:
         print(f"❌ Error getting college programs: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/programs', methods=['POST'])
 @login_required
@@ -1839,12 +2044,14 @@ def create_program():
         # Check if college exists
         cur.execute("SELECT id FROM colleges WHERE id = %s", (data['college_id'],))
         if not cur.fetchone():
+            conn.close()
             return jsonify({"error": "College not found"}), 404
         
         # Check if program name already exists for this college
         cur.execute("SELECT id FROM programs WHERE college_id = %s AND LOWER(name) = LOWER(%s)", 
                    (data['college_id'], data['name']))
         if cur.fetchone():
+            conn.close()
             return jsonify({"error": "Program name already exists for this college"}), 409
         
         # Insert new program
@@ -1863,6 +2070,7 @@ def create_program():
         
         new_program = cur.fetchone()
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1871,10 +2079,10 @@ def create_program():
         })
     except Exception as e:
         print(f"❌ Error creating program: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/programs/<int:program_id>', methods=['PUT'])
 @login_required
@@ -1901,12 +2109,14 @@ def update_program(program_id):
             cur.execute("SELECT college_id FROM programs WHERE id = %s", (program_id,))
             result = cur.fetchone()
             if not result:
+                conn.close()
                 return jsonify({"error": "Program not found"}), 404
             
             college_id = result['college_id']
             cur.execute("SELECT id FROM programs WHERE college_id = %s AND LOWER(name) = LOWER(%s) AND id != %s", 
                        (college_id, data['name'], program_id))
             if cur.fetchone():
+                conn.close()
                 return jsonify({"error": "Program name already exists in this college"}), 409
             updates.append("name = %s")
             values.append(data['name'])
@@ -1924,6 +2134,7 @@ def update_program(program_id):
             values.append(data['display_order'])
         
         if not updates:
+            conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
         values.append(program_id)
@@ -1932,6 +2143,7 @@ def update_program(program_id):
         cur.execute(update_query, values)
         updated_program = cur.fetchone()
         conn.commit()
+        conn.close()
         
         if not updated_program:
             return jsonify({"error": "Program not found"}), 404
@@ -1943,10 +2155,10 @@ def update_program(program_id):
         })
     except Exception as e:
         print(f"❌ Error updating program: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 @app.route('/api/programs/<int:program_id>', methods=['DELETE'])
 @login_required
@@ -1963,9 +2175,11 @@ def delete_program(program_id):
         cur.execute("DELETE FROM programs WHERE id = %s RETURNING id", (program_id,))
         
         if cur.rowcount == 0:
+            conn.close()
             return jsonify({"error": "Program not found"}), 404
         
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -1973,10 +2187,10 @@ def delete_program(program_id):
         })
     except Exception as e:
         print(f"❌ Error deleting program: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= COLLEGE API FOR FRONTEND DROPDOWNS =================
 @app.route('/api/colleges-dropdown', methods=['GET'])
@@ -2008,6 +2222,8 @@ def get_colleges_dropdown():
         """)
         programs = cur.fetchall()
         
+        conn.close()
+        
         # Group programs by college_id
         programs_by_college = {}
         for program in programs:
@@ -2027,9 +2243,9 @@ def get_colleges_dropdown():
         return jsonify(colleges)
     except Exception as e:
         print(f"❌ Error getting colleges dropdown: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= FIXED: GET STUDENT RECORDS (ONE PER STUDENT) =================
 @app.route('/api/my-records', methods=['GET'])
@@ -2053,6 +2269,7 @@ def get_my_records():
         """, (session['user_id'],))
         
         rows = cur.fetchall()
+        conn.close()
         
         for r in rows:
             if r['created_at']: 
@@ -2102,9 +2319,9 @@ def get_my_records():
         })
     except Exception as e:
         print(f"❌ Error in get_my_records: {e}")
+        if conn:
+            conn.close()
         return jsonify({"records": [], "error": str(e)})
-    finally:
-        conn.close()
 
 # ================= FIXED: GET ALL RECORDS (ONE PER USER) =================
 @app.route('/get-records', methods=['GET'])
@@ -2140,9 +2357,11 @@ def get_records():
                 ORDER BY r.user_id, r.updated_at DESC
             """)
         else:
+            conn.close()
             return jsonify({"records": [], "error": "Unknown user role"})
         
         rows = cur.fetchall()
+        conn.close()
         
         for r in rows:
             if r['created_at']: 
@@ -2192,9 +2411,9 @@ def get_records():
         })
     except Exception as e:
         print(f"❌ Error in get-records: {e}")
+        if conn:
+            conn.close()
         return jsonify({"records": [], "error": str(e)})
-    finally:
-        conn.close()
 
 # ================= FIXED: SAVE RECORD ENDPOINT (UPSERT - UPDATE OR INSERT) =================
 @app.route('/save-record', methods=['POST'])
@@ -2278,7 +2497,8 @@ def save_record():
                     special_talents = %s, is_scholar = %s, siblings = %s,
                     goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
                     has_disciplinary_record = %s, disciplinary_details = %s,
-                    other_documents = %s
+                    other_documents = %s,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s
                 RETURNING id
             ''', (
@@ -2309,6 +2529,7 @@ def save_record():
             
             updated_id = cur.fetchone()[0]
             conn.commit()
+            conn.close()
             
             print(f"✅ Record UPDATED with ID: {updated_id}")
             print(f"👤 User ID: {session['user_id']}")
@@ -2407,6 +2628,7 @@ def save_record():
             
             new_id = cur.fetchone()[0]
             conn.commit()
+            conn.close()
 
             print(f"✅ Record CREATED with ID: {new_id}")
             print(f"👤 User ID: {session['user_id']}")
@@ -2436,10 +2658,8 @@ def save_record():
         traceback.print_exc()
         if conn: 
             conn.rollback()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-    finally:
-        if conn: 
             conn.close()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
 
 # ================= FIXED ROUTES WITH ROLE-BASED ACCESS =================
 
@@ -2848,6 +3068,7 @@ def upload_other_document(record_id):
         cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
                    (new_documents_json, record_id))
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -2858,9 +3079,6 @@ def upload_other_document(record_id):
     except Exception as e:
         print(f"❌ Upload error: {e}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        if conn:
-            conn.close()
 
 # ================= DELETE OTHER DOCUMENT ENDPOINT =================
 @app.route('/delete-other-document/<int:record_id>/<int:doc_id>', methods=['DELETE'])
@@ -2889,6 +3107,7 @@ def delete_other_document(record_id, doc_id):
         result = cur.fetchone()
         
         if not result or not result[0]:
+            conn.close()
             return jsonify({"error": "No documents found"}), 404
         
         existing_documents = json.loads(result[0])
@@ -2904,6 +3123,7 @@ def delete_other_document(record_id, doc_id):
                 updated_documents.append(doc)
         
         if not document_to_delete:
+            conn.close()
             return jsonify({"error": "Document not found"}), 404
         
         # Delete the file
@@ -2918,6 +3138,7 @@ def delete_other_document(record_id, doc_id):
         cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
                    (updated_documents_json, record_id))
         conn.commit()
+        conn.close()
         
         return jsonify({
             "status": "success",
@@ -2925,10 +3146,9 @@ def delete_other_document(record_id, doc_id):
         })
     except Exception as e:
         print(f"❌ Delete error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
         if conn:
             conn.close()
+        return jsonify({"error": str(e)}), 500
 
 # ================= EXISTING FORM 137 ENDPOINT =================
 @app.route('/extract-form137', methods=['POST'])
@@ -3033,15 +3253,18 @@ def send_email_only(record_id):
         record = cur.fetchone()
         
         if not record:
+            conn.close()
             return jsonify({"error": "Record not found"}), 404
         
         if record.get('email_sent'):
+            conn.close()
             return jsonify({"warning": "Email has already been sent"}), 400
         
         email_addr = record['email']
         student_name = record['name']
         
         if not email_addr:
+            conn.close()
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Sending email for record ID: {record_id}")
@@ -3059,6 +3282,7 @@ def send_email_only(record_id):
                 WHERE id = %s
             """, (record_id,))
             conn.commit()
+            conn.close()
             
             print(f"✅ Email sent for ID: {record_id}")
             return jsonify({
@@ -3067,6 +3291,7 @@ def send_email_only(record_id):
                 "record_id": record_id
             })
         else:
+            conn.close()
             return jsonify({
                 "status": "error",
                 "error": "Failed to send email."
@@ -3075,10 +3300,8 @@ def send_email_only(record_id):
         print(f"❌ EMAIL SEND ERROR: {e}")
         if conn:
             conn.rollback()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-    finally:
-        if conn:
             conn.close()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
 
 @app.route('/resend-email/<int:record_id>', methods=['POST'])
 @login_required
@@ -3111,12 +3334,14 @@ def resend_email(record_id):
         record = cur.fetchone()
         
         if not record:
+            conn.close()
             return jsonify({"error": "Record not found"}), 404
         
         email_addr = record['email']
         student_name = record['name']
         
         if not email_addr:
+            conn.close()
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Resending email for ID: {record_id}")
@@ -3134,6 +3359,7 @@ def resend_email(record_id):
                 WHERE id = %s
             """, (record_id,))
             conn.commit()
+            conn.close()
             
             print(f"✅ Email resent for ID: {record_id}")
             return jsonify({
@@ -3142,6 +3368,7 @@ def resend_email(record_id):
                 "record_id": record_id
             })
         else:
+            conn.close()
             return jsonify({
                 "status": "error",
                 "error": "Failed to send email."
@@ -3150,10 +3377,8 @@ def resend_email(record_id):
         print(f"❌ EMAIL RESEND ERROR: {e}")
         if conn:
             conn.rollback()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-    finally:
-        if conn:
             conn.close()
+        return jsonify({"status": "error", "error": str(e)[:200]}), 500
 
 # ================= OTHER ENDPOINTS =================
 @app.route('/uploads/<path:filename>')
@@ -3225,6 +3450,7 @@ def view_form(record_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
         record = cur.fetchone()
+        conn.close()
         
         if record:
             if record.get('birthdate'):
@@ -3259,8 +3485,6 @@ def view_form(record_id):
             return "Record not found", 404
     except Exception as e:
         return f"Error loading form: {str(e)}", 500
-    finally:
-        conn.close()
 
 @app.route('/upload-additional', methods=['POST'])
 @login_required
@@ -3316,12 +3540,13 @@ def upload_additional():
         
         cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
         conn.commit()
+        conn.close()
         return jsonify({"status": "success", "message": "File uploaded successfully"})
     except Exception as e:
         print(f"❌ Upload error: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally: 
-        conn.close()
 
 @app.route('/delete-record/<int:record_id>', methods=['DELETE'])
 @login_required
@@ -3333,11 +3558,12 @@ def delete_record(record_id):
         cur = conn.cursor()
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
         conn.commit()
+        conn.close()
         return jsonify({"success": True})
     except Exception as e:
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally: 
-        conn.close()
 
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
 @login_required
@@ -3360,6 +3586,7 @@ def check_email_status(record_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT email_sent, email_sent_at FROM records WHERE id = %s", (record_id,))
         record = cur.fetchone()
+        conn.close()
         
         if record:
             email_sent_at = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S') if record['email_sent_at'] else None
@@ -3370,9 +3597,9 @@ def check_email_status(record_id):
         else:
             return jsonify({"error": "Record not found"}), 404
     except Exception as e:
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= HEALTH AND DIAGNOSTIC ENDPOINTS =================
 @app.route('/health', methods=['GET'])
@@ -3466,9 +3693,11 @@ def get_single_record(record_id):
             # Super Admin can see all records
             cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
         else:
+            conn.close()
             return jsonify({"error": "Unauthorized"}), 403
         
         record = cur.fetchone()
+        conn.close()
         
         if not record:
             return jsonify({"error": "Record not found"}), 404
@@ -3514,16 +3743,16 @@ def get_single_record(record_id):
         return jsonify({"record": record})
     except Exception as e:
         print(f"❌ Error in get_single_record: {e}")
+        if conn:
+            conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH ONE RECORD PER USER FIX")
+    print("🚀 ASSISCAN WITH COMPLETE DATABASE REINITIALIZATION")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3535,20 +3764,36 @@ if __name__ == '__main__':
     print("   • SUPER_ADMIN: Full system access")
     print("   • STUDENT: Scanner access + View own records + Download documents")
     print("="*60)
-    print("🔄 FIXED FEATURES:")
+    print("✅ FIXED FEATURES:")
+    print("   • Database tables will be recreated on startup")
     print("   • ONE RECORD PER USER enforced")
-    print("   • Students can UPDATE existing records")
-    print("   • Admin sees ONE record per student")
-    print("   • No duplicate entries anymore")
+    print("   • Foreign key constraints properly set")
+    print("   • Default admin user created")
     print("="*60)
     print("🔐 SECURITY FEATURES:")
     print("   • Role-based access control")
     print("   • Students can only access their own records")
     print("   • Document access permissions")
     print("="*60)
+    print("🔄 DATABASE STATUS:")
+    print("   • Checking table existence...")
+    
+    # Verify tables exist
+    if not check_tables_exist():
+        print("   ⚠️ Tables missing, initializing database...")
+        if init_db():
+            print("   ✅ Database initialized successfully!")
+        else:
+            print("   ❌ Database initialization failed!")
+    else:
+        print("   ✅ All tables exist")
     
     if os.path.exists(UPLOAD_FOLDER):
         file_count = len([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])
         print(f"📊 Uploads folder contains {file_count} files")
+    
+    print("="*60)
+    print(f"🌐 Server starting on port {port}")
+    print("="*60)
     
     app.run(host='0.0.0.0', port=port, debug=False)
