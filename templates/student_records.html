@@ -524,16 +524,19 @@
             border: 1px solid #dc3545;
         }
 
+        /* Document Previews */
         .document-preview {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-top: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
         }
 
         .document-thumbnail {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             border-radius: 4px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border-color);
@@ -543,11 +546,13 @@
             cursor: pointer;
             transition: var(--transition);
             overflow: hidden;
+            position: relative;
         }
 
         .document-thumbnail:hover {
             transform: scale(1.05);
             border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
         }
 
         .document-thumbnail img {
@@ -557,8 +562,23 @@
         }
 
         .document-thumbnail i {
-            font-size: 24px;
+            font-size: 30px;
             color: var(--gold);
+        }
+
+        .document-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--gold);
+            font-size: 8px;
+            text-align: center;
+            padding: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .record-actions {
@@ -612,19 +632,6 @@
             background: rgba(212, 175, 55, 0.1);
             border-color: var(--gold);
             transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: rgba(40, 167, 69, 0.15);
-            color: #28a745;
-            border: 1px solid #28a745;
-        }
-
-        .btn-success:hover {
-            background: #28a745;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
 
         /* ===== EMPTY STATE ===== */
@@ -799,23 +806,27 @@
         }
 
         .image-viewer-content {
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 95vw;
+            max-height: 95vh;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .image-viewer-content img {
             max-width: 100%;
-            max-height: 90vh;
+            max-height: 85vh;
             object-fit: contain;
             border: 2px solid var(--gold);
             border-radius: 4px;
+            box-shadow: var(--shadow-lg);
         }
 
         .image-viewer-close {
             position: absolute;
-            top: -40px;
-            right: -40px;
+            top: -45px;
+            right: -45px;
             background: rgba(212, 175, 55, 0.2);
             border: 1px solid var(--gold);
             color: var(--gold);
@@ -868,6 +879,11 @@
             background: rgba(212, 175, 55, 0.2);
         }
 
+        .image-viewer-nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
         /* ===== DOCUMENTS SECTION ===== */
         .documents-section {
             margin-top: 30px;
@@ -893,7 +909,7 @@
 
         .document-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 15px;
         }
 
@@ -914,7 +930,7 @@
 
         .document-preview-img {
             width: 100%;
-            height: 150px;
+            height: 120px;
             background: #1a1a1a;
             display: flex;
             align-items: center;
@@ -929,7 +945,7 @@
         }
 
         .document-preview-img i {
-            font-size: 48px;
+            font-size: 40px;
             color: var(--gold);
         }
 
@@ -944,6 +960,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: var(--gold);
         }
 
         .document-filename {
@@ -966,6 +983,45 @@
             padding: 6px;
             font-size: 10px;
             min-height: 32px;
+        }
+
+        /* ===== DETAILS GRID ===== */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .details-group {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .details-group h4 {
+            color: var(--gold);
+            font-size: 14px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .details-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .details-label {
+            width: 40%;
+            color: var(--text-muted);
+        }
+
+        .details-value {
+            width: 60%;
+            color: var(--text-light);
+            font-weight: 500;
         }
 
         /* ===== NOTIFICATION ===== */
@@ -1009,14 +1065,6 @@
             color: white;
             border-left: 4px solid #17a2b8;
             border: 1px solid #17a2b8;
-        }
-
-        /* ===== PDF VIEWER ===== */
-        .pdf-viewer {
-            width: 100%;
-            height: 70vh;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
         }
 
         /* ===== RESPONSIVE DESIGN ===== */
@@ -1102,7 +1150,7 @@
             }
             
             .document-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             }
             
             .image-viewer-close {
@@ -1112,6 +1160,10 @@
             
             .image-viewer-nav {
                 bottom: 20px;
+            }
+            
+            .details-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1189,6 +1241,11 @@
                 gap: 10px;
                 padding: 8px 15px;
             }
+            
+            .document-thumbnail {
+                width: 60px;
+                height: 60px;
+            }
         }
 
         /* Touch-friendly improvements */
@@ -1199,30 +1256,28 @@
         .nav-link,
         .filter-btn,
         .close-modal,
-        .document-card {
+        .document-card,
+        .document-thumbnail {
             min-height: 44px;
             min-width: 44px;
         }
         
         select, 
         input {
-            font-size: 16px; /* Prevents iOS zoom on focus */
+            font-size: 16px;
         }
         
-        /* Prevent text size adjustment */
         html {
             -webkit-text-size-adjust: 100%;
             -moz-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
         
-        /* Improve scrolling on iOS */
         .modal-container,
         .records-grid {
             -webkit-overflow-scrolling: touch;
         }
         
-        /* Hide scrollbar for cleaner look */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -1282,8 +1337,8 @@
             </div>
         </header>
 
-        <!-- STATS -->
-        <div class="stats-container">
+        <!-- STATS (Only show if there's data) -->
+        <div class="stats-container" id="statsContainer" style="display: none;">
             <div class="stat-card">
                 <div class="stat-icon">
                     <i class="fas fa-file-alt"></i>
@@ -1322,8 +1377,8 @@
             </div>
         </div>
 
-        <!-- SEARCH AND FILTER -->
-        <div class="search-filter-container">
+        <!-- SEARCH AND FILTER (Only show if there's data) -->
+        <div class="search-filter-container" id="searchFilterContainer" style="display: none;">
             <div class="search-box">
                 <i class="fas fa-search"></i>
                 <input type="text" id="searchInput" placeholder="Search records by name, college, or program...">
@@ -1360,8 +1415,9 @@
                 <img id="viewerImage" src="" alt="Document Preview">
                 <button class="image-viewer-close" onclick="closeImageViewer(event)">&times;</button>
                 <div class="image-viewer-nav">
-                    <button onclick="navigateImage(-1)"><i class="fas fa-chevron-left"></i></button>
-                    <button onclick="navigateImage(1)"><i class="fas fa-chevron-right"></i></button>
+                    <button id="prevImageBtn" onclick="navigateImage(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <span id="imageCounter" style="color: var(--gold); font-size: 14px; display: flex; align-items: center;">1/1</span>
+                    <button id="nextImageBtn" onclick="navigateImage(1)"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
         </div>
@@ -1455,10 +1511,12 @@
                 }
                 
                 // Left/right arrow keys for image navigation
-                if (event.key === 'ArrowLeft') {
-                    navigateImage(-1);
-                } else if (event.key === 'ArrowRight') {
-                    navigateImage(1);
+                if (document.getElementById('imageViewerModal').style.display === 'flex') {
+                    if (event.key === 'ArrowLeft') {
+                        navigateImage(-1);
+                    } else if (event.key === 'ArrowRight') {
+                        navigateImage(1);
+                    }
                 }
             });
         }
@@ -1516,13 +1574,21 @@
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
                     console.error('Non-JSON response:', text.substring(0, 200));
-                    throw new Error('Server returned non-JSON response. Possible 404 or server error.');
+                    throw new Error('Server returned non-JSON response');
                 }
                 
                 if (response.ok) {
                     const data = await response.json();
                     recordsData = data.records || [];
-                    updateStats();
+                    
+                    // Show/hide elements based on data presence
+                    const hasData = recordsData.length > 0;
+                    document.getElementById('statsContainer').style.display = hasData ? 'grid' : 'none';
+                    document.getElementById('searchFilterContainer').style.display = hasData ? 'flex' : 'none';
+                    
+                    if (hasData) {
+                        updateStats();
+                    }
                     renderRecords(recordsData);
                 } else {
                     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -1546,7 +1612,6 @@
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Connection Error</h3>
                         <p>Unable to connect to the server. Please check your connection.</p>
-                        <p class="error-detail" style="font-size: 12px; color: #ff6b6b; margin-top: 10px;">${error.message}</p>
                         <button class="btn btn-primary" onclick="loadMyRecords()">
                             <i class="fas fa-sync-alt"></i> Retry
                         </button>
@@ -1580,6 +1645,19 @@
             document.getElementById('emailsSent').textContent = emailsSent;
             document.getElementById('goodRecords').textContent = goodRecords;
             document.getElementById('lastSubmission').textContent = lastSubmission;
+        }
+
+        // Helper function to check if value exists and is not empty
+        function hasValue(value) {
+            return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+        }
+
+        // Helper function to format value
+        function formatValue(value, defaultValue = 'Not Provided') {
+            if (hasValue(value)) {
+                return value;
+            }
+            return null;
         }
 
         // Render records
@@ -1647,54 +1725,67 @@
                     day: 'numeric'
                 });
                 
-                // Count documents
-                const documentCount = countDocuments(record);
-                
                 // Get document previews
                 const documentPreviews = getDocumentPreviews(record);
+                
+                // Only show fields that have values
+                const college = formatValue(record.college);
+                const program = formatValue(record.program);
+                const schoolYear = formatValue(record.school_year);
+                const lrn = formatValue(record.lrn);
                 
                 return `
                 <div class="record-card" data-id="${record.id}">
                     <div class="record-card-header">
                         <div class="record-info">
                             <span class="record-id">ID: ${record.id}</span>
-                            <h3>${record.name}</h3>
+                            <h3>${record.name || 'Unknown'}</h3>
                             <div class="record-subtitle">
                                 <i class="fas fa-calendar-alt"></i> ${formattedDate}
                             </div>
-                            <div class="record-subtitle">
-                                <i class="fas fa-university"></i> ${record.college || 'No College'}
-                            </div>
+                            ${college ? `
+                                <div class="record-subtitle">
+                                    <i class="fas fa-university"></i> ${college}
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="record-status ${statusClass}">${statusText}</div>
                     </div>
                     
                     <div class="record-card-body">
                         <div class="record-details">
-                            <div class="detail-item">
-                                <span class="detail-label">School Year</span>
-                                <span class="detail-value">${record.school_year || 'N/A'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Program</span>
-                                <span class="detail-value">${record.program || 'N/A'}</span>
-                            </div>
+                            ${schoolYear ? `
+                                <div class="detail-item">
+                                    <span class="detail-label">School Year</span>
+                                    <span class="detail-value">${schoolYear}</span>
+                                </div>
+                            ` : ''}
+                            
+                            ${program ? `
+                                <div class="detail-item">
+                                    <span class="detail-label">Program</span>
+                                    <span class="detail-value">${program}</span>
+                                </div>
+                            ` : ''}
+                            
+                            ${lrn ? `
+                                <div class="detail-item">
+                                    <span class="detail-label">LRN</span>
+                                    <span class="detail-value">${lrn}</span>
+                                </div>
+                            ` : ''}
+                            
                             <div class="detail-item">
                                 <span class="detail-label">Good Moral Status</span>
                                 <span class="detail-value">${goodmoralBadge || 'Not Scanned'}</span>
                             </div>
+                            
                             <div class="detail-item">
                                 <span class="detail-label">Email Status</span>
                                 <span class="detail-value">
                                     ${record.email_sent ? 
                                         `<i class="fas fa-check-circle" style="color: #28a745;"></i> Sent` : 
                                         `<i class="fas fa-clock" style="color: #ffc107;"></i> Pending`}
-                                </span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Documents</span>
-                                <span class="detail-value">
-                                    <i class="fas fa-paperclip"></i> ${documentCount} file(s)
                                 </span>
                             </div>
                         </div>
@@ -1707,7 +1798,7 @@
                                 <i class="fas fa-eye"></i> View Details
                             </button>
                             <button class="btn btn-secondary" onclick="viewAllDocuments(${record.id})">
-                                <i class="fas fa-images"></i> All Documents
+                                <i class="fas fa-images"></i> Documents
                             </button>
                         </div>
                     </div>
@@ -1720,48 +1811,42 @@
         function getDocumentPreviews(record) {
             const previews = [];
             const maxPreviews = 4;
+            let previewCount = 0;
             
-            // Check each document type
-            const docTypes = [
-                { field: 'image_path', icon: 'fa-id-card', label: 'PSA' },
-                { field: 'form137_path', icon: 'fa-file-contract', label: 'Form 137' },
-                { field: 'form138_path', icon: 'fa-file-invoice', label: 'Form 138' },
-                { field: 'goodmoral_path', icon: 'fa-award', label: 'Good Moral' }
-            ];
-            
-            for (let type of docTypes) {
-                if (record[type.field]) {
-                    const paths = record[type.field].split(',');
-                    for (let i = 0; i < Math.min(paths.length, maxPreviews - previews.length); i++) {
-                        if (paths[i].trim()) {
-                            const isImage = paths[i].match(/\.(jpg|jpeg|png|gif)$/i);
-                            previews.push(`
-                                <div class="document-thumbnail" onclick="openDocument('${record.server_url}/uploads/${paths[i].trim()}', '${isImage ? 'image' : 'pdf'}')">
-                                    ${isImage ? 
-                                        `<img src="${record.server_url}/uploads/${paths[i].trim()}" alt="${type.label}">` : 
-                                        `<i class="fas fa-file-pdf"></i>`
-                                    }
-                                </div>
-                            `);
+            // Helper function to add preview
+            function addPreview(path, label, type) {
+                if (!path || previewCount >= maxPreviews) return;
+                
+                const cleanPath = path.split(',')[0].trim();
+                if (!cleanPath) return;
+                
+                const isImage = cleanPath.match(/\.(jpg|jpeg|png|gif)$/i);
+                const fullUrl = `${window.location.origin}/uploads/${cleanPath}`;
+                
+                previews.push(`
+                    <div class="document-thumbnail" onclick="openDocument('${fullUrl}', '${isImage ? 'image' : 'pdf'}', '${label}')" title="${label}">
+                        ${isImage ? 
+                            `<img src="${fullUrl}" alt="${label}" onerror="this.onerror=null; this.src=''; this.parentNode.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : 
+                            `<i class="fas fa-file-pdf"></i>`
                         }
-                    }
-                }
+                        <span class="document-label">${label}</span>
+                    </div>
+                `);
+                previewCount++;
             }
             
-            // Check other documents
-            if (record.other_documents && record.other_documents.length > 0) {
-                for (let i = 0; i < Math.min(record.other_documents.length, maxPreviews - previews.length); i++) {
-                    const doc = record.other_documents[i];
+            // Add document previews
+            addPreview(record.image_path, 'PSA', 'psa');
+            addPreview(record.form137_path, 'Form 137', 'f137');
+            addPreview(record.form138_path, 'Form 138', 'f138');
+            addPreview(record.goodmoral_path, 'Good Moral', 'gm');
+            
+            // Add other documents
+            if (record.other_documents && Array.isArray(record.other_documents)) {
+                for (let doc of record.other_documents) {
+                    if (previewCount >= maxPreviews) break;
                     if (doc.filename) {
-                        const isImage = doc.filename.match(/\.(jpg|jpeg|png|gif)$/i);
-                        previews.push(`
-                            <div class="document-thumbnail" onclick="openDocument('${record.server_url}/uploads/${doc.filename}', '${isImage ? 'image' : 'pdf'}')">
-                                ${isImage ? 
-                                    `<img src="${record.server_url}/uploads/${doc.filename}" alt="${doc.title || 'Document'}">` : 
-                                    `<i class="fas fa-file-pdf"></i>`
-                                }
-                            </div>
-                        `);
+                        addPreview(doc.filename, doc.title || 'Document', 'other');
                     }
                 }
             }
@@ -1770,9 +1855,10 @@
                 return `
                     <div class="document-preview">
                         ${previews.join('')}
-                        ${countDocuments(record) > maxPreviews ? 
-                            `<div class="document-thumbnail" onclick="viewAllDocuments(${record.id})">
+                        ${getDocumentCount(record) > maxPreviews ? 
+                            `<div class="document-thumbnail" onclick="viewAllDocuments(${record.id})" title="View all documents">
                                 <i class="fas fa-ellipsis-h"></i>
+                                <span class="document-label">More</span>
                             </div>` : ''
                         }
                     </div>
@@ -1782,8 +1868,8 @@
             return '';
         }
 
-        // Count documents in a record
-        function countDocuments(record) {
+        // Count total documents
+        function getDocumentCount(record) {
             let count = 0;
             
             if (record.image_path) count += record.image_path.split(',').filter(p => p.trim()).length;
@@ -1834,21 +1920,22 @@
         }
 
         // Setup search
-        document.getElementById('searchInput').addEventListener('input', function() {
+        document.getElementById('searchInput')?.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
             
             if (searchTerm === '') {
-                filterRecords('all');
+                renderRecords(recordsData);
                 return;
             }
             
             const filteredRecords = recordsData.filter(record => {
-                const nameMatch = record.name.toLowerCase().includes(searchTerm);
-                const collegeMatch = record.college?.toLowerCase().includes(searchTerm) || false;
-                const programMatch = record.program?.toLowerCase().includes(searchTerm) || false;
-                const schoolYearMatch = record.school_year?.toLowerCase().includes(searchTerm) || false;
+                const nameMatch = (record.name || '').toLowerCase().includes(searchTerm);
+                const collegeMatch = (record.college || '').toLowerCase().includes(searchTerm);
+                const programMatch = (record.program || '').toLowerCase().includes(searchTerm);
+                const schoolYearMatch = (record.school_year || '').toLowerCase().includes(searchTerm);
+                const lrnMatch = (record.lrn || '').toLowerCase().includes(searchTerm);
                 
-                return nameMatch || collegeMatch || programMatch || schoolYearMatch;
+                return nameMatch || collegeMatch || programMatch || schoolYearMatch || lrnMatch;
             });
             
             renderRecords(filteredRecords);
@@ -1878,7 +1965,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showDocumentsModal(data.documents, recordId, data.server_url);
+                    showDocumentsModal(data.documents, recordId);
                 } else {
                     showNotification('Failed to load documents', 'error');
                 }
@@ -1888,12 +1975,44 @@
             }
         }
 
-        // Open document (image or PDF)
-        function openDocument(url, type) {
+        // Open document
+        function openDocument(url, type, label) {
             if (type === 'image') {
-                // Open in image viewer
-                currentImages = [url];
-                currentImageIndex = 0;
+                // Collect all images from the current record for navigation
+                const currentRecord = recordsData[0]; // Since student only has one record
+                currentImages = [];
+                
+                function addImageFromPath(path) {
+                    if (path) {
+                        const paths = path.split(',');
+                        paths.forEach(p => {
+                            if (p.trim() && p.trim().match(/\.(jpg|jpeg|png|gif)$/i)) {
+                                currentImages.push(`${window.location.origin}/uploads/${p.trim()}`);
+                            }
+                        });
+                    }
+                }
+                
+                addImageFromPath(currentRecord.image_path);
+                addImageFromPath(currentRecord.form137_path);
+                addImageFromPath(currentRecord.form138_path);
+                addImageFromPath(currentRecord.goodmoral_path);
+                
+                if (currentRecord.other_documents && Array.isArray(currentRecord.other_documents)) {
+                    currentRecord.other_documents.forEach(doc => {
+                        if (doc.filename && doc.filename.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                            currentImages.push(`${window.location.origin}/uploads/${doc.filename}`);
+                        }
+                    });
+                }
+                
+                // Find index of current image
+                currentImageIndex = currentImages.indexOf(url);
+                if (currentImageIndex === -1) {
+                    currentImages = [url];
+                    currentImageIndex = 0;
+                }
+                
                 showImageViewer(url);
             } else {
                 // Open PDF in new tab
@@ -1905,9 +2024,24 @@
         function showImageViewer(imageUrl) {
             const viewer = document.getElementById('imageViewerModal');
             const img = document.getElementById('viewerImage');
+            const prevBtn = document.getElementById('prevImageBtn');
+            const nextBtn = document.getElementById('nextImageBtn');
+            const counter = document.getElementById('imageCounter');
+            
             img.src = imageUrl;
             viewer.style.display = 'flex';
             document.body.style.overflow = 'hidden';
+            
+            // Update navigation buttons
+            if (currentImages.length > 1) {
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+                counter.textContent = `${currentImageIndex + 1}/${currentImages.length}`;
+            } else {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                counter.textContent = '1/1';
+            }
         }
 
         // Close image viewer
@@ -1928,9 +2062,10 @@
             if (currentImageIndex >= currentImages.length) currentImageIndex = 0;
             
             document.getElementById('viewerImage').src = currentImages[currentImageIndex];
+            document.getElementById('imageCounter').textContent = `${currentImageIndex + 1}/${currentImages.length}`;
         }
 
-        // Show record modal
+        // Show record modal - Only show fields with data
         function showRecordModal(record) {
             const modalContent = document.getElementById('recordModalContent');
             
@@ -1955,105 +2090,186 @@
                 goodmoralInfo = record.disciplinary_status;
             }
             
-            modalContent.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-user-circle"></i> Student Information
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Full Name</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.name}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">School Year</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.school_year || 'N/A'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">College</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.college || 'N/A'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Program</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.program || 'N/A'}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-info-circle"></i> Record Details
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Record ID</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.id}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Submission Date</div>
-                            <div style="font-weight: 500; font-size: 14px;">${formattedDate}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Student Type</div>
-                            <div style="font-weight: 500; font-size: 14px;">${record.student_type || 'N/A'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Email Status</div>
-                            <div style="font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 5px;">
-                                ${record.email_sent ? 
-                                    `<i class="fas fa-check-circle" style="color: #28a745;"></i> Sent on ${new Date(record.email_sent_at).toLocaleDateString()}` : 
-                                    `<i class="fas fa-clock" style="color: #ffc107;"></i> Pending`}
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Good Moral Score</div>
-                            <div style="font-weight: 500; font-size: 14px;">${goodmoralInfo}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                    <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
-                            Close
-                        </button>
-                        <button class="btn btn-primary" onclick="viewAllDocuments(${record.id})" style="padding: 8px 20px;">
-                            <i class="fas fa-images"></i> View All Documents
-                        </button>
-                    </div>
-                </div>
-            `;
+            // Build HTML only for fields with data
+            let html = '<div class="details-grid">';
             
+            // Personal Information
+            let personalInfo = '';
+            if (record.name || record.sex || record.birthdate || record.age || record.civil_status || record.nationality || record.religion) {
+                personalInfo += '<div class="details-group"><h4><i class="fas fa-user"></i> Personal Information</h4>';
+                if (record.name) personalInfo += `<div class="details-row"><span class="details-label">Full Name</span><span class="details-value">${record.name}</span></div>`;
+                if (record.sex) personalInfo += `<div class="details-row"><span class="details-label">Sex</span><span class="details-value">${record.sex}</span></div>`;
+                if (record.birthdate) personalInfo += `<div class="details-row"><span class="details-label">Birthdate</span><span class="details-value">${record.birthdate}</span></div>`;
+                if (record.age) personalInfo += `<div class="details-row"><span class="details-label">Age</span><span class="details-value">${record.age}</span></div>`;
+                if (record.birthplace) personalInfo += `<div class="details-row"><span class="details-label">Birthplace</span><span class="details-value">${record.birthplace}</span></div>`;
+                if (record.civil_status) personalInfo += `<div class="details-row"><span class="details-label">Civil Status</span><span class="details-value">${record.civil_status}</span></div>`;
+                if (record.nationality) personalInfo += `<div class="details-row"><span class="details-label">Nationality</span><span class="details-value">${record.nationality}</span></div>`;
+                if (record.religion) personalInfo += `<div class="details-row"><span class="details-label">Religion</span><span class="details-value">${record.religion}</span></div>`;
+                personalInfo += '</div>';
+                html += personalInfo;
+            }
+            
+            // Contact Information
+            let contactInfo = '';
+            if (record.email || record.mobile_no || record.province || record.specific_address) {
+                contactInfo += '<div class="details-group"><h4><i class="fas fa-address-book"></i> Contact Information</h4>';
+                if (record.email) contactInfo += `<div class="details-row"><span class="details-label">Email</span><span class="details-value">${record.email}</span></div>`;
+                if (record.mobile_no) contactInfo += `<div class="details-row"><span class="details-label">Mobile</span><span class="details-value">${record.mobile_no}</span></div>`;
+                if (record.province) contactInfo += `<div class="details-row"><span class="details-label">Province</span><span class="details-value">${record.province}</span></div>`;
+                if (record.specific_address) contactInfo += `<div class="details-row"><span class="details-label">Address</span><span class="details-value">${record.specific_address}</span></div>`;
+                contactInfo += '</div>';
+                html += contactInfo;
+            }
+            
+            // Academic Information
+            let academicInfo = '';
+            if (record.lrn || record.school_name || record.school_year || record.student_type || record.college || record.program || record.final_general_average) {
+                academicInfo += '<div class="details-group"><h4><i class="fas fa-graduation-cap"></i> Academic Information</h4>';
+                if (record.lrn) academicInfo += `<div class="details-row"><span class="details-label">LRN</span><span class="details-value">${record.lrn}</span></div>`;
+                if (record.school_name) academicInfo += `<div class="details-row"><span class="details-label">School</span><span class="details-value">${record.school_name}</span></div>`;
+                if (record.school_year) academicInfo += `<div class="details-row"><span class="details-label">School Year</span><span class="details-value">${record.school_year}</span></div>`;
+                if (record.student_type) academicInfo += `<div class="details-row"><span class="details-label">Student Type</span><span class="details-value">${record.student_type}</span></div>`;
+                if (record.college) academicInfo += `<div class="details-row"><span class="details-label">College</span><span class="details-value">${record.college}</span></div>`;
+                if (record.program) academicInfo += `<div class="details-row"><span class="details-label">Program</span><span class="details-value">${record.program}</span></div>`;
+                if (record.final_general_average) academicInfo += `<div class="details-row"><span class="details-label">Average</span><span class="details-value">${record.final_general_average}</span></div>`;
+                academicInfo += '</div>';
+                html += academicInfo;
+            }
+            
+            // Parent Information
+            let parentInfo = '';
+            if (record.mother_name || record.father_name || record.guardian_name) {
+                parentInfo += '<div class="details-group"><h4><i class="fas fa-users"></i> Parent/Guardian Information</h4>';
+                if (record.mother_name) parentInfo += `<div class="details-row"><span class="details-label">Mother</span><span class="details-value">${record.mother_name}</span></div>`;
+                if (record.mother_contact) parentInfo += `<div class="details-row"><span class="details-label">Mother Contact</span><span class="details-value">${record.mother_contact}</span></div>`;
+                if (record.father_name) parentInfo += `<div class="details-row"><span class="details-label">Father</span><span class="details-value">${record.father_name}</span></div>`;
+                if (record.father_contact) parentInfo += `<div class="details-row"><span class="details-label">Father Contact</span><span class="details-value">${record.father_contact}</span></div>`;
+                if (record.guardian_name) parentInfo += `<div class="details-row"><span class="details-label">Guardian</span><span class="details-value">${record.guardian_name}</span></div>`;
+                parentInfo += '</div>';
+                html += parentInfo;
+            }
+            
+            // Record Information
+            let recordInfo = '<div class="details-group"><h4><i class="fas fa-info-circle"></i> Record Information</h4>';
+            recordInfo += `<div class="details-row"><span class="details-label">Record ID</span><span class="details-value">${record.id}</span></div>`;
+            recordInfo += `<div class="details-row"><span class="details-label">Submitted</span><span class="details-value">${formattedDate}</span></div>`;
+            recordInfo += `<div class="details-row"><span class="details-label">Email Status</span><span class="details-value">${record.email_sent ? 'Sent' : 'Pending'}</span></div>`;
+            recordInfo += `<div class="details-row"><span class="details-label">Good Moral</span><span class="details-value">${goodmoralInfo}</span></div>`;
+            recordInfo += '</div>';
+            html += recordInfo;
+            
+            html += '</div>';
+            
+            // Add Documents Preview
+            const documents = getDocumentsList(record);
+            if (documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-file-alt"></i> Documents</h4>
+                        <div class="document-grid">
+                            ${documents.join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = html;
             openModal('recordModal');
         }
 
+        // Get documents list for modal
+        function getDocumentsList(record) {
+            const docs = [];
+            
+            function addDocument(path, title, icon) {
+                if (!path) return;
+                const paths = path.split(',');
+                paths.forEach((p, index) => {
+                    if (p.trim()) {
+                        const isImage = p.trim().match(/\.(jpg|jpeg|png|gif)$/i);
+                        const url = `${window.location.origin}/uploads/${p.trim()}`;
+                        docs.push(`
+                            <div class="document-card" onclick="openDocument('${url}', '${isImage ? 'image' : 'pdf'}', '${title}')">
+                                <div class="document-preview-img">
+                                    ${isImage ? 
+                                        `<img src="${url}" alt="${title}" onerror="this.onerror=null; this.src=''; this.parentNode.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : 
+                                        `<i class="fas fa-file-pdf"></i>`
+                                    }
+                                </div>
+                                <div class="document-info">
+                                    <div class="document-title">${title}${paths.length > 1 ? ` ${index + 1}` : ''}</div>
+                                    <div class="document-filename">${p.trim().substring(0, 20)}...</div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            addDocument(record.image_path, 'PSA Certificate', 'id-card');
+            addDocument(record.form137_path, 'Form 137', 'file-contract');
+            addDocument(record.form138_path, 'Form 138', 'file-invoice');
+            addDocument(record.goodmoral_path, 'Good Moral', 'certificate');
+            
+            if (record.other_documents && Array.isArray(record.other_documents)) {
+                record.other_documents.forEach((doc, index) => {
+                    if (doc.filename) {
+                        const isImage = doc.filename.match(/\.(jpg|jpeg|png|gif)$/i);
+                        const url = `${window.location.origin}/uploads/${doc.filename}`;
+                        docs.push(`
+                            <div class="document-card" onclick="openDocument('${url}', '${isImage ? 'image' : 'pdf'}', '${doc.title || 'Document'}')">
+                                <div class="document-preview-img">
+                                    ${isImage ? 
+                                        `<img src="${url}" alt="${doc.title || 'Document'}" onerror="this.onerror=null; this.src=''; this.parentNode.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : 
+                                        `<i class="fas fa-file-pdf"></i>`
+                                    }
+                                </div>
+                                <div class="document-info">
+                                    <div class="document-title">${doc.title || 'Document'}${record.other_documents.length > 1 ? ` ${index + 1}` : ''}</div>
+                                    <div class="document-filename">${doc.filename.substring(0, 20)}...</div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            return docs;
+        }
+
         // Show documents modal
-        function showDocumentsModal(documents, recordId, serverUrl) {
+        function showDocumentsModal(documents, recordId) {
             const modalContent = document.getElementById('recordModalContent');
             
             // Collect all images for navigation
             currentImages = [];
             
+            function addImageFromDoc(doc, type) {
+                if (doc.filename && doc.filename.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                    currentImages.push(`${window.location.origin}/uploads/${doc.filename}`);
+                }
+            }
+            
             // Helper function to create document card
             function createDocumentCard(doc, type) {
                 const isImage = doc.filename.match(/\.(jpg|jpeg|png|gif)$/i);
-                const downloadUrl = `${serverUrl || ''}/uploads/${doc.filename}`;
+                const downloadUrl = `${window.location.origin}/uploads/${doc.filename}`;
                 
                 if (isImage) {
                     currentImages.push(downloadUrl);
                 }
                 
                 return `
-                    <div class="document-card" onclick="${isImage ? `showImageViewer('${downloadUrl}')` : `window.open('${downloadUrl}', '_blank')`}">
+                    <div class="document-card" onclick="openDocument('${downloadUrl}', '${isImage ? 'image' : 'pdf'}', '${doc.title || type}')">
                         <div class="document-preview-img">
                             ${isImage ? 
-                                `<img src="${downloadUrl}" alt="${doc.title || type}">` : 
+                                `<img src="${downloadUrl}" alt="${doc.title || type}" onerror="this.onerror=null; this.src=''; this.parentNode.innerHTML='<i class=\\'fas fa-file-image\\'></i>'">` : 
                                 `<i class="fas fa-file-pdf"></i>`
                             }
                         </div>
                         <div class="document-info">
                             <div class="document-title">${doc.title || type}</div>
-                            <div class="document-filename">${doc.filename}</div>
+                            <div class="document-filename">${doc.filename.substring(0, 20)}...</div>
                         </div>
                         <div class="document-actions">
                             <a href="${downloadUrl}" download class="btn btn-secondary btn-small" onclick="event.stopPropagation()">
@@ -2064,60 +2280,45 @@
                 `;
             }
             
-            let html = `
-                <div class="documents-section">
-                    <h4 class="section-title"><i class="fas fa-id-card"></i> PSA Birth Certificate</h4>
-                    <div class="document-grid">
-            `;
+            let html = '';
             
-            if (documents.psa_documents.length > 0) {
+            if (documents.psa_documents && documents.psa_documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-id-card"></i> PSA Birth Certificate</h4>
+                        <div class="document-grid">
+                `;
                 documents.psa_documents.forEach(doc => {
                     html += createDocumentCard(doc, 'PSA Certificate');
                 });
-            } else {
-                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No PSA documents found</p>';
+                html += `</div></div>`;
             }
             
-            html += `
-                    </div>
-                </div>
-                
-                <div class="documents-section">
-                    <h4 class="section-title"><i class="fas fa-file-contract"></i> Form 137</h4>
-                    <div class="document-grid">
-            `;
-            
-            if (documents.form137_documents.length > 0) {
+            if (documents.form137_documents && documents.form137_documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-file-contract"></i> Form 137</h4>
+                        <div class="document-grid">
+                `;
                 documents.form137_documents.forEach(doc => {
                     html += createDocumentCard(doc, 'Form 137');
                 });
-            } else {
-                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No Form 137 documents found</p>';
+                html += `</div></div>`;
             }
             
-            html += `
-                    </div>
-                </div>
-                
-                <div class="documents-section">
-                    <h4 class="section-title"><i class="fas fa-award"></i> Good Moral Certificate</h4>
-                    <div class="document-grid">
-            `;
-            
-            if (documents.goodmoral_documents.length > 0) {
+            if (documents.goodmoral_documents && documents.goodmoral_documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-award"></i> Good Moral Certificate</h4>
+                        <div class="document-grid">
+                `;
                 documents.goodmoral_documents.forEach(doc => {
                     html += createDocumentCard(doc, 'Good Moral');
                 });
-            } else {
-                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No Good Moral documents found</p>';
+                html += `</div></div>`;
             }
             
-            html += `
-                    </div>
-                </div>
-            `;
-            
-            if (documents.form138_documents.length > 0) {
+            if (documents.form138_documents && documents.form138_documents.length > 0) {
                 html += `
                     <div class="documents-section">
                         <h4 class="section-title"><i class="fas fa-file-invoice"></i> Form 138 (Report Card)</h4>
@@ -2126,13 +2327,10 @@
                 documents.form138_documents.forEach(doc => {
                     html += createDocumentCard(doc, 'Form 138');
                 });
-                html += `
-                        </div>
-                    </div>
-                `;
+                html += `</div></div>`;
             }
             
-            if (documents.other_documents.length > 0) {
+            if (documents.other_documents && documents.other_documents.length > 0) {
                 html += `
                     <div class="documents-section">
                         <h4 class="section-title"><i class="fas fa-paperclip"></i> Other Documents</h4>
@@ -2141,10 +2339,11 @@
                 documents.other_documents.forEach(doc => {
                     html += createDocumentCard(doc, doc.title || 'Other Document');
                 });
-                html += `
-                        </div>
-                    </div>
-                `;
+                html += `</div></div>`;
+            }
+            
+            if (html === '') {
+                html = '<div class="empty-state"><i class="fas fa-file-alt"></i><h3>No Documents Found</h3><p>No documents have been uploaded for this record.</p></div>';
             }
             
             html += `
@@ -2158,13 +2357,14 @@
             `;
             
             modalContent.innerHTML = html;
-            openModal('recordModal');
             
             // Update modal header
             const modalHeader = document.querySelector('#recordModal .modal-header h3');
             if (modalHeader) {
                 modalHeader.innerHTML = `<i class="fas fa-images"></i> Documents for Record #${recordId}`;
             }
+            
+            openModal('recordModal');
         }
 
         // Logout
