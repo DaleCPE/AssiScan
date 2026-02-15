@@ -1015,7 +1015,7 @@
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
-        /* Siblings Table */
+        /* Siblings Table - IMPROVED REMOVE BUTTON */
         #siblingsTable {
             width: 100%;
             border-collapse: separate;
@@ -1030,10 +1030,74 @@
             padding-bottom: 5px;
         }
 
+        #siblingsTable td {
+            padding: 2px 0;
+        }
+
         #siblingsTable input {
             margin: 0;
             font-size: 11px;
-            padding: 6px;
+            padding: 8px 6px;
+            width: 100%;
+        }
+
+        /* IMPROVED: Sibling Remove Button - Much Better Design */
+        .sibling-remove-btn {
+            background: #2a0a0a;
+            color: #ff6b6b;
+            border: 1px solid #5a1a1a;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            margin: 0 auto;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .sibling-remove-btn:hover {
+            background: #5a1a1a;
+            color: #ff9999;
+            border-color: #ff6b6b;
+            transform: scale(1.05);
+        }
+
+        .sibling-remove-btn i {
+            font-size: 12px;
+        }
+
+        /* Action column styling */
+        .action-column {
+            text-align: center;
+            width: 40px;
+        }
+
+        /* Add Sibling Button */
+        .add-sibling-btn {
+            width: 100%; 
+            background: rgba(212, 175, 55, 0.1); 
+            border: 1px dashed var(--border-dim); 
+            color: var(--primary-gold); 
+            padding: 10px; 
+            font-size: 12px; 
+            cursor: pointer; 
+            margin-top: 10px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 4px;
+        }
+
+        .add-sibling-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--primary-gold);
         }
 
         /* DEBUG BUTTON */
@@ -1239,6 +1303,12 @@
             #siblingsTable th:nth-child(3),
             #siblingsTable td:nth-child(3) {
                 display: none;
+            }
+
+            /* Adjust sibling remove button for mobile */
+            .sibling-remove-btn {
+                width: 36px;
+                height: 36px;
             }
         }
 
@@ -1837,7 +1907,7 @@
                                 <th>Name</th>
                                 <th style="width: 60px;">Age</th>
                                 <th>Work/School</th>
-                                <th style="width: 30px;"></th>
+                                <th style="width: 40px;" class="action-column"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1845,20 +1915,7 @@
                         </tbody>
                     </table>
                     
-                    <button type="button" onclick="addSiblingRow()" style="
-                        width: 100%; 
-                        background: rgba(212, 175, 55, 0.1); 
-                        border: 1px dashed var(--border-dim); 
-                        color: var(--primary-gold); 
-                        padding: 10px; 
-                        font-size: 12px; 
-                        cursor: pointer; 
-                        margin-top: 10px;
-                        transition: 0.3s;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 8px;">
+                    <button type="button" onclick="addSiblingRow()" class="add-sibling-btn">
                         <i class="fas fa-plus"></i> ADD SIBLING
                     </button>
                 </div>
@@ -2534,6 +2591,7 @@
             }
         }
 
+        // IMPROVED: addSiblingRow function with better remove button
         function addSiblingRow() {
             const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
             if (!table) return;
@@ -2542,17 +2600,12 @@
             
             newRow.innerHTML = `
                 <td><input type="text" class="sib-name" placeholder="Name" style="margin:0; width: 100%;"></td>
-                <td><input type="number" class="sib-age" placeholder="0" min="0" max="100" style="margin:0; width: 100%;"></td>
+                <td><input type="number" class="sib-age" placeholder="Age" min="0" max="100" style="margin:0; width: 100%;"></td>
                 <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0; width: 100%;"></td>
-                <td style="text-align: center;">
-                    <button type="button" onclick="this.closest('tr').remove()" style="
-                        background: #331010; 
-                        color: #ff6b6b; 
-                        border: none; 
-                        cursor: pointer; 
-                        font-size: 14px; 
-                        padding: 5px 8px;
-                        border-radius: 4px;">&times;</button>
+                <td class="action-column">
+                    <button type="button" class="sibling-remove-btn" onclick="removeSiblingRow(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </td>
             `;
             
@@ -2568,6 +2621,20 @@
                     this.style.backgroundColor = 'var(--input-bg)';
                 });
             });
+        }
+
+        // IMPROVED: New function to remove sibling row with better handling
+        function removeSiblingRow(button) {
+            const row = button.closest('tr');
+            if (row) {
+                // Add a fade-out effect before removing
+                row.style.transition = 'opacity 0.2s ease';
+                row.style.opacity = '0';
+                
+                setTimeout(() => {
+                    row.remove();
+                }, 200);
+            }
         }
 
         async function processPSA(input) {
