@@ -1015,23 +1015,34 @@
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
-        /* Siblings Table - IMPROVED REMOVE BUTTON */
+        /* ========== IMPROVED SIBLINGS TABLE WITH BETTER REMOVE BUTTON PLACEMENT ========== */
+        .siblings-section {
+            margin-top: 15px;
+            width: 100%;
+        }
+
         #siblingsTable {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 5px;
+            border-collapse: collapse;
             font-size: 11px;
+        }
+
+        #siblingsTable thead tr {
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
         }
 
         #siblingsTable th {
             text-align: left;
             color: var(--primary-gold);
             font-size: 9px;
-            padding-bottom: 5px;
+            padding: 8px 5px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         #siblingsTable td {
-            padding: 2px 0;
+            padding: 5px;
+            vertical-align: middle;
         }
 
         #siblingsTable input {
@@ -1039,54 +1050,81 @@
             font-size: 11px;
             padding: 8px 6px;
             width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #331010;
+            border-radius: 3px;
+            color: var(--text-main);
         }
 
-        /* IMPROVED: Sibling Remove Button - Much Better Design */
+        #siblingsTable input:focus {
+            border-color: var(--primary-gold);
+            background: rgba(212, 175, 55, 0.05);
+            outline: none;
+        }
+
+        /* IMPROVED: Perfectly aligned remove button */
         .sibling-remove-btn {
             background: #2a0a0a;
-            color: #ff6b6b;
+            color: #ff8a8a;
             border: 1px solid #5a1a1a;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             transition: all 0.2s ease;
             margin: 0 auto;
             padding: 0;
-            line-height: 1;
         }
 
         .sibling-remove-btn:hover {
             background: #5a1a1a;
-            color: #ff9999;
-            border-color: #ff6b6b;
+            color: #ffb3b3;
+            border-color: #ff8a8a;
             transform: scale(1.05);
         }
 
         .sibling-remove-btn i {
             font-size: 12px;
+            pointer-events: none;
         }
 
-        /* Action column styling */
+        /* Action column styling - fixed width and centered */
         .action-column {
+            width: 45px;
             text-align: center;
-            width: 40px;
+            vertical-align: middle;
+            padding: 5px 2px !important;
+        }
+
+        /* Name column - takes more space */
+        .name-column {
+            width: 40%;
+        }
+
+        /* Age column - fixed width */
+        .age-column {
+            width: 60px;
+        }
+
+        /* Occupation column - flexible */
+        .occ-column {
+            width: auto;
         }
 
         /* Add Sibling Button */
         .add-sibling-btn {
             width: 100%; 
-            background: rgba(212, 175, 55, 0.1); 
-            border: 1px dashed var(--border-dim); 
+            background: rgba(212, 175, 55, 0.08); 
+            border: 1px dashed rgba(212, 175, 55, 0.3); 
             color: var(--primary-gold); 
             padding: 10px; 
             font-size: 12px; 
             cursor: pointer; 
-            margin-top: 10px;
+            margin-top: 12px;
             transition: 0.3s;
             display: flex;
             align-items: center;
@@ -1096,8 +1134,12 @@
         }
 
         .add-sibling-btn:hover {
-            background: rgba(212, 175, 55, 0.2);
+            background: rgba(212, 175, 55, 0.15);
             border-color: var(--primary-gold);
+        }
+
+        .add-sibling-btn i {
+            font-size: 11px;
         }
 
         /* DEBUG BUTTON */
@@ -1300,15 +1342,24 @@
                 width: 100%;
             }
             
+            /* Mobile adjustments for siblings table */
             #siblingsTable th:nth-child(3),
             #siblingsTable td:nth-child(3) {
-                display: none;
+                display: none; /* Hide occupation on very small screens */
             }
 
-            /* Adjust sibling remove button for mobile */
+            .action-column {
+                width: 40px;
+            }
+            
             .sibling-remove-btn {
-                width: 36px;
-                height: 36px;
+                width: 32px;
+                height: 32px;
+            }
+            
+            #siblingsTable input {
+                padding: 10px 6px;
+                font-size: 12px;
             }
         }
 
@@ -1352,6 +1403,15 @@
                 left: 10px;
                 padding: 6px 10px;
                 font-size: 10px;
+            }
+            
+            /* Further optimize siblings table for very small screens */
+            .action-column {
+                width: 35px;
+            }
+            
+            #siblingsTable th {
+                font-size: 8px;
             }
         }
 
@@ -1712,7 +1772,6 @@
                 <div class="row">
                     <div class="col-half">
                         <label>Civil Status</label>
-                        <!-- CHANGED: Text input to dropdown -->
                         <select id="childCivilStatus">
                             <option value="">-- Select Civil Status --</option>
                             <option value="Single">Single</option>
@@ -1897,26 +1956,27 @@
                     </div>
                 </div>
 
+                <!-- ========== IMPROVED SIBLINGS SECTION WITH BETTER BUTTON PLACEMENT ========== -->
                 <div style="margin-top: 15px;"></div>
                 <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
                 
-                <div class="file-upload-group" style="padding: 0; background: transparent; border: none;">
+                <div class="siblings-section">
                     <table id="siblingsTable">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th style="width: 60px;">Age</th>
-                                <th>Work/School</th>
-                                <th style="width: 40px;" class="action-column"></th>
+                                <th class="name-column">NAME</th>
+                                <th class="age-column">AGE</th>
+                                <th class="occ-column">WORK/SCHOOL</th>
+                                <th class="action-column"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Rows will be added here -->
+                            <!-- Rows will be added here dynamically via JavaScript -->
                         </tbody>
                     </table>
                     
                     <button type="button" onclick="addSiblingRow()" class="add-sibling-btn">
-                        <i class="fas fa-plus"></i> ADD SIBLING
+                        <i class="fas fa-plus-circle"></i> ADD SIBLING
                     </button>
                 </div>
                 
@@ -2591,7 +2651,7 @@
             }
         }
 
-        // IMPROVED: addSiblingRow function with better remove button
+        // ========== IMPROVED: addSiblingRow function with proper classes ==========
         function addSiblingRow() {
             const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
             if (!table) return;
@@ -2599,11 +2659,11 @@
             const newRow = table.insertRow();
             
             newRow.innerHTML = `
-                <td><input type="text" class="sib-name" placeholder="Name" style="margin:0; width: 100%;"></td>
-                <td><input type="number" class="sib-age" placeholder="Age" min="0" max="100" style="margin:0; width: 100%;"></td>
-                <td><input type="text" class="sib-occ" placeholder="School/Job" style="margin:0; width: 100%;"></td>
+                <td class="name-column"><input type="text" class="sib-name" placeholder="Full name" style="margin:0; width: 100%;"></td>
+                <td class="age-column"><input type="number" class="sib-age" placeholder="Age" min="0" max="100" style="margin:0; width: 100%;"></td>
+                <td class="occ-column"><input type="text" class="sib-occ" placeholder="School/Employer" style="margin:0; width: 100%;"></td>
                 <td class="action-column">
-                    <button type="button" class="sibling-remove-btn" onclick="removeSiblingRow(this)">
+                    <button type="button" class="sibling-remove-btn" onclick="removeSiblingRow(this)" title="Remove sibling">
                         <i class="fas fa-times"></i>
                     </button>
                 </td>
@@ -2623,13 +2683,25 @@
             });
         }
 
-        // IMPROVED: New function to remove sibling row with better handling
+        // IMPROVED: removeSiblingRow function with smooth removal
         function removeSiblingRow(button) {
             const row = button.closest('tr');
             if (row) {
+                // Check if this is the last row
+                const tbody = row.parentNode;
+                if (tbody.children.length <= 1) {
+                    // Don't remove if it's the last row, just clear the inputs
+                    const inputs = row.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        input.value = '';
+                    });
+                    return;
+                }
+                
                 // Add a fade-out effect before removing
-                row.style.transition = 'opacity 0.2s ease';
-                row.style.opacity = '0';
+                row.style.transition = 'opacity 0.2s ease, background-color 0.2s ease';
+                row.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
+                row.style.opacity = '0.5';
                 
                 setTimeout(() => {
                     row.remove();
@@ -2989,7 +3061,7 @@
                 return element ? element.value.trim() : "";
             }
 
-            // Prepare record data - FIXED: Remove timestamp fields that don't exist
+            // Prepare record data
             const recordData = {
                 school_year: getValue('schoolYear'),
                 student_type: getValue('studentType'),
