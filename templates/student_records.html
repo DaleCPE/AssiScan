@@ -360,7 +360,7 @@
         /* ===== RECORDS GRID ===== */
         .records-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 20px;
             margin-bottom: 40px;
         }
@@ -524,6 +524,43 @@
             border: 1px solid #dc3545;
         }
 
+        .document-preview {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .document-thumbnail {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .document-thumbnail:hover {
+            transform: scale(1.05);
+            border-color: var(--gold);
+        }
+
+        .document-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .document-thumbnail i {
+            font-size: 24px;
+            color: var(--gold);
+        }
+
         .record-actions {
             display: flex;
             gap: 8px;
@@ -655,8 +692,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
             display: none;
             justify-content: center;
             align-items: center;
@@ -675,7 +712,7 @@
             border: 1px solid var(--gold);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-lg);
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
@@ -702,6 +739,10 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
+            position: sticky;
+            top: 0;
+            background: #121212;
+            z-index: 10;
         }
 
         .modal-header h3 {
@@ -742,46 +783,189 @@
             color: #ddd;
         }
 
+        /* ===== IMAGE VIEWER MODAL ===== */
+        .image-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.98);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .image-viewer-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .image-viewer-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border: 2px solid var(--gold);
+            border-radius: 4px;
+        }
+
+        .image-viewer-close {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .image-viewer-close:hover {
+            background: var(--gold);
+            color: black;
+            transform: scale(1.1);
+        }
+
+        .image-viewer-nav {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: 1px solid var(--gold);
+        }
+
+        .image-viewer-nav button {
+            background: none;
+            border: none;
+            color: var(--gold);
+            font-size: 20px;
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .image-viewer-nav button:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
         /* ===== DOCUMENTS SECTION ===== */
         .documents-section {
-            margin-top: 20px;
+            margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .document-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
+        .documents-section:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
         }
 
-        .document-item {
+        .section-title {
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-size: 16px;
+            margin-bottom: 15px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            gap: 8px;
+        }
+
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .document-card {
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            flex-wrap: wrap;
-            gap: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .document-card:hover {
+            border-color: var(--gold);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .document-preview-img {
+            width: 100%;
+            height: 150px;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .document-preview-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .document-preview-img i {
+            font-size: 48px;
+            color: var(--gold);
         }
 
         .document-info {
-            flex: 1;
-            min-width: 200px;
+            padding: 10px;
         }
 
         .document-title {
+            font-size: 12px;
             font-weight: 500;
-            font-size: 13px;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .document-filename {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .document-actions .btn-small {
+            flex: 1;
+            padding: 6px;
+            font-size: 10px;
+            min-height: 32px;
         }
 
         /* ===== NOTIFICATION ===== */
@@ -827,10 +1011,18 @@
             border: 1px solid #17a2b8;
         }
 
+        /* ===== PDF VIEWER ===== */
+        .pdf-viewer {
+            width: 100%;
+            height: 70vh;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 1024px) {
             .records-grid {
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             }
             
             .stat-card {
@@ -908,6 +1100,19 @@
             .modal-container {
                 max-height: 95vh;
             }
+            
+            .document-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .image-viewer-close {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .image-viewer-nav {
+                bottom: 20px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -970,20 +1175,19 @@
                 padding: 15px;
             }
             
-            .document-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .document-info {
-                width: 100%;
+            .document-grid {
+                grid-template-columns: 1fr;
             }
             
             .notification {
                 right: 15px;
                 left: 15px;
                 max-width: none;
+            }
+            
+            .image-viewer-nav {
+                gap: 10px;
+                padding: 8px 15px;
             }
         }
 
@@ -994,7 +1198,8 @@
         .btn,
         .nav-link,
         .filter-btn,
-        .close-modal {
+        .close-modal,
+        .document-card {
             min-height: 44px;
             min-width: 44px;
         }
@@ -1149,6 +1354,18 @@
             </div>
         </div>
 
+        <!-- IMAGE VIEWER MODAL -->
+        <div id="imageViewerModal" class="image-viewer-modal" onclick="closeImageViewer(event)">
+            <div class="image-viewer-content">
+                <img id="viewerImage" src="" alt="Document Preview">
+                <button class="image-viewer-close" onclick="closeImageViewer(event)">&times;</button>
+                <div class="image-viewer-nav">
+                    <button onclick="navigateImage(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <button onclick="navigateImage(1)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+
         <!-- NOTIFICATION -->
         <div id="notification" class="notification">
             <i class="fas fa-check-circle"></i>
@@ -1160,6 +1377,8 @@
         let recordsData = [];
         let currentUser = null;
         let isMobileMenuOpen = false;
+        let currentImages = [];
+        let currentImageIndex = 0;
 
         // Initialize on page load
         window.addEventListener('load', function() {
@@ -1229,6 +1448,17 @@
                     if (openModal) {
                         closeModal(openModal.id);
                     }
+                    const imageViewer = document.getElementById('imageViewerModal');
+                    if (imageViewer.style.display === 'flex') {
+                        imageViewer.style.display = 'none';
+                    }
+                }
+                
+                // Left/right arrow keys for image navigation
+                if (event.key === 'ArrowLeft') {
+                    navigateImage(-1);
+                } else if (event.key === 'ArrowRight') {
+                    navigateImage(1);
                 }
             });
         }
@@ -1281,18 +1511,27 @@
             try {
                 const response = await fetch('/api/my-records');
                 
+                // Check if response is OK and is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 200));
+                    throw new Error('Server returned non-JSON response. Possible 404 or server error.');
+                }
+                
                 if (response.ok) {
                     const data = await response.json();
                     recordsData = data.records || [];
                     updateStats();
                     renderRecords(recordsData);
                 } else {
-                    showNotification('Failed to load records', 'error');
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    showNotification(errorData.error || 'Failed to load records', 'error');
                     recordsGrid.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle"></i>
                             <h3>Error Loading Records</h3>
-                            <p>Unable to load your records. Please try again later.</p>
+                            <p>${errorData.error || 'Unable to load your records. Please try again later.'}</p>
                             <button class="btn btn-primary" onclick="loadMyRecords()">
                                 <i class="fas fa-sync-alt"></i> Retry
                             </button>
@@ -1301,12 +1540,13 @@
                 }
             } catch (error) {
                 console.error('Error loading records:', error);
-                showNotification('Connection error', 'error');
+                showNotification('Connection error: ' + error.message, 'error');
                 recordsGrid.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Connection Error</h3>
                         <p>Unable to connect to the server. Please check your connection.</p>
+                        <p class="error-detail" style="font-size: 12px; color: #ff6b6b; margin-top: 10px;">${error.message}</p>
                         <button class="btn btn-primary" onclick="loadMyRecords()">
                             <i class="fas fa-sync-alt"></i> Retry
                         </button>
@@ -1410,6 +1650,9 @@
                 // Count documents
                 const documentCount = countDocuments(record);
                 
+                // Get document previews
+                const documentPreviews = getDocumentPreviews(record);
+                
                 return `
                 <div class="record-card" data-id="${record.id}">
                     <div class="record-card-header">
@@ -1456,18 +1699,87 @@
                             </div>
                         </div>
                         
+                        <!-- Document Previews -->
+                        ${documentPreviews}
+                        
                         <div class="record-actions">
                             <button class="btn btn-primary" onclick="viewRecordDetails(${record.id})">
                                 <i class="fas fa-eye"></i> View Details
                             </button>
-                            <button class="btn btn-secondary" onclick="viewDocuments(${record.id})">
-                                <i class="fas fa-download"></i> Documents
+                            <button class="btn btn-secondary" onclick="viewAllDocuments(${record.id})">
+                                <i class="fas fa-images"></i> All Documents
                             </button>
                         </div>
                     </div>
                 </div>
                 `;
             }).join('');
+        }
+
+        // Get document previews HTML
+        function getDocumentPreviews(record) {
+            const previews = [];
+            const maxPreviews = 4;
+            
+            // Check each document type
+            const docTypes = [
+                { field: 'image_path', icon: 'fa-id-card', label: 'PSA' },
+                { field: 'form137_path', icon: 'fa-file-contract', label: 'Form 137' },
+                { field: 'form138_path', icon: 'fa-file-invoice', label: 'Form 138' },
+                { field: 'goodmoral_path', icon: 'fa-award', label: 'Good Moral' }
+            ];
+            
+            for (let type of docTypes) {
+                if (record[type.field]) {
+                    const paths = record[type.field].split(',');
+                    for (let i = 0; i < Math.min(paths.length, maxPreviews - previews.length); i++) {
+                        if (paths[i].trim()) {
+                            const isImage = paths[i].match(/\.(jpg|jpeg|png|gif)$/i);
+                            previews.push(`
+                                <div class="document-thumbnail" onclick="openDocument('${record.server_url}/uploads/${paths[i].trim()}', '${isImage ? 'image' : 'pdf'}')">
+                                    ${isImage ? 
+                                        `<img src="${record.server_url}/uploads/${paths[i].trim()}" alt="${type.label}">` : 
+                                        `<i class="fas fa-file-pdf"></i>`
+                                    }
+                                </div>
+                            `);
+                        }
+                    }
+                }
+            }
+            
+            // Check other documents
+            if (record.other_documents && record.other_documents.length > 0) {
+                for (let i = 0; i < Math.min(record.other_documents.length, maxPreviews - previews.length); i++) {
+                    const doc = record.other_documents[i];
+                    if (doc.filename) {
+                        const isImage = doc.filename.match(/\.(jpg|jpeg|png|gif)$/i);
+                        previews.push(`
+                            <div class="document-thumbnail" onclick="openDocument('${record.server_url}/uploads/${doc.filename}', '${isImage ? 'image' : 'pdf'}')">
+                                ${isImage ? 
+                                    `<img src="${record.server_url}/uploads/${doc.filename}" alt="${doc.title || 'Document'}">` : 
+                                    `<i class="fas fa-file-pdf"></i>`
+                                }
+                            </div>
+                        `);
+                    }
+                }
+            }
+            
+            if (previews.length > 0) {
+                return `
+                    <div class="document-preview">
+                        ${previews.join('')}
+                        ${countDocuments(record) > maxPreviews ? 
+                            `<div class="document-thumbnail" onclick="viewAllDocuments(${record.id})">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+            }
+            
+            return '';
         }
 
         // Count documents in a record
@@ -1559,14 +1871,14 @@
             }
         }
 
-        // View documents
-        async function viewDocuments(recordId) {
+        // View all documents
+        async function viewAllDocuments(recordId) {
             try {
                 const response = await fetch(`/api/student/documents/${recordId}`);
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showDocumentsModal(data.documents, recordId);
+                    showDocumentsModal(data.documents, recordId, data.server_url);
                 } else {
                     showNotification('Failed to load documents', 'error');
                 }
@@ -1574,6 +1886,48 @@
                 console.error('Error fetching documents:', error);
                 showNotification('Connection error', 'error');
             }
+        }
+
+        // Open document (image or PDF)
+        function openDocument(url, type) {
+            if (type === 'image') {
+                // Open in image viewer
+                currentImages = [url];
+                currentImageIndex = 0;
+                showImageViewer(url);
+            } else {
+                // Open PDF in new tab
+                window.open(url, '_blank');
+            }
+        }
+
+        // Show image viewer
+        function showImageViewer(imageUrl) {
+            const viewer = document.getElementById('imageViewerModal');
+            const img = document.getElementById('viewerImage');
+            img.src = imageUrl;
+            viewer.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close image viewer
+        function closeImageViewer(event) {
+            if (event.target === document.getElementById('imageViewerModal') || 
+                event.target.classList.contains('image-viewer-close')) {
+                document.getElementById('imageViewerModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Navigate images
+        function navigateImage(direction) {
+            if (currentImages.length === 0) return;
+            
+            currentImageIndex += direction;
+            if (currentImageIndex < 0) currentImageIndex = currentImages.length - 1;
+            if (currentImageIndex >= currentImages.length) currentImageIndex = 0;
+            
+            document.getElementById('viewerImage').src = currentImages[currentImageIndex];
         }
 
         // Show record modal
@@ -1663,8 +2017,8 @@
                         <button class="btn btn-secondary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
                             Close
                         </button>
-                        <button class="btn btn-primary" onclick="viewDocuments(${record.id})" style="padding: 8px 20px;">
-                            <i class="fas fa-download"></i> View Documents
+                        <button class="btn btn-primary" onclick="viewAllDocuments(${record.id})" style="padding: 8px 20px;">
+                            <i class="fas fa-images"></i> View All Documents
                         </button>
                     </div>
                 </div>
@@ -1674,134 +2028,143 @@
         }
 
         // Show documents modal
-        function showDocumentsModal(documents, recordId) {
+        function showDocumentsModal(documents, recordId, serverUrl) {
             const modalContent = document.getElementById('recordModalContent');
             
-            modalContent.innerHTML = `
-                <div class="modal-header">
-                    <h3><i class="fas fa-paperclip"></i> Documents for Record #${recordId}</h3>
-                    <button class="close-modal" onclick="closeModal('recordModal')">&times;</button>
+            // Collect all images for navigation
+            currentImages = [];
+            
+            // Helper function to create document card
+            function createDocumentCard(doc, type) {
+                const isImage = doc.filename.match(/\.(jpg|jpeg|png|gif)$/i);
+                const downloadUrl = `${serverUrl || ''}/uploads/${doc.filename}`;
+                
+                if (isImage) {
+                    currentImages.push(downloadUrl);
+                }
+                
+                return `
+                    <div class="document-card" onclick="${isImage ? `showImageViewer('${downloadUrl}')` : `window.open('${downloadUrl}', '_blank')`}">
+                        <div class="document-preview-img">
+                            ${isImage ? 
+                                `<img src="${downloadUrl}" alt="${doc.title || type}">` : 
+                                `<i class="fas fa-file-pdf"></i>`
+                            }
+                        </div>
+                        <div class="document-info">
+                            <div class="document-title">${doc.title || type}</div>
+                            <div class="document-filename">${doc.filename}</div>
+                        </div>
+                        <div class="document-actions">
+                            <a href="${downloadUrl}" download class="btn btn-secondary btn-small" onclick="event.stopPropagation()">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let html = `
+                <div class="documents-section">
+                    <h4 class="section-title"><i class="fas fa-id-card"></i> PSA Birth Certificate</h4>
+                    <div class="document-grid">
+            `;
+            
+            if (documents.psa_documents.length > 0) {
+                documents.psa_documents.forEach(doc => {
+                    html += createDocumentCard(doc, 'PSA Certificate');
+                });
+            } else {
+                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No PSA documents found</p>';
+            }
+            
+            html += `
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <div class="documents-section">
-                        <h4 style="color: var(--gold); margin-bottom: 15px;">
-                            <i class="fas fa-file-alt"></i> PSA Birth Certificate
-                        </h4>
-                        <div class="document-list">
-                            ${documents.psa_documents.length > 0 ? 
-                                documents.psa_documents.map(doc => `
-                                    <div class="document-item">
-                                        <div class="document-info">
-                                            <div class="document-title">PSA Document</div>
-                                            <div class="document-filename">${doc.filename}</div>
-                                        </div>
-                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                    </div>
-                                `).join('') : 
-                                '<p style="color: var(--text-muted); font-style: italic;">No PSA documents found</p>'
-                            }
-                        </div>
+                
+                <div class="documents-section">
+                    <h4 class="section-title"><i class="fas fa-file-contract"></i> Form 137</h4>
+                    <div class="document-grid">
+            `;
+            
+            if (documents.form137_documents.length > 0) {
+                documents.form137_documents.forEach(doc => {
+                    html += createDocumentCard(doc, 'Form 137');
+                });
+            } else {
+                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No Form 137 documents found</p>';
+            }
+            
+            html += `
                     </div>
-                    
-                    <div class="documents-section">
-                        <h4 style="color: var(--gold); margin-bottom: 15px;">
-                            <i class="fas fa-file-contract"></i> Form 137
-                        </h4>
-                        <div class="document-list">
-                            ${documents.form137_documents.length > 0 ? 
-                                documents.form137_documents.map(doc => `
-                                    <div class="document-item">
-                                        <div class="document-info">
-                                            <div class="document-title">Form 137</div>
-                                            <div class="document-filename">${doc.filename}</div>
-                                        </div>
-                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                    </div>
-                                `).join('') : 
-                                '<p style="color: var(--text-muted); font-style: italic;">No Form 137 documents found</p>'
-                            }
-                        </div>
-                    </div>
-                    
-                    <div class="documents-section">
-                        <h4 style="color: var(--gold); margin-bottom: 15px;">
-                            <i class="fas fa-award"></i> Good Moral Certificate
-                        </h4>
-                        <div class="document-list">
-                            ${documents.goodmoral_documents.length > 0 ? 
-                                documents.goodmoral_documents.map(doc => `
-                                    <div class="document-item">
-                                        <div class="document-info">
-                                            <div class="document-title">Good Moral Certificate</div>
-                                            <div class="document-filename">${doc.filename}</div>
-                                        </div>
-                                        <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                    </div>
-                                `).join('') : 
-                                '<p style="color: var(--text-muted); font-style: italic;">No Good Moral documents found</p>'
-                            }
-                        </div>
-                    </div>
-                    
-                    ${documents.form138_documents.length > 0 ? `
-                    <div class="documents-section">
-                        <h4 style="color: var(--gold); margin-bottom: 15px;">
-                            <i class="fas fa-file-invoice"></i> Form 138 (Report Card)
-                        </h4>
-                        <div class="document-list">
-                            ${documents.form138_documents.map(doc => `
-                                <div class="document-item">
-                                    <div class="document-info">
-                                        <div class="document-title">Form 138</div>
-                                        <div class="document-filename">${doc.filename}</div>
-                                    </div>
-                                    <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
-                                        <i class="fas fa-download"></i> Download
-                                    </a>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    ${documents.other_documents.length > 0 ? `
-                    <div class="documents-section">
-                        <h4 style="color: var(--gold); margin-bottom: 15px;">
-                            <i class="fas fa-paperclip"></i> Other Documents
-                        </h4>
-                        <div class="document-list">
-                            ${documents.other_documents.map(doc => `
-                                <div class="document-item">
-                                    <div class="document-info">
-                                        <div class="document-title">${doc.title || 'Untitled Document'}</div>
-                                        <div class="document-filename">${doc.filename}</div>
-                                    </div>
-                                    <a href="${doc.download_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px;">
-                                        <i class="fas fa-download"></i> Download
-                                    </a>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                            <button class="btn btn-primary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
-                                Close
-                            </button>
-                        </div>
+                </div>
+                
+                <div class="documents-section">
+                    <h4 class="section-title"><i class="fas fa-award"></i> Good Moral Certificate</h4>
+                    <div class="document-grid">
+            `;
+            
+            if (documents.goodmoral_documents.length > 0) {
+                documents.goodmoral_documents.forEach(doc => {
+                    html += createDocumentCard(doc, 'Good Moral');
+                });
+            } else {
+                html += '<p style="color: var(--text-muted); grid-column: 1/-1;">No Good Moral documents found</p>';
+            }
+            
+            html += `
                     </div>
                 </div>
             `;
             
+            if (documents.form138_documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-file-invoice"></i> Form 138 (Report Card)</h4>
+                        <div class="document-grid">
+                `;
+                documents.form138_documents.forEach(doc => {
+                    html += createDocumentCard(doc, 'Form 138');
+                });
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (documents.other_documents.length > 0) {
+                html += `
+                    <div class="documents-section">
+                        <h4 class="section-title"><i class="fas fa-paperclip"></i> Other Documents</h4>
+                        <div class="document-grid">
+                `;
+                documents.other_documents.forEach(doc => {
+                    html += createDocumentCard(doc, doc.title || 'Other Document');
+                });
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-primary" onclick="closeModal('recordModal')" style="padding: 8px 20px;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modalContent.innerHTML = html;
             openModal('recordModal');
+            
+            // Update modal header
+            const modalHeader = document.querySelector('#recordModal .modal-header h3');
+            if (modalHeader) {
+                modalHeader.innerHTML = `<i class="fas fa-images"></i> Documents for Record #${recordId}`;
+            }
         }
 
         // Logout
