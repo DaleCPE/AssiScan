@@ -2255,7 +2255,7 @@ def get_my_records():
     """Get only ONE record of the currently logged-in student"""
     conn = get_db_connection()
     if not conn: 
-        return jsonify({"records": [], "error": "Database connection failed"})
+        return jsonify({"records": [], "error": "Database connection failed"}), 500
     
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -2319,9 +2319,111 @@ def get_my_records():
         })
     except Exception as e:
         print(f"❌ Error in get_my_records: {e}")
+        traceback.print_exc()
         if conn:
             conn.close()
-        return jsonify({"records": [], "error": str(e)})
+        return jsonify({"records": [], "error": str(e)}), 500
+
+# ================= STUDENT DOCUMENTS ENDPOINT =================
+@app.route('/api/student/documents/<int:record_id>', methods=['GET'])
+@login_required
+@role_required('STUDENT')
+def get_student_documents(record_id):
+    """Get documents for a specific record (students can only access their own)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verify this record belongs to the logged-in student
+        cur.execute("""
+            SELECT * FROM records 
+            WHERE id = %s AND user_id = %s
+        """, (record_id, session['user_id']))
+        
+        record = cur.fetchone()
+        
+        if not record:
+            conn.close()
+            return jsonify({"error": "Record not found or access denied"}), 404
+        
+        # Prepare documents response
+        documents = {
+            "psa_documents": [],
+            "form137_documents": [],
+            "form138_documents": [],
+            "goodmoral_documents": [],
+            "other_documents": []
+        }
+        
+        # Process PSA documents
+        if record.get('image_path'):
+            paths = record['image_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["psa_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Process Form 137 documents
+        if record.get('form137_path'):
+            paths = record['form137_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["form137_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Process Form 138 documents
+        if record.get('form138_path'):
+            paths = record['form138_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["form138_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Process Good Moral documents
+        if record.get('goodmoral_path'):
+            paths = record['goodmoral_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["goodmoral_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Process Other documents
+        if record.get('other_documents'):
+            try:
+                other_docs = json.loads(record['other_documents'])
+                for doc in other_docs:
+                    if doc.get('filename'):
+                        documents["other_documents"].append({
+                            "title": doc.get('title', 'Untitled'),
+                            "filename": doc['filename'],
+                            "download_url": f"{request.host_url}uploads/{doc['filename']}"
+                        })
+            except:
+                pass
+        
+        conn.close()
+        
+        return jsonify({
+            "documents": documents,
+            "record_id": record_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in get_student_documents: {e}")
+        if conn:
+            conn.close()
+        return jsonify({"error": str(e)}), 500
 
 # ================= FIXED: GET ALL RECORDS (ONE PER USER) =================
 @app.route('/get-records', methods=['GET'])
