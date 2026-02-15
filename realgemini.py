@@ -2896,7 +2896,7 @@ def my_records_page():
     
     return render_template('student_records.html')
 
-# ================= GOOD MORAL SCANNING ENDPOINT =================
+# ================= FIXED GOOD MORAL SCANNING ENDPOINT =================
 @app.route('/scan-goodmoral', methods=['POST'])
 @login_required
 @permission_required('access_scanner')
@@ -2924,27 +2924,37 @@ def scan_goodmoral():
         
         Analyze this Good Moral Certificate and extract ALL relevant information.
         
-        IMPORTANT: Focus on identifying if there are any disciplinary issues or negative remarks.
+        IMPORTANT: You MUST extract the following information if present:
+        1. Issuing School - The name of the school that issued the certificate
+        2. Issuing Officer - The name/title of the person who signed the certificate
+        3. Issued Date - The date when the certificate was issued (in YYYY-MM-DD format)
+        4. Student Name - The full name of the student
+        5. Certificate Type - The type of certificate (Good Moral, Certificate of Good Moral Character, etc.)
+        6. Remarks - Any remarks or conditions mentioned
+        7. Disciplinary Records - Any mention of disciplinary actions
         
         Return ONLY a valid JSON object with the following structure:
         {
-            "is_valid_certificate": true,
-            "student_name": "Full Name of Student",
-            "issuing_school": "Name of Issuing School",
-            "issuing_officer": "Name of Issuing Officer/Principal",
-            "issued_date": "YYYY-MM-DD format",
-            "certificate_type": "Good Moral Certificate / Certificate of Good Moral Character",
-            "remarks": "Any remarks or conditions mentioned",
-            "has_disciplinary_record": false,
-            "disciplinary_details": "Details of any disciplinary actions if mentioned",
-            "recommendation_statement": "The recommendation statement text",
-            "special_conditions": "Any special conditions or limitations"
+            "is_valid_certificate": true/false,
+            "student_name": "Full Name of Student or 'Not Found'",
+            "issuing_school": "Name of Issuing School or 'Not Found'",
+            "issuing_officer": "Name of Issuing Officer/Principal or 'Not Found'",
+            "issued_date": "YYYY-MM-DD format or 'Not Found'",
+            "certificate_type": "Type of Certificate or 'Not Found'",
+            "remarks": "Any remarks or conditions mentioned or ''",
+            "has_disciplinary_record": true/false,
+            "disciplinary_details": "Details of any disciplinary actions if mentioned or ''",
+            "recommendation_statement": "The recommendation statement text or ''",
+            "special_conditions": "Any special conditions or limitations or ''"
         }
         
-        CRITICAL ANALYSIS:
-        1. If the certificate mentions any suspensions, disciplinary actions, or negative behavior, set "has_disciplinary_record": true
-        2. Look for phrases like: "subject to", "conditional", "pending", "under review", "with reservations"
-        3. Extract the exact remarks about the student's behavior
+        CRITICAL RULES:
+        1. Look for school name in letterhead, footer, or signature area
+        2. Look for officer name near signature line or printed name
+        3. Look for date near signature or at the top of the certificate
+        4. If information is not found, use "Not Found" as the value (not null or empty string)
+        5. For boolean fields, always include them with true/false values
+        6. For text fields, always include them with string values (never null)
         
         If the document is not a valid Good Moral Certificate, set "is_valid_certificate": false.
         
@@ -2953,6 +2963,7 @@ def scan_goodmoral():
         try:
             response_text = extract_with_gemini(prompt, pil_images)
             print(f"✅ Gemini Response received: {len(response_text)} characters")
+            print(f"📝 Response preview: {response_text[:500]}...")
             
             # Clean the response
             cleaned_text = response_text.strip()
@@ -2975,12 +2986,25 @@ def scan_goodmoral():
             try:
                 analysis_data = json.loads(json_str)
                 print(f"✅ Successfully parsed Good Moral analysis")
+                print(f"📊 Extracted data: {json.dumps(analysis_data, indent=2)}")
                 
                 # Validate required fields
                 if not analysis_data.get("is_valid_certificate", False):
                     return jsonify({
                         "error": "Invalid Good Moral Certificate"
                     }), 400
+                
+                # Ensure all fields have values (not null)
+                analysis_data['student_name'] = analysis_data.get('student_name', 'Not Found')
+                analysis_data['issuing_school'] = analysis_data.get('issuing_school', 'Not Found')
+                analysis_data['issuing_officer'] = analysis_data.get('issuing_officer', 'Not Found')
+                analysis_data['issued_date'] = analysis_data.get('issued_date', 'Not Found')
+                analysis_data['certificate_type'] = analysis_data.get('certificate_type', 'Not Found')
+                analysis_data['remarks'] = analysis_data.get('remarks', '')
+                analysis_data['has_disciplinary_record'] = analysis_data.get('has_disciplinary_record', False)
+                analysis_data['disciplinary_details'] = analysis_data.get('disciplinary_details', '')
+                analysis_data['recommendation_statement'] = analysis_data.get('recommendation_statement', '')
+                analysis_data['special_conditions'] = analysis_data.get('special_conditions', '')
                 
                 # Calculate score and status
                 score, status = calculate_goodmoral_score(analysis_data)
@@ -3005,6 +3029,7 @@ def scan_goodmoral():
                 })
             except json.JSONDecodeError as json_error:
                 print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Invalid JSON string: {json_str}")
                 return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
         except Exception as ai_error:
             print(f"❌ AI Extraction Failed: {ai_error}")
