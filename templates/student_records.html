@@ -225,6 +225,164 @@
             color: var(--text-muted);
         }
 
+        /* ===== COMPLETION STATUS ===== */
+        .completion-status {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(5px);
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-title {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-complete {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .status-incomplete {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .status-missing {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .requirement-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .requirement-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .icon-complete {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .icon-missing {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .requirement-info {
+            flex: 1;
+        }
+
+        .requirement-name {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .requirement-status {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .missing-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            border-radius: var(--border-radius);
+        }
+
+        .missing-title {
+            color: #dc3545;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .missing-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .missing-tag {
+            padding: 4px 10px;
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            border-radius: 20px;
+            color: #dc3545;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         /* ===== STATS CARDS ===== */
         .stats-container {
             display: grid;
@@ -495,6 +653,35 @@
             word-break: break-word;
         }
 
+        .completion-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .badge-complete {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .badge-incomplete {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .badge-missing {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
         .goodmoral-badge {
             display: inline-block;
             padding: 4px 10px;
@@ -581,6 +768,12 @@
             text-overflow: ellipsis;
         }
 
+        .missing-document {
+            opacity: 0.5;
+            filter: grayscale(100%);
+            border-color: #dc3545;
+        }
+
         .record-actions {
             display: flex;
             gap: 8px;
@@ -631,6 +824,18 @@
         .btn-secondary:hover {
             background: rgba(212, 175, 55, 0.1);
             border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .btn-warning:hover {
+            background: #ffc107;
+            color: black;
             transform: translateY(-2px);
         }
 
@@ -1067,6 +1272,13 @@
             border: 1px solid #17a2b8;
         }
 
+        .notification.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: black;
+            border-left: 4px solid #ffc107;
+            border: 1px solid #ffc107;
+        }
+
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 1024px) {
             .records-grid {
@@ -1165,6 +1377,10 @@
             .details-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .requirements-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1245,6 +1461,11 @@
             .document-thumbnail {
                 width: 60px;
                 height: 60px;
+            }
+            
+            .status-header {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
 
@@ -1337,6 +1558,11 @@
             </div>
         </header>
 
+        <!-- COMPLETION STATUS SECTION -->
+        <div id="completionStatus" class="completion-status" style="display: none;">
+            <!-- Will be populated by JavaScript -->
+        </div>
+
         <!-- STATS (Only show if there's data) -->
         <div class="stats-container" id="statsContainer" style="display: none;">
             <div class="stat-card">
@@ -1387,6 +1613,7 @@
                 <button class="filter-btn active" onclick="filterRecords('all')">All Records</button>
                 <button class="filter-btn" onclick="filterRecords('sent')">Email Sent</button>
                 <button class="filter-btn" onclick="filterRecords('good')">Good Records</button>
+                <button class="filter-btn" onclick="filterRecords('incomplete')">Incomplete</button>
                 <button class="filter-btn" onclick="filterRecords('recent')">Recent</button>
             </div>
         </div>
@@ -1435,6 +1662,37 @@
         let isMobileMenuOpen = false;
         let currentImages = [];
         let currentImageIndex = 0;
+
+        // Required fields and documents for completion check
+        const REQUIRED_FIELDS = [
+            { key: 'name', label: 'Full Name', category: 'personal' },
+            { key: 'sex', label: 'Sex', category: 'personal' },
+            { key: 'birthdate', label: 'Birthdate', category: 'personal' },
+            { key: 'birthplace', label: 'Birthplace', category: 'personal' },
+            { key: 'age', label: 'Age', category: 'personal' },
+            { key: 'civil_status', label: 'Civil Status', category: 'personal' },
+            { key: 'nationality', label: 'Nationality', category: 'personal' },
+            { key: 'religion', label: 'Religion', category: 'personal' },
+            { key: 'email', label: 'Email Address', category: 'contact' },
+            { key: 'mobile_no', label: 'Mobile Number', category: 'contact' },
+            { key: 'province', label: 'Province', category: 'contact' },
+            { key: 'specific_address', label: 'Complete Address', category: 'contact' },
+            { key: 'lrn', label: 'LRN', category: 'academic' },
+            { key: 'school_name', label: 'Previous School', category: 'academic' },
+            { key: 'school_year', label: 'School Year', category: 'academic' },
+            { key: 'student_type', label: 'Student Type', category: 'academic' },
+            { key: 'college', label: 'College', category: 'academic' },
+            { key: 'program', label: 'Program', category: 'academic' },
+            { key: 'final_general_average', label: 'Final Average', category: 'academic' },
+            { key: 'mother_name', label: "Mother's Name", category: 'parent' },
+            { key: 'father_name', label: "Father's Name", category: 'parent' }
+        ];
+
+        const REQUIRED_DOCUMENTS = [
+            { key: 'image_path', label: 'PSA Birth Certificate', icon: 'id-card' },
+            { key: 'form137_path', label: 'Form 137 / SF10', icon: 'file-contract' },
+            { key: 'goodmoral_path', label: 'Good Moral Certificate', icon: 'certificate' }
+        ];
 
         // Initialize on page load
         window.addEventListener('load', function() {
@@ -1585,9 +1843,11 @@
                     const hasData = recordsData.length > 0;
                     document.getElementById('statsContainer').style.display = hasData ? 'grid' : 'none';
                     document.getElementById('searchFilterContainer').style.display = hasData ? 'flex' : 'none';
+                    document.getElementById('completionStatus').style.display = hasData ? 'block' : 'none';
                     
                     if (hasData) {
                         updateStats();
+                        renderCompletionStatus(recordsData[0]);
                     }
                     renderRecords(recordsData);
                 } else {
@@ -1620,6 +1880,200 @@
             }
         }
 
+        // Render completion status
+        function renderCompletionStatus(record) {
+            const completionDiv = document.getElementById('completionStatus');
+            
+            // Calculate completion
+            const fieldStats = checkFieldCompletion(record);
+            const docStats = checkDocumentCompletion(record);
+            
+            const totalRequired = fieldStats.total + docStats.total;
+            const completed = fieldStats.completed + docStats.completed;
+            const completionPercentage = Math.round((completed / totalRequired) * 100);
+            
+            const isComplete = completionPercentage === 100;
+            const missingFields = fieldStats.missing;
+            const missingDocs = docStats.missing;
+            
+            let statusClass = 'status-complete';
+            let statusText = 'COMPLETE';
+            
+            if (!isComplete) {
+                if (missingFields.length > 0 || missingDocs.length > 0) {
+                    statusClass = 'status-incomplete';
+                    statusText = 'INCOMPLETE';
+                }
+            }
+            
+            let html = `
+                <div class="status-header">
+                    <div class="status-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        Application Status
+                    </div>
+                    <div class="status-badge ${statusClass}">${statusText}</div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${completionPercentage}%"></div>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 15px; color: var(--text-muted); font-size: 12px;">
+                    ${completed} of ${totalRequired} requirements completed (${completionPercentage}%)
+                </div>
+            `;
+            
+            // Requirements grid
+            html += '<div class="requirements-grid">';
+            
+            // Personal Information
+            html += `
+                <div class="requirement-item">
+                    <div class="requirement-icon ${fieldStats.categories.personal.completed === fieldStats.categories.personal.total ? 'icon-complete' : 'icon-missing'}">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="requirement-info">
+                        <div class="requirement-name">Personal Information</div>
+                        <div class="requirement-status">
+                            ${fieldStats.categories.personal.completed}/${fieldStats.categories.personal.total} fields
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Contact Information
+            html += `
+                <div class="requirement-item">
+                    <div class="requirement-icon ${fieldStats.categories.contact.completed === fieldStats.categories.contact.total ? 'icon-complete' : 'icon-missing'}">
+                        <i class="fas fa-address-book"></i>
+                    </div>
+                    <div class="requirement-info">
+                        <div class="requirement-name">Contact Information</div>
+                        <div class="requirement-status">
+                            ${fieldStats.categories.contact.completed}/${fieldStats.categories.contact.total} fields
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Academic Information
+            html += `
+                <div class="requirement-item">
+                    <div class="requirement-icon ${fieldStats.categories.academic.completed === fieldStats.categories.academic.total ? 'icon-complete' : 'icon-missing'}">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="requirement-info">
+                        <div class="requirement-name">Academic Information</div>
+                        <div class="requirement-status">
+                            ${fieldStats.categories.academic.completed}/${fieldStats.categories.academic.total} fields
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Parent Information
+            html += `
+                <div class="requirement-item">
+                    <div class="requirement-icon ${fieldStats.categories.parent.completed === fieldStats.categories.parent.total ? 'icon-complete' : 'icon-missing'}">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="requirement-info">
+                        <div class="requirement-name">Parent Information</div>
+                        <div class="requirement-status">
+                            ${fieldStats.categories.parent.completed}/${fieldStats.categories.parent.total} fields
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Documents
+            html += `
+                <div class="requirement-item">
+                    <div class="requirement-icon ${docStats.completed === docStats.total ? 'icon-complete' : 'icon-missing'}">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="requirement-info">
+                        <div class="requirement-name">Required Documents</div>
+                        <div class="requirement-status">
+                            ${docStats.completed}/${docStats.total} documents
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            html += '</div>';
+            
+            // Missing requirements
+            if (missingFields.length > 0 || missingDocs.length > 0) {
+                html += '<div class="missing-list">';
+                html += '<div class="missing-title"><i class="fas fa-exclamation-triangle"></i> Missing Requirements:</div>';
+                html += '<div class="missing-items">';
+                
+                missingFields.forEach(field => {
+                    html += `<span class="missing-tag"><i class="fas fa-times-circle"></i> ${field}</span>`;
+                });
+                
+                missingDocs.forEach(doc => {
+                    html += `<span class="missing-tag"><i class="fas fa-file"></i> ${doc}</span>`;
+                });
+                
+                html += '</div></div>';
+            }
+            
+            completionDiv.innerHTML = html;
+        }
+
+        // Check field completion
+        function checkFieldCompletion(record) {
+            const stats = {
+                total: 0,
+                completed: 0,
+                missing: [],
+                categories: {
+                    personal: { total: 0, completed: 0 },
+                    contact: { total: 0, completed: 0 },
+                    academic: { total: 0, completed: 0 },
+                    parent: { total: 0, completed: 0 }
+                }
+            };
+            
+            REQUIRED_FIELDS.forEach(field => {
+                stats.total++;
+                stats.categories[field.category].total++;
+                
+                const value = record[field.key];
+                if (value && value !== '' && value !== 'N/A' && value !== null && value !== undefined) {
+                    stats.completed++;
+                    stats.categories[field.category].completed++;
+                } else {
+                    stats.missing.push(field.label);
+                }
+            });
+            
+            return stats;
+        }
+
+        // Check document completion
+        function checkDocumentCompletion(record) {
+            const stats = {
+                total: REQUIRED_DOCUMENTS.length,
+                completed: 0,
+                missing: []
+            };
+            
+            REQUIRED_DOCUMENTS.forEach(doc => {
+                const value = record[doc.key];
+                if (value && value !== '' && value !== null && value !== undefined) {
+                    stats.completed++;
+                } else {
+                    stats.missing.push(doc.label);
+                }
+            });
+            
+            return stats;
+        }
+
         // Update stats
         function updateStats() {
             const totalRecords = recordsData.length;
@@ -1647,13 +2101,13 @@
             document.getElementById('lastSubmission').textContent = lastSubmission;
         }
 
-        // Helper function to check if value exists and is not empty
+        // Helper function to check if value exists
         function hasValue(value) {
             return value !== null && value !== undefined && value !== '' && value !== 'N/A';
         }
 
         // Helper function to format value
-        function formatValue(value, defaultValue = 'Not Provided') {
+        function formatValue(value, defaultValue = null) {
             if (hasValue(value)) {
                 return value;
             }
@@ -1679,6 +2133,13 @@
             }
             
             recordsGrid.innerHTML = records.map(record => {
+                // Check completion for this record
+                const fieldStats = checkFieldCompletion(record);
+                const docStats = checkDocumentCompletion(record);
+                const totalRequired = fieldStats.total + docStats.total;
+                const completed = fieldStats.completed + docStats.completed;
+                const isComplete = completed === totalRequired;
+                
                 // Get status
                 let status = 'pending';
                 let statusText = 'Pending';
@@ -1688,10 +2149,14 @@
                     status = 'sent';
                     statusText = 'Email Sent';
                     statusClass = 'status-sent';
-                } else if (record.created_at) {
+                } else if (isComplete) {
                     status = 'complete';
                     statusText = 'Complete';
                     statusClass = 'status-complete';
+                } else {
+                    status = 'incomplete';
+                    statusText = 'Incomplete';
+                    statusClass = 'status-pending';
                 }
                 
                 // Get Good Moral badge
@@ -1716,6 +2181,11 @@
                         goodmoralBadge = '<span class="goodmoral-badge badge-poor">Poor</span>';
                     }
                 }
+                
+                // Completion badge
+                const completionBadge = isComplete ? 
+                    '<span class="completion-badge badge-complete"><i class="fas fa-check-circle"></i> Complete</span>' : 
+                    '<span class="completion-badge badge-incomplete"><i class="fas fa-exclamation-triangle"></i> Incomplete</span>';
                 
                 // Format date
                 const date = new Date(record.created_at);
@@ -1754,6 +2224,16 @@
                     
                     <div class="record-card-body">
                         <div class="record-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Completion</span>
+                                <span class="detail-value">${completionBadge}</span>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Progress</span>
+                                <span class="detail-value">${completed}/${totalRequired}</span>
+                            </div>
+                            
                             ${schoolYear ? `
                                 <div class="detail-item">
                                     <span class="detail-label">School Year</span>
@@ -1797,7 +2277,7 @@
                             <button class="btn btn-primary" onclick="viewRecordDetails(${record.id})">
                                 <i class="fas fa-eye"></i> View Details
                             </button>
-                            <button class="btn btn-secondary" onclick="viewAllDocuments(${record.id})">
+                            <button class="btn ${isComplete ? 'btn-secondary' : 'btn-warning'}" onclick="viewAllDocuments(${record.id})">
                                 <i class="fas fa-images"></i> Documents
                             </button>
                         </div>
@@ -1904,6 +2384,15 @@
                             return status === 'EXCELLENT' || status === 'GOOD';
                         }
                         return false;
+                    });
+                    break;
+                case 'incomplete':
+                    filteredRecords = recordsData.filter(r => {
+                        const fieldStats = checkFieldCompletion(r);
+                        const docStats = checkDocumentCompletion(r);
+                        const totalRequired = fieldStats.total + docStats.total;
+                        const completed = fieldStats.completed + docStats.completed;
+                        return completed < totalRequired;
                     });
                     break;
                 case 'recent':
@@ -2069,6 +2558,13 @@
         function showRecordModal(record) {
             const modalContent = document.getElementById('recordModalContent');
             
+            // Check completion
+            const fieldStats = checkFieldCompletion(record);
+            const docStats = checkDocumentCompletion(record);
+            const totalRequired = fieldStats.total + docStats.total;
+            const completed = fieldStats.completed + docStats.completed;
+            const isComplete = completed === totalRequired;
+            
             // Format date
             const createdDate = new Date(record.created_at);
             const formattedDate = createdDate.toLocaleDateString('en-US', {
@@ -2090,82 +2586,120 @@
                 goodmoralInfo = record.disciplinary_status;
             }
             
-            // Build HTML only for fields with data
-            let html = '<div class="details-grid">';
+            // Build HTML
+            let html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 5px;">${record.name || 'Unknown'}</h3>
+                            <div style="color: var(--text-muted); font-size: 12px;">LRN: ${record.lrn || 'Not provided'}</div>
+                        </div>
+                        <div>
+                            ${isComplete ? 
+                                '<span class="completion-badge badge-complete"><i class="fas fa-check-circle"></i> Complete Application</span>' : 
+                                '<span class="completion-badge badge-incomplete"><i class="fas fa-exclamation-triangle"></i> Incomplete Application</span>'
+                            }
+                        </div>
+                    </div>
+                    <div class="progress-bar" style="margin-top: 15px;">
+                        <div class="progress-fill" style="width: ${Math.round((completed/totalRequired)*100)}%"></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px; color: var(--text-muted); font-size: 11px;">
+                        ${completed} of ${totalRequired} requirements completed
+                    </div>
+                </div>
+            `;
+            
+            html += '<div class="details-grid">';
             
             // Personal Information
-            let personalInfo = '';
-            if (record.name || record.sex || record.birthdate || record.age || record.civil_status || record.nationality || record.religion) {
-                personalInfo += '<div class="details-group"><h4><i class="fas fa-user"></i> Personal Information</h4>';
-                if (record.name) personalInfo += `<div class="details-row"><span class="details-label">Full Name</span><span class="details-value">${record.name}</span></div>`;
-                if (record.sex) personalInfo += `<div class="details-row"><span class="details-label">Sex</span><span class="details-value">${record.sex}</span></div>`;
-                if (record.birthdate) personalInfo += `<div class="details-row"><span class="details-label">Birthdate</span><span class="details-value">${record.birthdate}</span></div>`;
-                if (record.age) personalInfo += `<div class="details-row"><span class="details-label">Age</span><span class="details-value">${record.age}</span></div>`;
-                if (record.birthplace) personalInfo += `<div class="details-row"><span class="details-label">Birthplace</span><span class="details-value">${record.birthplace}</span></div>`;
-                if (record.civil_status) personalInfo += `<div class="details-row"><span class="details-label">Civil Status</span><span class="details-value">${record.civil_status}</span></div>`;
-                if (record.nationality) personalInfo += `<div class="details-row"><span class="details-label">Nationality</span><span class="details-value">${record.nationality}</span></div>`;
-                if (record.religion) personalInfo += `<div class="details-row"><span class="details-label">Religion</span><span class="details-value">${record.religion}</span></div>`;
-                personalInfo += '</div>';
-                html += personalInfo;
-            }
+            let personalInfo = '<div class="details-group"><h4><i class="fas fa-user"></i> Personal Information</h4>';
+            let hasPersonal = false;
+            
+            if (record.name) { personalInfo += `<div class="details-row"><span class="details-label">Full Name</span><span class="details-value">${record.name}</span></div>`; hasPersonal = true; }
+            if (record.sex) { personalInfo += `<div class="details-row"><span class="details-label">Sex</span><span class="details-value">${record.sex}</span></div>`; hasPersonal = true; }
+            if (record.birthdate) { personalInfo += `<div class="details-row"><span class="details-label">Birthdate</span><span class="details-value">${record.birthdate}</span></div>`; hasPersonal = true; }
+            if (record.age) { personalInfo += `<div class="details-row"><span class="details-label">Age</span><span class="details-value">${record.age}</span></div>`; hasPersonal = true; }
+            if (record.birthplace) { personalInfo += `<div class="details-row"><span class="details-label">Birthplace</span><span class="details-value">${record.birthplace}</span></div>`; hasPersonal = true; }
+            if (record.civil_status) { personalInfo += `<div class="details-row"><span class="details-label">Civil Status</span><span class="details-value">${record.civil_status}</span></div>`; hasPersonal = true; }
+            if (record.nationality) { personalInfo += `<div class="details-row"><span class="details-label">Nationality</span><span class="details-value">${record.nationality}</span></div>`; hasPersonal = true; }
+            if (record.religion) { personalInfo += `<div class="details-row"><span class="details-label">Religion</span><span class="details-value">${record.religion}</span></div>`; hasPersonal = true; }
+            
+            personalInfo += '</div>';
+            if (hasPersonal) html += personalInfo;
             
             // Contact Information
-            let contactInfo = '';
-            if (record.email || record.mobile_no || record.province || record.specific_address) {
-                contactInfo += '<div class="details-group"><h4><i class="fas fa-address-book"></i> Contact Information</h4>';
-                if (record.email) contactInfo += `<div class="details-row"><span class="details-label">Email</span><span class="details-value">${record.email}</span></div>`;
-                if (record.mobile_no) contactInfo += `<div class="details-row"><span class="details-label">Mobile</span><span class="details-value">${record.mobile_no}</span></div>`;
-                if (record.province) contactInfo += `<div class="details-row"><span class="details-label">Province</span><span class="details-value">${record.province}</span></div>`;
-                if (record.specific_address) contactInfo += `<div class="details-row"><span class="details-label">Address</span><span class="details-value">${record.specific_address}</span></div>`;
-                contactInfo += '</div>';
-                html += contactInfo;
-            }
+            let contactInfo = '<div class="details-group"><h4><i class="fas fa-address-book"></i> Contact Information</h4>';
+            let hasContact = false;
+            
+            if (record.email) { contactInfo += `<div class="details-row"><span class="details-label">Email</span><span class="details-value">${record.email}</span></div>`; hasContact = true; }
+            if (record.mobile_no) { contactInfo += `<div class="details-row"><span class="details-label">Mobile</span><span class="details-value">${record.mobile_no}</span></div>`; hasContact = true; }
+            if (record.province) { contactInfo += `<div class="details-row"><span class="details-label">Province</span><span class="details-value">${record.province}</span></div>`; hasContact = true; }
+            if (record.specific_address) { contactInfo += `<div class="details-row"><span class="details-label">Address</span><span class="details-value">${record.specific_address}</span></div>`; hasContact = true; }
+            
+            contactInfo += '</div>';
+            if (hasContact) html += contactInfo;
             
             // Academic Information
-            let academicInfo = '';
-            if (record.lrn || record.school_name || record.school_year || record.student_type || record.college || record.program || record.final_general_average) {
-                academicInfo += '<div class="details-group"><h4><i class="fas fa-graduation-cap"></i> Academic Information</h4>';
-                if (record.lrn) academicInfo += `<div class="details-row"><span class="details-label">LRN</span><span class="details-value">${record.lrn}</span></div>`;
-                if (record.school_name) academicInfo += `<div class="details-row"><span class="details-label">School</span><span class="details-value">${record.school_name}</span></div>`;
-                if (record.school_year) academicInfo += `<div class="details-row"><span class="details-label">School Year</span><span class="details-value">${record.school_year}</span></div>`;
-                if (record.student_type) academicInfo += `<div class="details-row"><span class="details-label">Student Type</span><span class="details-value">${record.student_type}</span></div>`;
-                if (record.college) academicInfo += `<div class="details-row"><span class="details-label">College</span><span class="details-value">${record.college}</span></div>`;
-                if (record.program) academicInfo += `<div class="details-row"><span class="details-label">Program</span><span class="details-value">${record.program}</span></div>`;
-                if (record.final_general_average) academicInfo += `<div class="details-row"><span class="details-label">Average</span><span class="details-value">${record.final_general_average}</span></div>`;
-                academicInfo += '</div>';
-                html += academicInfo;
-            }
+            let academicInfo = '<div class="details-group"><h4><i class="fas fa-graduation-cap"></i> Academic Information</h4>';
+            let hasAcademic = false;
+            
+            if (record.lrn) { academicInfo += `<div class="details-row"><span class="details-label">LRN</span><span class="details-value">${record.lrn}</span></div>`; hasAcademic = true; }
+            if (record.school_name) { academicInfo += `<div class="details-row"><span class="details-label">School</span><span class="details-value">${record.school_name}</span></div>`; hasAcademic = true; }
+            if (record.school_year) { academicInfo += `<div class="details-row"><span class="details-label">School Year</span><span class="details-value">${record.school_year}</span></div>`; hasAcademic = true; }
+            if (record.student_type) { academicInfo += `<div class="details-row"><span class="details-label">Student Type</span><span class="details-value">${record.student_type}</span></div>`; hasAcademic = true; }
+            if (record.college) { academicInfo += `<div class="details-row"><span class="details-label">College</span><span class="details-value">${record.college}</span></div>`; hasAcademic = true; }
+            if (record.program) { academicInfo += `<div class="details-row"><span class="details-label">Program</span><span class="details-value">${record.program}</span></div>`; hasAcademic = true; }
+            if (record.final_general_average) { academicInfo += `<div class="details-row"><span class="details-label">Average</span><span class="details-value">${record.final_general_average}</span></div>`; hasAcademic = true; }
+            
+            academicInfo += '</div>';
+            if (hasAcademic) html += academicInfo;
             
             // Parent Information
-            let parentInfo = '';
-            if (record.mother_name || record.father_name || record.guardian_name) {
-                parentInfo += '<div class="details-group"><h4><i class="fas fa-users"></i> Parent/Guardian Information</h4>';
-                if (record.mother_name) parentInfo += `<div class="details-row"><span class="details-label">Mother</span><span class="details-value">${record.mother_name}</span></div>`;
-                if (record.mother_contact) parentInfo += `<div class="details-row"><span class="details-label">Mother Contact</span><span class="details-value">${record.mother_contact}</span></div>`;
-                if (record.father_name) parentInfo += `<div class="details-row"><span class="details-label">Father</span><span class="details-value">${record.father_name}</span></div>`;
-                if (record.father_contact) parentInfo += `<div class="details-row"><span class="details-label">Father Contact</span><span class="details-value">${record.father_contact}</span></div>`;
-                if (record.guardian_name) parentInfo += `<div class="details-row"><span class="details-label">Guardian</span><span class="details-value">${record.guardian_name}</span></div>`;
-                parentInfo += '</div>';
-                html += parentInfo;
-            }
+            let parentInfo = '<div class="details-group"><h4><i class="fas fa-users"></i> Parent/Guardian Information</h4>';
+            let hasParent = false;
+            
+            if (record.mother_name) { parentInfo += `<div class="details-row"><span class="details-label">Mother</span><span class="details-value">${record.mother_name}</span></div>`; hasParent = true; }
+            if (record.mother_contact) { parentInfo += `<div class="details-row"><span class="details-label">Mother Contact</span><span class="details-value">${record.mother_contact}</span></div>`; hasParent = true; }
+            if (record.father_name) { parentInfo += `<div class="details-row"><span class="details-label">Father</span><span class="details-value">${record.father_name}</span></div>`; hasParent = true; }
+            if (record.father_contact) { parentInfo += `<div class="details-row"><span class="details-label">Father Contact</span><span class="details-value">${record.father_contact}</span></div>`; hasParent = true; }
+            if (record.guardian_name) { parentInfo += `<div class="details-row"><span class="details-label">Guardian</span><span class="details-value">${record.guardian_name}</span></div>`; hasParent = true; }
+            
+            parentInfo += '</div>';
+            if (hasParent) html += parentInfo;
             
             // Record Information
-            let recordInfo = '<div class="details-group"><h4><i class="fas fa-info-circle"></i> Record Information</h4>';
-            recordInfo += `<div class="details-row"><span class="details-label">Record ID</span><span class="details-value">${record.id}</span></div>`;
-            recordInfo += `<div class="details-row"><span class="details-label">Submitted</span><span class="details-value">${formattedDate}</span></div>`;
-            recordInfo += `<div class="details-row"><span class="details-label">Email Status</span><span class="details-value">${record.email_sent ? 'Sent' : 'Pending'}</span></div>`;
-            recordInfo += `<div class="details-row"><span class="details-label">Good Moral</span><span class="details-value">${goodmoralInfo}</span></div>`;
-            recordInfo += '</div>';
-            html += recordInfo;
+            html += `
+                <div class="details-group">
+                    <h4><i class="fas fa-info-circle"></i> Record Information</h4>
+                    <div class="details-row"><span class="details-label">Record ID</span><span class="details-value">${record.id}</span></div>
+                    <div class="details-row"><span class="details-label">Submitted</span><span class="details-value">${formattedDate}</span></div>
+                    <div class="details-row"><span class="details-label">Email Status</span><span class="details-value">${record.email_sent ? 'Sent' : 'Pending'}</span></div>
+                    <div class="details-row"><span class="details-label">Good Moral</span><span class="details-value">${goodmoralInfo}</span></div>
+                </div>
+            `;
             
             html += '</div>';
+            
+            // Add missing requirements warning
+            if (!isComplete) {
+                html += `
+                    <div class="missing-list" style="margin-top: 20px;">
+                        <div class="missing-title"><i class="fas fa-exclamation-triangle"></i> Missing Requirements:</div>
+                        <div class="missing-items">
+                            ${fieldStats.missing.map(f => `<span class="missing-tag"><i class="fas fa-times-circle"></i> ${f}</span>`).join('')}
+                            ${docStats.missing.map(d => `<span class="missing-tag"><i class="fas fa-file"></i> ${d}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
             
             // Add Documents Preview
             const documents = getDocumentsList(record);
             if (documents.length > 0) {
                 html += `
                     <div class="documents-section">
-                        <h4 class="section-title"><i class="fas fa-file-alt"></i> Documents</h4>
+                        <h4 class="section-title"><i class="fas fa-file-alt"></i> Uploaded Documents</h4>
                         <div class="document-grid">
                             ${documents.join('')}
                         </div>
@@ -2398,7 +2932,8 @@
             icon.className = {
                 'success': 'fas fa-check-circle',
                 'error': 'fas fa-exclamation-circle',
-                'info': 'fas fa-info-circle'
+                'info': 'fas fa-info-circle',
+                'warning': 'fas fa-exclamation-triangle'
             }[type] || 'fas fa-info-circle';
             
             notification.className = `notification ${type}`;
