@@ -1463,6 +1463,19 @@
                     const data = await recordsResponse.json();
                     allRecords = data.records || [];
                     filteredRecords = [...allRecords];
+                    
+                    // DEBUG: Log all records and their Good Moral analysis
+                    console.log('📊 ALL RECORDS LOADED:', allRecords);
+                    allRecords.forEach((record, index) => {
+                        if (record.goodmoral_analysis) {
+                            console.log(`📝 Record ${index + 1} (ID: ${record.id}) - Good Moral Analysis:`, record.goodmoral_analysis);
+                            console.log(`   → Issuing School: ${record.goodmoral_analysis.issuing_school || 'Not Found'}`);
+                            console.log(`   → Issuing Officer: ${record.goodmoral_analysis.issuing_officer || 'Not Found'}`);
+                            console.log(`   → Issued Date: ${record.goodmoral_analysis.issued_date || 'Not Found'}`);
+                        } else {
+                            console.log(`⚠️ Record ${index + 1} (ID: ${record.id}) - No Good Moral Analysis`);
+                        }
+                    });
                 }
 
                 if (collegesResponse.ok) {
@@ -1926,12 +1939,20 @@
             }
         }
 
-        // View student details
+        // View student details - UPDATED with Good Moral debugging
         async function viewStudentDetails(id) {
             const record = allRecords.find(r => r.id === id);
             if (!record) {
                 showNotification('Record not found', 'error');
                 return;
+            }
+            
+            // DEBUG: Log the record data
+            console.log(`📝 Viewing record ID ${id}:`, record);
+            if (record.goodmoral_analysis) {
+                console.log('📊 Good Moral Analysis for this record:', record.goodmoral_analysis);
+            } else {
+                console.log('⚠️ No Good Moral Analysis found for this record');
             }
             
             // Get college badge class
@@ -1952,8 +1973,15 @@
                     goodmoralAnalysis = typeof record.goodmoral_analysis === 'string' 
                         ? JSON.parse(record.goodmoral_analysis) 
                         : record.goodmoral_analysis;
+                    
+                    // DEBUG: Log parsed analysis
+                    console.log('✅ Parsed Good Moral Analysis:', goodmoralAnalysis);
+                    console.log('   → Issuing School:', goodmoralAnalysis.issuing_school);
+                    console.log('   → Issuing Officer:', goodmoralAnalysis.issuing_officer);
+                    console.log('   → Issued Date:', goodmoralAnalysis.issued_date);
+                    
                 } catch (e) {
-                    console.error('Failed to parse analysis:', e);
+                    console.error('❌ Failed to parse analysis:', e);
                 }
             }
 
@@ -2228,6 +2256,15 @@
                                 <div style="margin-bottom: 8px;">
                                     <strong>Issued Date:</strong> ${goodmoralAnalysis.issued_date || 'N/A'}
                                 </div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Certificate Type:</strong> ${goodmoralAnalysis.certificate_type || 'N/A'}
+                                </div>
+                                ${goodmoralAnalysis.remarks ? `
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>Remarks:</strong><br>
+                                        ${goodmoralAnalysis.remarks}
+                                    </div>
+                                ` : ''}
                             ` : ''}
                             
                             ${record.goodmoral_score ? `
@@ -2246,11 +2283,27 @@
                             
                             ${goodmoralAnalysis && goodmoralAnalysis.disciplinary_details ? `
                                 <div style="margin-bottom: 8px;">
-                                    <strong>Details:</strong><br>
+                                    <strong>Disciplinary Details:</strong><br>
                                     ${goodmoralAnalysis.disciplinary_details}
                                 </div>
                             ` : ''}
+                            
+                            ${record.disciplinary_details ? `
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Recorded Details:</strong><br>
+                                    ${record.disciplinary_details}
+                                </div>
+                            ` : ''}
                         </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid #444;">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-shield-alt"></i> Good Moral Analysis
+                        </h4>
+                        <p style="color: #888;">No Good Moral analysis available for this record.</p>
                     </div>
                 `;
             }
