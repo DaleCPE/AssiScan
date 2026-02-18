@@ -3,6 +3,7 @@ flask-cors
 psycopg2-binary
 google-generativeai>=0.8.3
 pillow
-gunicorn
+gunicorn app:app
 werkzeug
 requests>=2.31.0
+
