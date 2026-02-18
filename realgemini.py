@@ -55,10 +55,10 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
 
-# Setup CORS
+# Setup CORS - Allow all origins for Render
 CORS(app, resources={
     r"/*": {
-        "origins": ["https://assiscan-app.onrender.com", "http://localhost:10000", "http://localhost:5000"],
+        "origins": ["*"],  # Allow all origins for Render
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"]
     }
@@ -3804,7 +3804,14 @@ def get_single_record(record_id):
 
 # ================= APPLICATION START =================
 if __name__ == '__main__':
+    # Get port from environment variable (Render sets this automatically)
     port = int(os.environ.get("PORT", 10000))
+    
+    # Get host - VERY IMPORTANT: Use 0.0.0.0 for Render
+    host = os.environ.get("HOST", "0.0.0.0")
+    
+    # Debug mode - set to False in production
+    debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
     print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING")
@@ -3851,7 +3858,9 @@ if __name__ == '__main__':
     print("   • Enhanced logging for Good Moral extraction")
     print("   • Manual extraction fallbacks")
     print("="*60)
-    print(f"🌐 Server starting on port {port}")
+    print(f"🌐 Server starting on {host}:{port}")
+    print(f"⚙️ Debug mode: {debug}")
     print("="*60)
     
-    app.run(host='0.0.0.0', port=port, debug=False)
+    # Force Flask to bind to all interfaces
+    app.run(host=host, port=port, debug=debug)
