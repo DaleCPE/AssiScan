@@ -58,7 +58,7 @@ app.secret_key = os.getenv("SECRET_KEY", "assiscan-super-secret-key-2024")
 # Setup CORS - Allow all origins for Render
 CORS(app, resources={
     r"/*": {
-        "origins": ["*"],  # Allow all origins for Render
+        "origins": ["*"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"]
     }
@@ -86,13 +86,53 @@ PERMISSIONS = {
         'manage_users', 'manage_colleges', 'manage_programs',
         'view_all_records', 'edit_records', 'delete_records',
         'send_emails', 'view_dashboard', 'access_admin_panel',
-        'manage_settings'  # Added for school year management
+        'manage_settings'
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
         'change_password', 'view_own_documents', 'download_own_documents'
     ]
 }
+
+# ================= DECORATORS FOR ROLE-BASED ACCESS =================
+# MOVED TO TOP - para magamit agad
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({"error": "Authentication required"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def role_required(required_role):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            user_role = session.get('role', '').upper()
+            if user_role != required_role:
+                return jsonify({"error": f"{required_role} access required"}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def permission_required(permission):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            user_role = session.get('role', '').upper()
+            if user_role not in PERMISSIONS or permission not in PERMISSIONS[user_role]:
+                return jsonify({"error": "Permission denied"}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # ================= SCHOOL YEAR SETTINGS =================
 SCHOOL_YEAR_FILE = os.path.join(BASE_DIR, 'school_year.json')
@@ -168,45 +208,6 @@ def set_school_year():
     except Exception as e:
         print(f"❌ Error setting school year: {e}")
         return jsonify({"error": str(e)}), 500
-
-# ================= DECORATORS FOR ROLE-BASED ACCESS =================
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({"error": "Authentication required"}), 401
-        return f(*args, **kwargs)
-    return decorated_function
-
-def role_required(required_role):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                return jsonify({"error": "Authentication required"}), 401
-            
-            user_role = session.get('role', '').upper()
-            if user_role != required_role:
-                return jsonify({"error": f"{required_role} access required"}), 403
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def permission_required(permission):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                return jsonify({"error": "Authentication required"}), 401
-            
-            user_role = session.get('role', '').upper()
-            if user_role not in PERMISSIONS or permission not in PERMISSIONS[user_role]:
-                return jsonify({"error": "Permission denied"}), 403
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
