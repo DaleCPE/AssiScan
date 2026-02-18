@@ -167,6 +167,207 @@
             font-family: 'Cinzel', serif;
         }
 
+        /* ===== SCHOOL YEAR SECTION ===== */
+        .school-year-section {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(20, 5, 5, 0.5) 100%);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .school-year-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .school-year-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .school-year-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: black;
+            box-shadow: var(--shadow);
+        }
+
+        .school-year-title {
+            flex: 1;
+        }
+
+        .school-year-title h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            color: var(--gold);
+            margin-bottom: 5px;
+        }
+
+        .school-year-title p {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .school-year-current {
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid var(--gold);
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .school-year-controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .school-year-input-group {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .school-year-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .school-year-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .school-year-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--text-light);
+            border-radius: var(--border-radius);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .school-year-input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .school-year-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .school-year-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-school-year {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            border: none;
+            color: black;
+            font-weight: 600;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .btn-school-year:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-school-year:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-muted);
+        }
+
+        .btn-reset:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+        }
+
+        .school-year-preview {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            border: 1px dashed rgba(212, 175, 55, 0.3);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .preview-label {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .preview-value {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: var(--gold);
+            font-weight: 600;
+        }
+
         /* ===== STATS CARDS ===== */
         .stats-container {
             display: grid;
@@ -962,6 +1163,24 @@
                 justify-content: center;
             }
 
+            .school-year-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .school-year-input-wrapper {
+                flex-direction: column;
+            }
+
+            .school-year-actions {
+                width: 100%;
+            }
+
+            .btn-school-year {
+                width: 100%;
+                justify-content: center;
+            }
+
             .colleges-grid {
                 grid-template-columns: 1fr;
             }
@@ -1007,6 +1226,11 @@
             .stat-card {
                 flex-direction: column;
                 text-align: center;
+            }
+
+            .school-year-preview {
+                flex-direction: column;
+                align-items: flex-start;
             }
 
             .college-card-header {
@@ -1119,6 +1343,63 @@
             </div>
         </header>
 
+        <!-- SCHOOL YEAR SECTION (NEW) -->
+        <div class="school-year-section">
+            <div class="school-year-header">
+                <div class="school-year-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="school-year-title">
+                    <h2>School Year Management</h2>
+                    <p>Set the active school year for student applications</p>
+                </div>
+                <div class="school-year-current" id="currentSchoolYearDisplay">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Loading...</span>
+                </div>
+            </div>
+
+            <div class="school-year-controls">
+                <div class="school-year-input-group">
+                    <label class="school-year-label">
+                        <i class="fas fa-pen"></i> Set Active School Year
+                    </label>
+                    <div class="school-year-input-wrapper">
+                        <input type="text" 
+                               class="school-year-input" 
+                               id="schoolYearInput" 
+                               placeholder="e.g., 2025-2026"
+                               maxlength="9"
+                               pattern="\d{4}-\d{4}"
+                               title="Format: YYYY-YYYY (e.g., 2025-2026)">
+                        <div class="school-year-actions">
+                            <button class="btn-school-year" onclick="updateSchoolYear()">
+                                <i class="fas fa-save"></i> Update
+                            </button>
+                            <button class="btn-school-year btn-reset" onclick="resetSchoolYear()">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="school-year-hint">
+                        <i class="fas fa-info-circle"></i> Format: YYYY-YYYY (e.g., 2025-2026)
+                    </div>
+                </div>
+            </div>
+
+            <div class="school-year-preview">
+                <span class="preview-label">
+                    <i class="fas fa-eye"></i> Preview in Scanner:
+                </span>
+                <span class="preview-value" id="schoolYearPreview">
+                    Not set
+                </span>
+                <span class="preview-label" style="margin-left: auto;">
+                    <i class="fas fa-sync-alt"></i> Auto-updates in real-time
+                </span>
+            </div>
+        </div>
+
         <!-- STATS -->
         <div class="stats-container">
             <div class="stat-card">
@@ -1150,11 +1431,11 @@
             </div>
             <div class="stat-card">
                 <div class="stat-icon">
-                    <i class="fas fa-users"></i>
+                    <i class="fas fa-calendar-check"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalUsers">0</h3>
-                    <p>System Users</p>
+                    <h3 id="currentSchoolYear">N/A</h3>
+                    <p>Current SY</p>
                 </div>
             </div>
         </div>
@@ -1397,11 +1678,13 @@
         let currentAction = {};
         let currentFilter = 'all';
         let userData = {};
+        let currentSchoolYear = '2025-2026'; // Default
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadColleges();
+            loadSchoolYear();
             setupFormEvents();
             setupSearch();
         });
@@ -1427,6 +1710,27 @@
                 e.preventDefault();
                 await updateProgram();
             });
+
+            // School year input validation
+            const schoolYearInput = document.getElementById('schoolYearInput');
+            if (schoolYearInput) {
+                schoolYearInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/[^0-9-]/g, '');
+                    if (value.length > 9) value = value.slice(0, 9);
+                    e.target.value = value;
+                    
+                    // Auto-format after 4 digits
+                    if (value.length === 4 && !value.includes('-')) {
+                        e.target.value = value + '-';
+                    }
+                });
+
+                schoolYearInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        updateSchoolYear();
+                    }
+                });
+            }
         }
 
         // Check authentication
@@ -1472,6 +1776,110 @@
             document.getElementById('userAvatar').textContent = initials;
         }
 
+        // ========== SCHOOL YEAR FUNCTIONS ==========
+        async function loadSchoolYear() {
+            try {
+                const response = await fetch('/api/settings/school-year', {
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentSchoolYear = data.school_year || '2025-2026';
+                } else {
+                    // Use default if not set
+                    currentSchoolYear = '2025-2026';
+                }
+            } catch (error) {
+                console.error('Error loading school year:', error);
+                currentSchoolYear = '2025-2026';
+            }
+            
+            updateSchoolYearDisplay();
+        }
+
+        async function updateSchoolYear() {
+            const input = document.getElementById('schoolYearInput');
+            const newSchoolYear = input.value.trim();
+            
+            // Validate format: YYYY-YYYY
+            const yearPattern = /^\d{4}-\d{4}$/;
+            if (!yearPattern.test(newSchoolYear)) {
+                showNotification('Invalid format! Use: YYYY-YYYY (e.g., 2025-2026)', 'error');
+                input.focus();
+                return;
+            }
+            
+            // Validate years
+            const [startYear, endYear] = newSchoolYear.split('-').map(Number);
+            if (endYear !== startYear + 1) {
+                showNotification('End year must be exactly one year after start year!', 'error');
+                input.focus();
+                return;
+            }
+            
+            const btn = document.querySelector('.btn-school-year:not(.btn-reset)');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/settings/school-year', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify({ school_year: newSchoolYear })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentSchoolYear = data.school_year;
+                    updateSchoolYearDisplay();
+                    showNotification(`School year updated to ${currentSchoolYear}!`, 'success');
+                    input.value = '';
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update school year', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating school year:', error);
+                showNotification('Error updating school year', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function resetSchoolYear() {
+            document.getElementById('schoolYearInput').value = '';
+            showNotification('Enter new school year to update', 'info');
+        }
+
+        function updateSchoolYearDisplay() {
+            // Update the current display
+            const currentDisplay = document.getElementById('currentSchoolYearDisplay');
+            if (currentDisplay) {
+                currentDisplay.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    <span>Active SY: ${currentSchoolYear}</span>
+                `;
+            }
+            
+            // Update stats
+            const currentSYStat = document.getElementById('currentSchoolYear');
+            if (currentSYStat) {
+                currentSYStat.textContent = currentSchoolYear;
+            }
+            
+            // Update preview
+            const preview = document.getElementById('schoolYearPreview');
+            if (preview) {
+                preview.textContent = currentSchoolYear;
+            }
+        }
+
         // ========== COLLEGE FUNCTIONS ==========
         async function loadColleges() {
             try {
@@ -1493,12 +1901,11 @@
             const totalColleges = collegesData.length;
             const activeColleges = collegesData.filter(c => c.is_active).length;
             const totalPrograms = collegesData.reduce((sum, college) => sum + (college.programs?.length || 0), 0);
-            const totalUsers = 0; // Set to 0 since user management is removed
             
             document.getElementById('totalColleges').textContent = totalColleges;
             document.getElementById('activeColleges').textContent = activeColleges;
             document.getElementById('totalPrograms').textContent = totalPrograms;
-            document.getElementById('totalUsers').textContent = totalUsers;
+            // currentSchoolYear is already updated separately
         }
 
         function renderColleges(colleges) {
@@ -1995,6 +2402,7 @@
         // ========== UTILITY FUNCTIONS ==========
         function refreshData() {
             loadColleges();
+            loadSchoolYear();
             showNotification('Data refreshed successfully!', 'info');
         }
 
