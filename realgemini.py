@@ -2285,8 +2285,10 @@ def get_my_records():
             if r.get('goodmoral_analysis'):
                 try:
                     r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                    print(f"📊 Good Moral Analysis for student {r['id']}: {json.dumps(r['goodmoral_analysis'], indent=2)}")
                 except:
                     r['goodmoral_analysis'] = {}
+                    print(f"❌ Failed to parse goodmoral_analysis for student {r['id']}")
             
             # Parse other_documents JSON
             if r.get('other_documents'):
@@ -2479,8 +2481,12 @@ def get_records():
             if r.get('goodmoral_analysis'):
                 try:
                     r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                    print(f"📊 Good Moral Analysis for record {r['id']}: {json.dumps(r['goodmoral_analysis'], indent=2)}")
                 except:
                     r['goodmoral_analysis'] = {}
+                    print(f"❌ Failed to parse goodmoral_analysis for record {r['id']}")
+            else:
+                print(f"⚠️ No goodmoral_analysis found for record {r['id']}")
             
             # Parse other_documents JSON
             if r.get('other_documents'):
@@ -2528,8 +2534,10 @@ def save_record():
         d = request.json
         print(f"📥 Saving/UPDATING record for user: {session['user_id']}")
         
-        # Check if Good Moral data is included
+        # Debug: Print incoming goodmoral data
         goodmoral_analysis = d.get('goodmoral_analysis')
+        print(f"📊 Incoming goodmoral_analysis: {json.dumps(goodmoral_analysis, indent=2) if goodmoral_analysis else 'None'}")
+        
         disciplinary_status = d.get('disciplinary_status')
         goodmoral_score = d.get('goodmoral_score')
         disciplinary_details = d.get('disciplinary_details')
@@ -2574,8 +2582,10 @@ def save_record():
             if goodmoral_analysis:
                 if isinstance(goodmoral_analysis, dict):
                     goodmoral_analysis_json = json.dumps(goodmoral_analysis)
+                    print(f"✅ Converted goodmoral_analysis to JSON string")
                 else:
                     goodmoral_analysis_json = goodmoral_analysis
+                    print(f"⚠️ goodmoral_analysis is already a string")
             
             # FIXED UPDATE QUERY - Remove updated_at field since it has DEFAULT
             cur.execute('''
@@ -2635,6 +2645,7 @@ def save_record():
             
             print(f"✅ Record UPDATED with ID: {updated_id}")
             print(f"👤 User ID: {session['user_id']}")
+            print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             print(f"🔄 This was an UPDATE of existing record")
             
             return jsonify({
@@ -2658,8 +2669,10 @@ def save_record():
             if goodmoral_analysis:
                 if isinstance(goodmoral_analysis, dict):
                     goodmoral_analysis_json = json.dumps(goodmoral_analysis)
+                    print(f"✅ Converted goodmoral_analysis to JSON string")
                 else:
                     goodmoral_analysis_json = goodmoral_analysis
+                    print(f"⚠️ goodmoral_analysis is already a string")
             
             # INSERT new record
             cur.execute('''
@@ -2738,6 +2751,7 @@ def save_record():
             print(f"📚 Program: {program}")
             print(f"🙏 Religion: {religion}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
+            print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2963,6 +2977,7 @@ def scan_goodmoral():
         try:
             response_text = extract_with_gemini(prompt, pil_images)
             print(f"✅ Gemini Response received: {len(response_text)} characters")
+            print(f"📝 RAW RESPONSE FROM GEMINI: {response_text}")  # DEBUG: Print raw response
             print(f"📝 Response preview: {response_text[:500]}...")
             
             # Clean the response
@@ -2982,11 +2997,12 @@ def scan_goodmoral():
                 return jsonify({"error": "Invalid JSON response from AI"}), 500
                 
             json_str = cleaned_text[start:end]
+            print(f"📝 EXTRACTED JSON STRING: {json_str}")  # DEBUG: Print extracted JSON
             
             try:
                 analysis_data = json.loads(json_str)
                 print(f"✅ Successfully parsed Good Moral analysis")
-                print(f"📊 Extracted data: {json.dumps(analysis_data, indent=2)}")
+                print(f"📊 PARSED ANALYSIS DATA: {json.dumps(analysis_data, indent=2)}")  # DEBUG: Print parsed data
                 
                 # Validate required fields
                 if not analysis_data.get("is_valid_certificate", False):
@@ -3843,6 +3859,7 @@ def get_single_record(record_id):
         if record.get('goodmoral_analysis'):
             try:
                 record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
+                print(f"📊 Good Moral Analysis for record {record['id']}: {json.dumps(record['goodmoral_analysis'], indent=2)}")
             except:
                 record['goodmoral_analysis'] = {}
         
