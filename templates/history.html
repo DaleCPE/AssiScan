@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         :root {
             --gold: #d4af37;
@@ -274,6 +277,34 @@
         .filter-select option {
             background: #121212;
             color: white;
+        }
+
+        .action-buttons-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            padding: 12px 20px;
+            background: rgba(40, 167, 69, 0.15);
+            border: 1px solid #28a745;
+            color: #28a745;
+            border-radius: var(--border-radius);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .download-btn:hover {
+            background: rgba(40, 167, 69, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
 
         .clear-filters-btn {
@@ -977,6 +1008,16 @@
             border-color: var(--gold);
         }
 
+        /* Download counter */
+        .download-counter {
+            font-size: 11px;
+            color: var(--gold);
+            margin-left: 5px;
+            background: rgba(212, 175, 55, 0.2);
+            padding: 2px 6px;
+            border-radius: 12px;
+        }
+
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 1024px) {
             table {
@@ -1008,7 +1049,8 @@
             }
 
             .filter-select,
-            .clear-filters-btn {
+            .clear-filters-btn,
+            .download-btn {
                 width: 100%;
             }
 
@@ -1228,9 +1270,17 @@
                 <option value="POOR">Poor Record</option>
             </select>
 
-            <button class="clear-filters-btn" onclick="clearFilters()">
-                <i class="fas fa-times"></i> Clear Filters
-            </button>
+            <div class="action-buttons-group">
+                <button class="download-btn" onclick="downloadFilteredData()" title="Download filtered records to Excel">
+                    <i class="fas fa-download"></i> 
+                    Download Excel 
+                    <span class="download-counter" id="downloadCount">0</span>
+                </button>
+                
+                <button class="clear-filters-btn" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
+                </button>
+            </div>
         </div>
 
         <!-- TABLE -->
@@ -1311,6 +1361,7 @@
 
     <script>
         let allRecords = [];
+        let filteredRecords = [];
         let serverBaseUrl = window.location.origin;
         let currentEmailRecordId = null;
         let collegesData = [];
@@ -1411,6 +1462,7 @@
                 if (recordsResponse.ok) {
                     const data = await recordsResponse.json();
                     allRecords = data.records || [];
+                    filteredRecords = [...allRecords];
                 }
 
                 if (collegesResponse.ok) {
@@ -1420,7 +1472,8 @@
 
                 document.getElementById('recordsTable').style.display = 'table';
                 updateStats();
-                renderTable(allRecords);
+                renderTable(filteredRecords);
+                updateDownloadCount();
 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -1470,8 +1523,9 @@
             }
         }
 
-        // Render table - COMPLETE VERSION with all features
+        // Render table
         function renderTable(records) {
+            filteredRecords = records;
             const tbody = document.getElementById('tableBody');
             if (!tbody) return;
             
@@ -1487,6 +1541,7 @@
                         </td>
                     </tr>
                 `;
+                updateDownloadCount();
                 return;
             }
 
@@ -1685,6 +1740,8 @@
                     </td>
                 </tr>
             `}).join('');
+            
+            updateDownloadCount();
         }
 
         // Update stats
@@ -1722,11 +1779,11 @@
             const programFilter = document.getElementById('programFilter')?.value || '';
             const statusFilter = document.getElementById('statusFilter')?.value || '';
             
-            let filteredRecords = allRecords;
+            let filtered = allRecords;
             
             // Apply search filter
             if (searchTerm) {
-                filteredRecords = filteredRecords.filter(r => {
+                filtered = filtered.filter(r => {
                     const name = (r.name || '').toLowerCase();
                     const lrn = (r.lrn || '').toLowerCase();
                     const college = (r.college || '').toLowerCase();
@@ -1741,21 +1798,21 @@
             
             // Apply college filter
             if (collegeFilter) {
-                filteredRecords = filteredRecords.filter(r => 
+                filtered = filtered.filter(r => 
                     (r.college || '').toLowerCase() === collegeFilter.toLowerCase()
                 );
             }
             
             // Apply program filter
             if (programFilter) {
-                filteredRecords = filteredRecords.filter(r => 
+                filtered = filtered.filter(r => 
                     (r.program || '').toLowerCase() === programFilter.toLowerCase()
                 );
             }
             
             // Apply status filter
             if (statusFilter) {
-                filteredRecords = filteredRecords.filter(r => {
+                filtered = filtered.filter(r => {
                     if (!r.disciplinary_status && r.goodmoral_score === undefined) {
                         return statusFilter === '';
                     }
@@ -1785,7 +1842,7 @@
                 });
             }
             
-            renderTable(filteredRecords);
+            renderTable(filtered);
         }
 
         function clearFilters() {
@@ -1798,7 +1855,78 @@
             renderTable(allRecords);
         }
 
-        // View student details - COMPLETE VERSION
+        // Update download counter
+        function updateDownloadCount() {
+            const count = filteredRecords.length;
+            const counter = document.getElementById('downloadCount');
+            if (counter) {
+                counter.textContent = count;
+            }
+        }
+
+        // DOWNLOAD FUNCTION - Exports filtered data to Excel
+        function downloadFilteredData() {
+            if (filteredRecords.length === 0) {
+                showNotification('No records to download', 'info');
+                return;
+            }
+
+            try {
+                // Prepare data for Excel - Only Name, Mobile Number, and Address
+                const excelData = filteredRecords.map(r => ({
+                    'NAME': r.name || 'N/A',
+                    'MOBILE NUMBER': r.mobile_no || 'N/A',
+                    'ADDRESS': [
+                        r.specific_address || '',
+                        r.province || ''
+                    ].filter(Boolean).join(', ') || 'N/A'
+                }));
+
+                // Create worksheet
+                const ws = XLSX.utils.json_to_sheet(excelData);
+
+                // Set column widths
+                const colWidths = [
+                    { wch: 40 }, // Name
+                    { wch: 20 }, // Mobile Number
+                    { wch: 50 }  // Address
+                ];
+                ws['!cols'] = colWidths;
+
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Student Records');
+
+                // Generate filename with filters
+                const date = new Date();
+                const dateStr = date.toISOString().split('T')[0];
+                const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-');
+                
+                let filename = `student_records_${dateStr}`;
+                
+                // Add filter info to filename
+                const collegeFilter = document.getElementById('collegeFilter')?.value;
+                const programFilter = document.getElementById('programFilter')?.value;
+                const statusFilter = document.getElementById('statusFilter')?.value;
+                
+                if (collegeFilter) filename += `_${collegeFilter.replace(/\s+/g, '_')}`;
+                if (programFilter) filename += `_${programFilter.replace(/\s+/g, '_')}`;
+                if (statusFilter) filename += `_${statusFilter}`;
+                
+                filename += `_${timeStr}.xlsx`;
+
+                // Download file
+                XLSX.writeFile(wb, filename);
+                
+                showNotification(`Downloaded ${filteredRecords.length} record(s) successfully!`, 'success');
+
+            } catch (error) {
+                console.error('Download error:', error);
+                showNotification('Error downloading file', 'error');
+            }
+        }
+
+        // View student details
         async function viewStudentDetails(id) {
             const record = allRecords.find(r => r.id === id);
             if (!record) {
@@ -2073,7 +2201,7 @@
                             <div class="document-item">
                                 <i class="fas fa-file" style="color: #FFCC80; font-size: 24px; margin-bottom: 8px;"></i>
                                 <div style="font-size: 12px; font-weight: bold;">Other Doc ${index + 1}</div>
-                                <a href="${getImageUrl(doc)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <a href="${getImageUrl(doc.filename)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
                                     <i class="fas fa-external-link-alt"></i> View
                                 </a>
                             </div>
@@ -2169,7 +2297,7 @@
                         allRecords[recordIndex].email_sent_at = new Date().toISOString();
                         
                         updateStats();
-                        renderTable(allRecords);
+                        renderTable(filteredRecords);
                     }
                     
                     closeModal('emailModal');
@@ -2204,7 +2332,9 @@
                         setTimeout(() => {
                             row.remove();
                             allRecords = allRecords.filter(r => r.id !== id);
+                            filteredRecords = filteredRecords.filter(r => r.id !== id);
                             updateStats();
+                            updateDownloadCount();
                         }, 300);
                     }
                     showNotification('Record deleted successfully!', 'success');
