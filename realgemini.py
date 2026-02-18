@@ -85,13 +85,89 @@ PERMISSIONS = {
     'SUPER_ADMIN': [
         'manage_users', 'manage_colleges', 'manage_programs',
         'view_all_records', 'edit_records', 'delete_records',
-        'send_emails', 'view_dashboard', 'access_admin_panel'
+        'send_emails', 'view_dashboard', 'access_admin_panel',
+        'manage_settings'  # Added for school year management
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
         'change_password', 'view_own_documents', 'download_own_documents'
     ]
 }
+
+# ================= SCHOOL YEAR SETTINGS =================
+SCHOOL_YEAR_FILE = os.path.join(BASE_DIR, 'school_year.json')
+
+def get_school_year():
+    """Get the current active school year"""
+    default_year = "2025-2026"
+    try:
+        if os.path.exists(SCHOOL_YEAR_FILE):
+            with open(SCHOOL_YEAR_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get('school_year', default_year)
+    except Exception as e:
+        print(f"⚠️ Error reading school year file: {e}")
+    return default_year
+
+def save_school_year(school_year):
+    """Save the active school year"""
+    try:
+        with open(SCHOOL_YEAR_FILE, 'w') as f:
+            json.dump({
+                'school_year': school_year, 
+                'updated_at': datetime.now().isoformat()
+            }, f)
+        return True
+    except Exception as e:
+        print(f"❌ Error saving school year: {e}")
+        return False
+
+@app.route('/api/settings/school-year', methods=['GET'])
+@login_required
+def get_school_year_endpoint():
+    """Get current active school year"""
+    try:
+        school_year = get_school_year()
+        return jsonify({
+            "school_year": school_year,
+            "success": True
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/settings/school-year', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def set_school_year():
+    """Set active school year (Super Admin only)"""
+    try:
+        data = request.json
+        school_year = data.get('school_year')
+        
+        if not school_year:
+            return jsonify({"error": "School year is required"}), 400
+        
+        # Validate format YYYY-YYYY
+        if not re.match(r'^\d{4}-\d{4}$', school_year):
+            return jsonify({"error": "Invalid format. Use YYYY-YYYY (e.g., 2025-2026)"}), 400
+        
+        # Validate year logic
+        start_year, end_year = map(int, school_year.split('-'))
+        if end_year != start_year + 1:
+            return jsonify({"error": "End year must be exactly one year after start year"}), 400
+        
+        if save_school_year(school_year):
+            return jsonify({
+                "success": True,
+                "message": "School year updated successfully",
+                "school_year": school_year
+            })
+        else:
+            return jsonify({"error": "Failed to save school year"}), 500
+            
+    except Exception as e:
+        print(f"❌ Error setting school year: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # ================= DECORATORS FOR ROLE-BASED ACCESS =================
 def login_required(f):
@@ -3679,7 +3755,8 @@ def health_check():
             "religion_dropdown": "ENABLED",
             "student_records": "ENABLED",
             "document_access": "ENABLED",
-            "one_record_per_user": "ENABLED"
+            "one_record_per_user": "ENABLED",
+            "school_year_management": "ENABLED"
         }
     })
 
@@ -3814,7 +3891,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING")
+    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING & SCHOOL YEAR MANAGEMENT")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3857,6 +3934,11 @@ if __name__ == '__main__':
     print("   • /debug-goodmoral/<id> - Check raw database values")
     print("   • Enhanced logging for Good Moral extraction")
     print("   • Manual extraction fallbacks")
+    print("="*60)
+    print("📅 NEW SCHOOL YEAR MANAGEMENT:")
+    print("   • /api/settings/school-year - GET/POST school year")
+    print("   • Auto-updates in scanner interface")
+    print("   • Persistent storage in JSON file")
     print("="*60)
     print(f"🌐 Server starting on {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
