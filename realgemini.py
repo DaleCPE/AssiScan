@@ -574,8 +574,9 @@ def init_db():
         cur.close()
         conn.close()
 
+# ================= ENHANCED CHECK TABLES FUNCTION =================
 def check_tables_exist():
-    """Check if all required tables exist"""
+    """Check if all required tables AND columns exist"""
     print("🔍 Checking if tables exist...")
     conn = get_db_connection()
     if not conn:
@@ -584,6 +585,7 @@ def check_tables_exist():
     try:
         cur = conn.cursor()
         
+        # Check if tables exist
         tables = ['users', 'user_sessions', 'colleges', 'programs', 'records']
         missing_tables = []
         
@@ -600,11 +602,57 @@ def check_tables_exist():
             if not exists:
                 missing_tables.append(table)
         
+        # If tables are missing, return False to trigger init_db()
         if missing_tables:
             print(f"❌ Missing tables: {missing_tables}")
             return False
         
-        print("✅ All tables exist")
+        # Check if records table has all required columns
+        print("🔍 Checking required columns in records table...")
+        
+        # List of required columns (add new columns here)
+        required_columns = [
+            'id', 'user_id', 'name', 'sex', 'birthdate', 'birthplace', 
+            'birth_order', 'religion', 'age', 'mother_name', 
+            'mother_citizenship', 'mother_occupation', 'father_name',
+            'father_citizenship', 'father_occupation', 'lrn', 'school_name',
+            'school_address', 'final_general_average', 'image_path',
+            'form137_path', 'form138_path', 'goodmoral_path', 'created_at',
+            'updated_at', 'email_sent', 'email_sent_at', 'email',
+            'civil_status', 'nationality', 'mother_contact', 'father_contact',
+            'guardian_name', 'guardian_relation', 'guardian_contact',
+            'region', 'province', 'specific_address', 'mobile_no',
+            'school_year', 'student_type', 'college', 'program',
+            'last_level_attended', 'is_ip', 'is_pwd', 'has_medication',
+            'is_working', 'residence_type', 'employer_name', 'marital_status',
+            'is_gifted', 'needs_assistance', 'school_type', 'year_attended',
+            'special_talents', 'is_scholar', 'siblings', 'goodmoral_analysis',
+            'disciplinary_status', 'goodmoral_score', 'has_disciplinary_record',
+            'disciplinary_details', 'other_documents', 'document_status',
+            'rejection_reason', 'status'
+        ]
+        
+        missing_columns = []
+        
+        for column in required_columns:
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'records' 
+                    AND column_name = %s
+                )
+            """, (column,))
+            exists = cur.fetchone()[0]
+            
+            if not exists:
+                missing_columns.append(column)
+        
+        if missing_columns:
+            print(f"❌ Missing columns in records table: {missing_columns}")
+            return False
+        
+        print("✅ All tables and columns exist")
         return True
         
     except Exception as e:
@@ -619,13 +667,13 @@ print("🔄 DATABASE INITIALIZATION")
 print("="*60)
 
 if not check_tables_exist():
-    print("⚠️ Tables missing, initializing database...")
+    print("⚠️ Tables or columns missing, initializing database...")
     if init_db():
         print("✅ Database initialization successful!")
     else:
         print("❌ Database initialization failed!")
 else:
-    print("✅ Database tables already exist")
+    print("✅ Database tables already exist with all required columns")
 
 # ================= USER MANAGEMENT FUNCTIONS =================
 def create_session(user_id, ip_address=None, user_agent=None):
@@ -4186,7 +4234,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH ALL FEATURES")
+    print("🚀 ASSISCAN WITH ENHANCED DATABASE CHECK")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -4212,13 +4260,13 @@ if __name__ == '__main__':
     print("   • Checking table existence...")
     
     if not check_tables_exist():
-        print("   ⚠️ Tables missing, initializing database...")
+        print("⚠️ Tables or columns missing, initializing database...")
         if init_db():
-            print("   ✅ Database initialized successfully!")
+            print("✅ Database initialized successfully!")
         else:
-            print("   ❌ Database initialization failed!")
+            print("❌ Database initialization failed!")
     else:
-        print("   ✅ All tables exist")
+        print("✅ All tables and columns already exist")
     
     if os.path.exists(UPLOAD_FOLDER):
         file_count = len([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])
