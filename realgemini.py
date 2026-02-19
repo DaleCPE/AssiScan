@@ -444,7 +444,8 @@ def init_db():
                 disciplinary_details TEXT,
                 other_documents JSONB,
                 document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
-                status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'INCOMPLETE')),
+                rejection_reason TEXT,
+                status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
@@ -806,7 +807,7 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 ━━━━━━━━━━━━━━━━━━━━━━━━
 • Status: {doc_status_text}
 • Submitted Documents: {doc_summary}
-• Record Status: {student_data.get('status', 'PENDING')}
+• Record Status: {student_data.get('status', 'INCOMPLETE')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📅 VERIFICATION DETAILS
@@ -1012,7 +1013,7 @@ def update_document_status(record_id, doc_type, has_file):
         cur = conn.cursor()
         
         # Get current document_status
-        cur.execute("SELECT document_status FROM records WHERE id = %s", (record_id,))
+        cur.execute("SELECT document_status, status FROM records WHERE id = %s", (record_id,))
         result = cur.fetchone()
         
         if result and result[0]:
@@ -1029,14 +1030,19 @@ def update_document_status(record_id, doc_type, has_file):
         # Update specific document status
         status[doc_type] = has_file
         
-        # Determine overall record status
-        all_docs = all([status.get('psa', False), status.get('form137', False), 
-                       status.get('form138', False), status.get('goodmoral', False)])
+        # Determine overall record status (only if not already APPROVED/REJECTED)
+        current_record_status = result[1] if result and len(result) > 1 else 'INCOMPLETE'
         
-        if all_docs:
-            overall_status = "PENDING"  # Can be changed to COMPLETE if desired
+        if current_record_status not in ['APPROVED', 'REJECTED']:
+            all_docs = all([status.get('psa', False), status.get('form137', False), 
+                           status.get('form138', False), status.get('goodmoral', False)])
+            
+            if all_docs:
+                overall_status = 'PENDING'
+            else:
+                overall_status = 'INCOMPLETE'
         else:
-            overall_status = "INCOMPLETE"
+            overall_status = current_record_status
         
         # Update database
         cur.execute("""
@@ -2494,7 +2500,8 @@ def get_student_documents(record_id):
         return jsonify({
             "documents": documents,
             "document_status": doc_status,
-            "record_status": record.get('status', 'PENDING'),
+            "record_status": record.get('status', 'INCOMPLETE'),
+            "rejection_reason": record.get('rejection_reason', ''),
             "record_id": record_id
         })
         
@@ -2609,6 +2616,66 @@ def get_records():
             conn.close()
         return jsonify({"records": [], "error": str(e)})
 
+# ================= UPDATE RECORD STATUS (APPROVE/REJECT) =================
+@app.route('/api/record/<int:record_id>/status', methods=['PUT'])
+@login_required
+@permission_required('edit_records')
+def update_record_status(record_id):
+    """Update record status (approve/reject) - Super Admin only"""
+    try:
+        data = request.json
+        status = data.get('status')
+        reason = data.get('reason', '')
+        
+        if status not in ['APPROVED', 'REJECTED', 'PENDING']:
+            return jsonify({"error": "Invalid status"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Update status and optionally add rejection reason
+        if status == 'REJECTED' and reason:
+            cur.execute("""
+                UPDATE records 
+                SET status = %s, rejection_reason = %s, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = %s
+                RETURNING id
+            """, (status, reason, record_id))
+        else:
+            cur.execute("""
+                UPDATE records 
+                SET status = %s, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = %s
+                RETURNING id
+            """, (status, record_id))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "Record not found"}), 404
+        
+        updated_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        # Optional: Send email notification about status change
+        if status in ['APPROVED', 'REJECTED']:
+            # You can add email notification here
+            print(f"📧 Record {record_id} {status} - notification would be sent")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Record {status.lower()} successfully",
+            "record_id": updated_id,
+            "status": status
+        })
+        
+    except Exception as e:
+        print(f"❌ Status update error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # ================= SAVE RECORD ENDPOINT (UPSERT) =================
 @app.route('/save-record', methods=['POST'])
 @login_required
@@ -2658,8 +2725,8 @@ def save_record():
         if existing_record:
             print(f"🔄 Updating existing record ID: {existing_record[0]} for user: {session['user_id']}")
             
-            # Get current document status
-            cur.execute("SELECT document_status, image_path, form137_path, goodmoral_path FROM records WHERE id = %s", (existing_record[0],))
+            # Get current document status and paths
+            cur.execute("SELECT document_status, image_path, form137_path, goodmoral_path, status FROM records WHERE id = %s", (existing_record[0],))
             current = cur.fetchone()
             current_status = {}
             if current and current[0]:
@@ -2673,13 +2740,17 @@ def save_record():
             else:
                 current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
             
-            # Update status based on new uploads
-            if d.get('psa_image_path') and d.get('psa_image_path') != current[1]:
-                current_status['psa'] = True
-            if d.get('f137_image_path') and d.get('f137_image_path') != current[2]:
-                current_status['form137'] = True
-            if d.get('goodmoral_image_path') and d.get('goodmoral_image_path') != current[3]:
-                current_status['goodmoral'] = True
+            # Get current record status (don't change if already APPROVED/REJECTED)
+            current_record_status = current[4] if current and len(current) > 4 else 'INCOMPLETE'
+            
+            # Update status based on new uploads (only if not APPROVED/REJECTED)
+            if current_record_status not in ['APPROVED', 'REJECTED']:
+                if d.get('psa_image_path') and d.get('psa_image_path') != current[1]:
+                    current_status['psa'] = True
+                if d.get('f137_image_path') and d.get('f137_image_path') != current[2]:
+                    current_status['form137'] = True
+                if d.get('goodmoral_image_path') and d.get('goodmoral_image_path') != current[3]:
+                    current_status['goodmoral'] = True
             
             goodmoral_analysis_json = None
             if goodmoral_analysis:
@@ -2689,6 +2760,18 @@ def save_record():
                 else:
                     goodmoral_analysis_json = goodmoral_analysis
                     print(f"⚠️ goodmoral_analysis is already a string")
+            
+            # Determine new overall status (only if not APPROVED/REJECTED)
+            if current_record_status not in ['APPROVED', 'REJECTED']:
+                all_docs = all([current_status.get('psa', False), current_status.get('form137', False), 
+                               current_status.get('form138', False), current_status.get('goodmoral', False)])
+                
+                if all_docs:
+                    overall_status = 'PENDING'
+                else:
+                    overall_status = 'INCOMPLETE'
+            else:
+                overall_status = current_record_status
             
             cur.execute('''
                 UPDATE records SET
@@ -2725,13 +2808,7 @@ def save_record():
                     has_disciplinary_record = %s, disciplinary_details = %s,
                     other_documents = %s,
                     document_status = %s,
-                    status = CASE 
-                        WHEN %s::jsonb->>'psa' = 'true' 
-                         AND %s::jsonb->>'form137' = 'true'
-                         AND %s::jsonb->>'goodmoral' = 'true'
-                        THEN 'PENDING'
-                        ELSE 'INCOMPLETE'
-                    END,
+                    status = %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s
                 RETURNING id
@@ -2764,7 +2841,7 @@ def save_record():
                 disciplinary_details,
                 other_documents_json,
                 json.dumps(current_status),
-                json.dumps(current_status), json.dumps(current_status), json.dumps(current_status),
+                overall_status,
                 session['user_id']
             ))
             
@@ -2780,6 +2857,7 @@ def save_record():
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             print(f"📄 Document Status: {current_status}")
+            print(f"📋 Record Status: {overall_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2794,6 +2872,7 @@ def save_record():
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
                 "document_status": current_status,
+                "record_status": overall_status,
                 "message": "Record UPDATED successfully.",
                 "operation": "update"
             })
@@ -2808,6 +2887,15 @@ def save_record():
                 "form138": False,
                 "goodmoral": bool(d.get('goodmoral_image_path'))
             }
+            
+            # Determine initial status
+            all_docs = all([doc_status.get('psa', False), doc_status.get('form137', False), 
+                           doc_status.get('form138', False), doc_status.get('goodmoral', False)])
+            
+            if all_docs:
+                initial_status = 'PENDING'
+            else:
+                initial_status = 'INCOMPLETE'
             
             goodmoral_analysis_json = None
             if goodmoral_analysis:
@@ -2887,7 +2975,7 @@ def save_record():
                 disciplinary_details,
                 other_documents_json,
                 json.dumps(doc_status),
-                'INCOMPLETE'  # Default status for new records
+                initial_status
             ))
             
             new_id = cur.fetchone()[0]
@@ -2902,6 +2990,7 @@ def save_record():
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             print(f"📄 Document Status: {doc_status}")
+            print(f"📋 Record Status: {initial_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2916,6 +3005,7 @@ def save_record():
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
                 "document_status": doc_status,
+                "record_status": initial_status,
                 "message": "Record CREATED successfully.",
                 "operation": "create"
             })
@@ -3564,7 +3654,7 @@ def send_email_only(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status
+                   special_talents, document_status, status, rejection_reason
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3590,6 +3680,7 @@ def send_email_only(record_id):
         print(f"📚 Program: {record.get('program', 'N/A')}")
         print(f"🙏 Religion: {record.get('religion', 'N/A')}")
         print(f"📄 Document Status: {record.get('document_status', {})}")
+        print(f"📋 Record Status: {record.get('status', 'INCOMPLETE')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3866,6 +3957,11 @@ def upload_additional():
         new_path_str = ','.join([p for p in new_paths if p])
         
         cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
+        
+        # Update document status
+        doc_type_map = {'form137': 'form137', 'form138': 'form138', 'goodmoral': 'goodmoral'}
+        update_document_status(rid, doc_type_map[dtype], True)
+        
         conn.commit()
         conn.close()
         return jsonify({"status": "success", "message": "File uploaded successfully"})
@@ -3949,7 +4045,8 @@ def health_check():
             "document_access": "ENABLED",
             "one_record_per_user": "ENABLED",
             "school_year_management": "ENABLED",
-            "tofollow_documents": "ENABLED"
+            "tofollow_documents": "ENABLED",
+            "approve_reject": "ENABLED"
         }
     })
 
@@ -4094,7 +4191,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING & TOFOLLOW DOCUMENTS")
+    print("🚀 ASSISCAN WITH COMPLETE FEATURES")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -4133,7 +4230,7 @@ if __name__ == '__main__':
         print(f"📊 Uploads folder contains {file_count} files")
     
     print("="*60)
-    print("🔍 NEW DEBUGGING FEATURES:")
+    print("🔍 DEBUGGING FEATURES:")
     print("   • /debug-goodmoral/<id> - Check raw database values")
     print("   • Enhanced logging for Good Moral extraction")
     print("   • Manual extraction fallbacks")
@@ -4143,11 +4240,15 @@ if __name__ == '__main__':
     print("   • Auto-updates in scanner interface")
     print("   • Persistent storage in JSON file")
     print("="*60)
-    print("📄 TOFOLLOW DOCUMENTS FEATURE:")
+    print("📄 TOFOLLOW DOCUMENTS:")
     print("   • Append new uploads to existing record")
     print("   • Track document status (PSA, Form137, GoodMoral)")
     print("   • Automatic status updates (INCOMPLETE/PENDING)")
-    print("   • Document status in email notifications")
+    print("="*60)
+    print("✅ APPROVE/REJECT SYSTEM:")
+    print("   • /api/record/<id>/status - PUT endpoint")
+    print("   • Status: INCOMPLETE → PENDING → APPROVED/REJECTED")
+    print("   • Rejection reason storage")
     print("="*60)
     print(f"🌐 Server starting on {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
