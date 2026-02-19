@@ -90,12 +90,12 @@ PERMISSIONS = {
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
-        'change_password', 'view_own_documents', 'download_own_documents'
+        'change_password', 'view_own_documents', 'download_own_documents',
+        'upload_additional_documents'
     ]
 }
 
 # ================= DECORATORS FOR ROLE-BASED ACCESS =================
-# MOVED TO TOP - para magamit agad
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -443,7 +443,8 @@ def init_db():
                 has_disciplinary_record BOOLEAN DEFAULT FALSE,
                 disciplinary_details TEXT,
                 other_documents JSONB,
-                status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
+                status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'INCOMPLETE')),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
@@ -733,6 +734,25 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
         
         student_info = ""
         if student_data:
+            # Get document status
+            doc_status = student_data.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            # Count submitted documents
+            submitted_docs = []
+            if doc_status.get('psa'): submitted_docs.append("PSA")
+            if doc_status.get('form137'): submitted_docs.append("Form 137")
+            if doc_status.get('form138'): submitted_docs.append("Form 138")
+            if doc_status.get('goodmoral'): submitted_docs.append("Good Moral")
+            
+            doc_summary = ", ".join(submitted_docs) if submitted_docs else "No documents yet"
+            doc_count = len(submitted_docs)
+            doc_status_text = f"{doc_count}/4 documents submitted"
+            
             student_info = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📋 STUDENT INFORMATION
@@ -780,6 +800,13 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 📝 GOOD MORAL CERTIFICATE ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━
 {goodmoral_status}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📄 DOCUMENT STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━
+• Status: {doc_status_text}
+• Submitted Documents: {doc_summary}
+• Record Status: {student_data.get('status', 'PENDING')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📅 VERIFICATION DETAILS
@@ -977,6 +1004,58 @@ def calculate_goodmoral_score(analysis_data):
         status = 'POOR'
     
     return score, status
+
+def update_document_status(record_id, doc_type, has_file):
+    """Update document status in database"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        
+        # Get current document_status
+        cur.execute("SELECT document_status FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
+        
+        if result and result[0]:
+            try:
+                if isinstance(result[0], dict):
+                    status = result[0]
+                else:
+                    status = json.loads(result[0])
+            except:
+                status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        else:
+            status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        
+        # Update specific document status
+        status[doc_type] = has_file
+        
+        # Determine overall record status
+        all_docs = all([status.get('psa', False), status.get('form137', False), 
+                       status.get('form138', False), status.get('goodmoral', False)])
+        
+        if all_docs:
+            overall_status = "PENDING"  # Can be changed to COMPLETE if desired
+        else:
+            overall_status = "INCOMPLETE"
+        
+        # Update database
+        cur.execute("""
+            UPDATE records 
+            SET document_status = %s, 
+                status = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (json.dumps(status), overall_status, record_id))
+        
+        conn.commit()
+        print(f"📄 Document status updated for record {record_id}: {doc_type}={has_file}")
+        return status, overall_status
+        
+    except Exception as e:
+        print(f"❌ Error updating document status: {e}")
+        return None, None
+    finally:
+        conn.close()
 
 # ================= DEBUG MIDDLEWARE =================
 @app.before_request
@@ -2284,6 +2363,16 @@ def get_my_records():
             else:
                 r['other_documents'] = []
             
+            # Parse document_status
+            if r.get('document_status'):
+                try:
+                    if isinstance(r['document_status'], str):
+                        r['document_status'] = json.loads(r['document_status'])
+                except:
+                    r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            else:
+                r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
                 if r.get(field):
@@ -2340,6 +2429,17 @@ def get_student_documents(record_id):
             "other_documents": []
         }
         
+        # Parse document status
+        doc_status = {}
+        if record.get('document_status'):
+            try:
+                if isinstance(record['document_status'], str):
+                    doc_status = json.loads(record['document_status'])
+                else:
+                    doc_status = record['document_status']
+            except:
+                doc_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        
         if record.get('image_path'):
             paths = record['image_path'].split(',')
             for path in paths:
@@ -2393,6 +2493,8 @@ def get_student_documents(record_id):
         
         return jsonify({
             "documents": documents,
+            "document_status": doc_status,
+            "record_status": record.get('status', 'PENDING'),
             "record_id": record_id
         })
         
@@ -2471,6 +2573,16 @@ def get_records():
             else:
                 r['other_documents'] = []
             
+            # Parse document_status
+            if r.get('document_status'):
+                try:
+                    if isinstance(r['document_status'], str):
+                        r['document_status'] = json.loads(r['document_status'])
+                except:
+                    r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            else:
+                r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
                 if r.get(field):
@@ -2546,6 +2658,29 @@ def save_record():
         if existing_record:
             print(f"🔄 Updating existing record ID: {existing_record[0]} for user: {session['user_id']}")
             
+            # Get current document status
+            cur.execute("SELECT document_status, image_path, form137_path, goodmoral_path FROM records WHERE id = %s", (existing_record[0],))
+            current = cur.fetchone()
+            current_status = {}
+            if current and current[0]:
+                try:
+                    if isinstance(current[0], dict):
+                        current_status = current[0]
+                    else:
+                        current_status = json.loads(current[0])
+                except:
+                    current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            else:
+                current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            
+            # Update status based on new uploads
+            if d.get('psa_image_path') and d.get('psa_image_path') != current[1]:
+                current_status['psa'] = True
+            if d.get('f137_image_path') and d.get('f137_image_path') != current[2]:
+                current_status['form137'] = True
+            if d.get('goodmoral_image_path') and d.get('goodmoral_image_path') != current[3]:
+                current_status['goodmoral'] = True
+            
             goodmoral_analysis_json = None
             if goodmoral_analysis:
                 if isinstance(goodmoral_analysis, dict):
@@ -2562,9 +2697,21 @@ def save_record():
                     mother_name = %s, mother_citizenship = %s, mother_occupation = %s, 
                     father_name = %s, father_citizenship = %s, father_occupation = %s, 
                     lrn = %s, school_name = %s, school_address = %s, final_general_average = %s,
-                    image_path = COALESCE(%s, image_path), 
-                    form137_path = COALESCE(%s, form137_path), 
-                    goodmoral_path = COALESCE(%s, goodmoral_path),
+                    image_path = COALESCE(
+                        CASE WHEN %s IS NOT NULL AND %s != '' 
+                             THEN CONCAT(COALESCE(image_path, ''), CASE WHEN image_path IS NOT NULL AND image_path != '' THEN ',' ELSE '' END, %s)
+                             ELSE image_path
+                        END, image_path),
+                    form137_path = COALESCE(
+                        CASE WHEN %s IS NOT NULL AND %s != '' 
+                             THEN CONCAT(COALESCE(form137_path, ''), CASE WHEN form137_path IS NOT NULL AND form137_path != '' THEN ',' ELSE '' END, %s)
+                             ELSE form137_path
+                        END, form137_path),
+                    goodmoral_path = COALESCE(
+                        CASE WHEN %s IS NOT NULL AND %s != '' 
+                             THEN CONCAT(COALESCE(goodmoral_path, ''), CASE WHEN goodmoral_path IS NOT NULL AND goodmoral_path != '' THEN ',' ELSE '' END, %s)
+                             ELSE goodmoral_path
+                        END, goodmoral_path),
                     email = %s, mobile_no = %s, civil_status = %s, nationality = %s,
                     mother_contact = %s, father_contact = %s,
                     guardian_name = %s, guardian_relation = %s, guardian_contact = %s,
@@ -2577,6 +2724,14 @@ def save_record():
                     goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
                     has_disciplinary_record = %s, disciplinary_details = %s,
                     other_documents = %s,
+                    document_status = %s,
+                    status = CASE 
+                        WHEN %s::jsonb->>'psa' = 'true' 
+                         AND %s::jsonb->>'form137' = 'true'
+                         AND %s::jsonb->>'goodmoral' = 'true'
+                        THEN 'PENDING'
+                        ELSE 'INCOMPLETE'
+                    END,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s
                 RETURNING id
@@ -2586,7 +2741,12 @@ def save_record():
                 d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
                 d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
                 d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-                d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
+                # PSA image - append mode
+                d.get('psa_image_path', ''), d.get('psa_image_path', ''), d.get('psa_image_path', ''),
+                # Form137 image - append mode
+                d.get('f137_image_path', ''), d.get('f137_image_path', ''), d.get('f137_image_path', ''),
+                # Good Moral image - append mode
+                d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''),
                 d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
                 d.get('mother_contact'), d.get('father_contact'),
                 d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
@@ -2603,6 +2763,8 @@ def save_record():
                 has_disciplinary_record,
                 disciplinary_details,
                 other_documents_json,
+                json.dumps(current_status),
+                json.dumps(current_status), json.dumps(current_status), json.dumps(current_status),
                 session['user_id']
             ))
             
@@ -2617,6 +2779,7 @@ def save_record():
             print(f"🙏 Religion: {religion}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
+            print(f"📄 Document Status: {current_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2630,12 +2793,21 @@ def save_record():
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
+                "document_status": current_status,
                 "message": "Record UPDATED successfully.",
                 "operation": "update"
             })
             
         else:
             print(f"🆕 Creating NEW record for user: {session['user_id']}")
+            
+            # Initialize document status
+            doc_status = {
+                "psa": bool(d.get('psa_image_path')),
+                "form137": bool(d.get('f137_image_path')),
+                "form138": False,
+                "goodmoral": bool(d.get('goodmoral_image_path'))
+            }
             
             goodmoral_analysis_json = None
             if goodmoral_analysis:
@@ -2664,7 +2836,9 @@ def save_record():
                     special_talents, is_scholar, siblings,
                     goodmoral_analysis, disciplinary_status, goodmoral_score,
                     has_disciplinary_record, disciplinary_details,
-                    other_documents
+                    other_documents,
+                    document_status,
+                    status
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s,
@@ -2683,6 +2857,8 @@ def save_record():
                     %s,
                     %s, %s, %s,
                     %s, %s,
+                    %s,
+                    %s,
                     %s
                 ) 
                 RETURNING id
@@ -2709,7 +2885,9 @@ def save_record():
                 goodmoral_score,
                 has_disciplinary_record,
                 disciplinary_details,
-                other_documents_json
+                other_documents_json,
+                json.dumps(doc_status),
+                'INCOMPLETE'  # Default status for new records
             ))
             
             new_id = cur.fetchone()[0]
@@ -2723,6 +2901,7 @@ def save_record():
             print(f"🙏 Religion: {religion}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
+            print(f"📄 Document Status: {doc_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2736,6 +2915,7 @@ def save_record():
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
+                "document_status": doc_status,
                 "message": "Record CREATED successfully.",
                 "operation": "create"
             })
@@ -3384,7 +3564,7 @@ def send_email_only(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents
+                   special_talents, document_status, status
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3409,6 +3589,7 @@ def send_email_only(record_id):
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
         print(f"🙏 Religion: {record.get('religion', 'N/A')}")
+        print(f"📄 Document Status: {record.get('document_status', {})}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3465,7 +3646,7 @@ def resend_email(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents
+                   special_talents, document_status, status
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3616,6 +3797,16 @@ def view_form(record_id):
                     record['other_documents'] = []
             else:
                 record['other_documents'] = []
+            
+            # Parse document status
+            if record.get('document_status'):
+                try:
+                    if isinstance(record['document_status'], str):
+                        record['document_status'] = json.loads(record['document_status'])
+                except:
+                    record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            else:
+                record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
 
             return render_template('print_form.html', r=record)
         else:
@@ -3757,7 +3948,8 @@ def health_check():
             "student_records": "ENABLED",
             "document_access": "ENABLED",
             "one_record_per_user": "ENABLED",
-            "school_year_management": "ENABLED"
+            "school_year_management": "ENABLED",
+            "tofollow_documents": "ENABLED"
         }
     })
 
@@ -3861,6 +4053,16 @@ def get_single_record(record_id):
         else:
             record['other_documents'] = []
         
+        # Parse document_status
+        if record.get('document_status'):
+            try:
+                if isinstance(record['document_status'], str):
+                    record['document_status'] = json.loads(record['document_status'])
+            except:
+                record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        else:
+            record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        
         image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
         for field in image_fields:
             if record.get(field):
@@ -3892,7 +4094,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING & SCHOOL YEAR MANAGEMENT")
+    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING & TOFOLLOW DOCUMENTS")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -3936,10 +4138,16 @@ if __name__ == '__main__':
     print("   • Enhanced logging for Good Moral extraction")
     print("   • Manual extraction fallbacks")
     print("="*60)
-    print("📅 NEW SCHOOL YEAR MANAGEMENT:")
+    print("📅 SCHOOL YEAR MANAGEMENT:")
     print("   • /api/settings/school-year - GET/POST school year")
     print("   • Auto-updates in scanner interface")
     print("   • Persistent storage in JSON file")
+    print("="*60)
+    print("📄 TOFOLLOW DOCUMENTS FEATURE:")
+    print("   • Append new uploads to existing record")
+    print("   • Track document status (PSA, Form137, GoodMoral)")
+    print("   • Automatic status updates (INCOMPLETE/PENDING)")
+    print("   • Document status in email notifications")
     print("="*60)
     print(f"🌐 Server starting on {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
