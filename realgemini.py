@@ -2660,11 +2660,6 @@ def update_record_status(record_id):
         conn.commit()
         conn.close()
         
-        # Optional: Send email notification about status change
-        if status in ['APPROVED', 'REJECTED']:
-            # You can add email notification here
-            print(f"📧 Record {record_id} {status} - notification would be sent")
-        
         return jsonify({
             "success": True,
             "message": f"Record {status.lower()} successfully",
@@ -4184,14 +4179,14 @@ if __name__ == '__main__':
     # Get port from environment variable (Render sets this automatically)
     port = int(os.environ.get("PORT", 10000))
     
-    # Get host - VERY IMPORTANT: Use 0.0.0.0 for Render
+    # Get host - MUST be 0.0.0.0 for Render
     host = os.environ.get("HOST", "0.0.0.0")
     
     # Debug mode - set to False in production
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH COMPLETE FEATURES")
+    print("🚀 ASSISCAN WITH ALL FEATURES")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: gemini-2.5-flash")
@@ -4250,8 +4245,10 @@ if __name__ == '__main__':
     print("   • Status: INCOMPLETE → PENDING → APPROVED/REJECTED")
     print("   • Rejection reason storage")
     print("="*60)
-    print(f"🌐 Server starting on {host}:{port}")
+    print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
+    print("="*60)
+    print("💡 IMPORTANT: Make sure PORT environment variable is set in Render!")
     print("="*60)
     
     # Force Flask to bind to all interfaces
