@@ -9,9 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Inline CSS to avoid 404 errors -->
+    <!-- Inline CSS -->
     <style>
-        /* All your CSS styles remain exactly the same */
         :root {
             --bg-dark: #0f0404;
             --panel-bg: rgba(10, 2, 2, 0.95); 
@@ -25,6 +24,9 @@
             --warning-yellow: #FFC107;
             --info-blue: #2196F3;
             --danger-red: #f44336;
+            --incomplete: #ff9800;
+            --pending: #2196F3;
+            --approved: #4CAF50;
         }
 
         * { 
@@ -202,9 +204,9 @@
             color: white;
         }
 
-        /* Student Access Buttons - Only show for STUDENT role */
+        /* Student Access Buttons */
         .student-actions {
-            display: none; /* Hidden by default, shown via JS */
+            display: none;
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
@@ -233,9 +235,9 @@
             transform: translateY(-2px);
         }
 
-        /* Admin Access Buttons - Only show for SUPER_ADMIN role */
+        /* Admin Access Buttons */
         .admin-actions {
-            display: none; /* Hidden by default, shown via JS */
+            display: none;
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
@@ -639,6 +641,139 @@
             animation: scanLaser 2s infinite linear; 
         }
         
+        /* Document Status Badges */
+        .document-status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            z-index: 20;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .status-uploaded {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .status-missing {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        /* Record Status Display */
+        .record-status-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .status-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .status-icon.incomplete {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        .status-icon.pending {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+            border: 1px solid #2196F3;
+        }
+
+        .status-icon.approved {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .status-title {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .status-message {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Document Checklist */
+        .document-checklist {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checklist-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checklist-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .checklist-icon.complete {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .checklist-icon.missing {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .checklist-text {
+            flex: 1;
+            font-size: 11px;
+        }
+
+        .checklist-name {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .checklist-status {
+            font-size: 9px;
+        }
+
         /* --- FORM PANEL (Right - Editable) --- */
         .form-panel { 
             width: 450px; 
@@ -1015,7 +1150,7 @@
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
-        /* ========== IMPROVED SIBLINGS TABLE WITH BETTER REMOVE BUTTON PLACEMENT ========== */
+        /* Siblings Table */
         .siblings-section {
             margin-top: 15px;
             width: 100%;
@@ -1062,7 +1197,6 @@
             outline: none;
         }
 
-        /* IMPROVED: Perfectly aligned remove button */
         .sibling-remove-btn {
             background: #2a0a0a;
             color: #ff8a8a;
@@ -1092,7 +1226,6 @@
             pointer-events: none;
         }
 
-        /* Action column styling - fixed width and centered */
         .action-column {
             width: 45px;
             text-align: center;
@@ -1100,22 +1233,18 @@
             padding: 5px 2px !important;
         }
 
-        /* Name column - takes more space */
         .name-column {
             width: 40%;
         }
 
-        /* Age column - fixed width */
         .age-column {
             width: 60px;
         }
 
-        /* Occupation column - flexible */
         .occ-column {
             width: auto;
         }
 
-        /* Add Sibling Button */
         .add-sibling-btn {
             width: 100%; 
             background: rgba(212, 175, 55, 0.08); 
@@ -1160,7 +1289,7 @@
             gap: 5px;
         }
 
-        /* Mobile Responsive Styles */
+        /* Mobile Responsive */
         @media (max-width: 1200px) {
             .main-container {
                 flex-direction: column;
@@ -1235,6 +1364,10 @@
             
             .scan-frame {
                 height: 200px;
+            }
+
+            .document-checklist {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1341,25 +1474,9 @@
             .col-half {
                 width: 100%;
             }
-            
-            /* Mobile adjustments for siblings table */
-            #siblingsTable th:nth-child(3),
-            #siblingsTable td:nth-child(3) {
-                display: none; /* Hide occupation on very small screens */
-            }
 
-            .action-column {
-                width: 40px;
-            }
-            
-            .sibling-remove-btn {
-                width: 32px;
-                height: 32px;
-            }
-            
-            #siblingsTable input {
-                padding: 10px 6px;
-                font-size: 12px;
+            .document-checklist {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1405,7 +1522,6 @@
                 font-size: 10px;
             }
             
-            /* Further optimize siblings table for very small screens */
             .action-column {
                 width: 35px;
             }
@@ -1413,9 +1529,12 @@
             #siblingsTable th {
                 font-size: 8px;
             }
+
+            .document-checklist {
+                grid-template-columns: 1fr;
+            }
         }
 
-        /* Touch-friendly improvements */
         button, 
         input[type="button"],
         input[type="submit"],
@@ -1427,10 +1546,9 @@
         
         select, 
         input {
-            font-size: 16px; /* Prevents iOS zoom on focus */
+            font-size: 16px;
         }
         
-        /* Prevent text size adjustment */
         html {
             -webkit-text-size-adjust: 100%;
             -moz-text-size-adjust: 100%;
@@ -1553,7 +1671,7 @@
         </div>
     </div>
 
-    <!-- Check if user is logged in -->
+    <!-- Access Denied -->
     <div id="accessDenied" class="access-denied" style="display: none;">
         <i class="fas fa-lock"></i>
         <h2>ACCESS RESTRICTED</h2>
@@ -1563,7 +1681,7 @@
         </a>
     </div>
 
-    <!-- Main Scanner Interface (Only shown when logged in) -->
+    <!-- Main Scanner Interface -->
     <div id="scannerInterface" style="display: none; width: 100%;">
         <div class="main-container">
             <nav class="sidebar" id="mainSidebar">
@@ -1578,7 +1696,7 @@
                     </div>
                 </div>
                 
-                <!-- Student Actions (Only for STUDENT role) -->
+                <!-- Student Actions -->
                 <div id="studentActions" class="student-actions">
                     <button onclick="openChangePasswordModal()" class="student-action-btn">
                         <i class="fas fa-key"></i> CHANGE PASSWORD
@@ -1589,7 +1707,7 @@
                     </button>
                 </div>
                 
-                <!-- Admin Actions (Only for SUPER_ADMIN role) -->
+                <!-- Admin Actions -->
                 <div id="adminActions" class="admin-actions">
                     <a href="history.html" class="btn-access">
                         <i class="fas fa-database"></i> VIEW DATABASE
@@ -1604,7 +1722,7 @@
                     </a>
                 </div>
                 
-                <!-- Logout Button (For all roles) -->
+                <!-- Logout Button -->
                 <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
                     <i class="fas fa-sign-out-alt"></i> LOGOUT
                 </button>
@@ -1614,7 +1732,9 @@
                 <div class="scanner-wrapper">
                     <div class="scan-label">
                         <span><i class="fas fa-baby"></i> PSA BIRTH CERTIFICATE</span>
-                        <span id="psaStatus" class="status-text">Waiting for input...</span>
+                        <span id="psaStatus" class="status-text">
+                            <i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready
+                        </span>
                     </div>
                     <div class="scan-frame" onclick="triggerFileInput('psaInput')">
                         <div class="scan-laser" id="psaLaser"></div>
@@ -1622,6 +1742,10 @@
                         <div class="corner tr"></div>
                         <div class="corner bl"></div>
                         <div class="corner br"></div>
+                        
+                        <div class="document-status-badge status-missing" id="psaStatusBadge">
+                            <i class="fas fa-hourglass-half"></i> Missing
+                        </div>
                         
                         <div class="upload-placeholder" id="psaPlaceholder">
                             <i class="fas fa-camera"></i>
@@ -1636,7 +1760,9 @@
                 <div class="scanner-wrapper">
                     <div class="scan-label">
                         <span><i class="fas fa-file-contract"></i> FORM 137 / SF10</span>
-                        <span id="f137Status" class="status-text">Waiting for input...</span>
+                        <span id="f137Status" class="status-text">
+                            <i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready
+                        </span>
                     </div>
                     <div class="scan-frame" onclick="triggerFileInput('f137Input')">
                         <div class="scan-laser" id="f137Laser"></div>
@@ -1644,6 +1770,10 @@
                         <div class="corner tr"></div>
                         <div class="corner bl"></div>
                         <div class="corner br"></div>
+                        
+                        <div class="document-status-badge status-missing" id="f137StatusBadge">
+                            <i class="fas fa-hourglass-half"></i> Missing
+                        </div>
                         
                         <div class="upload-placeholder" id="f137Placeholder">
                             <i class="fas fa-camera"></i>
@@ -1658,7 +1788,9 @@
                 <div class="scanner-wrapper">
                     <div class="scan-label">
                         <span><i class="fas fa-award"></i> GOOD MORAL CERTIFICATE</span>
-                        <span id="goodmoralStatus" class="status-text">Waiting for input...</span>
+                        <span id="goodmoralStatus" class="status-text">
+                            <i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready
+                        </span>
                     </div>
                     <div class="scan-frame" onclick="triggerFileInput('goodmoralInput')">
                         <div class="scan-laser" id="goodmoralLaser"></div>
@@ -1666,6 +1798,10 @@
                         <div class="corner tr"></div>
                         <div class="corner bl"></div>
                         <div class="corner br"></div>
+                        
+                        <div class="document-status-badge status-missing" id="goodmoralStatusBadge">
+                            <i class="fas fa-hourglass-half"></i> Missing
+                        </div>
                         
                         <div class="upload-placeholder" id="goodmoralPlaceholder">
                             <i class="fas fa-camera"></i>
@@ -1684,6 +1820,59 @@
                     <span class="operator-info" id="operatorInfo">
                         <i class="fas fa-user-check"></i> Operator: <span id="currentOperator">Loading...</span>
                     </span>
+                </div>
+                
+                <!-- RECORD STATUS SECTION (NEW) -->
+                <div id="recordStatusContainer" class="record-status-container" style="display: none;">
+                    <div class="status-header">
+                        <div class="status-icon incomplete" id="recordStatusIcon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="status-title" id="recordStatusTitle">Record Status</div>
+                            <div class="status-message" id="recordStatusMessage">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DOCUMENT CHECKLIST (NEW) -->
+                <div class="document-checklist" id="documentChecklist">
+                    <div class="checklist-item" id="checklistPSA">
+                        <div class="checklist-icon missing" id="checklistPSAIcon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">PSA</div>
+                            <div class="checklist-status" id="checklistPSAStatus">Missing</div>
+                        </div>
+                    </div>
+                    <div class="checklist-item" id="checklistForm137">
+                        <div class="checklist-icon missing" id="checklistForm137Icon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">Form 137</div>
+                            <div class="checklist-status" id="checklistForm137Status">Missing</div>
+                        </div>
+                    </div>
+                    <div class="checklist-item" id="checklistGoodMoral">
+                        <div class="checklist-icon missing" id="checklistGoodMoralIcon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">Good Moral</div>
+                            <div class="checklist-status" id="checklistGoodMoralStatus">Missing</div>
+                        </div>
+                    </div>
+                    <div class="checklist-item" id="checklistForm138">
+                        <div class="checklist-icon missing" id="checklistForm138Icon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">Form 138</div>
+                            <div class="checklist-status" id="checklistForm138Status">Missing</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Good Moral Status Display -->
@@ -1712,7 +1901,6 @@
                 <div class="row">
                     <div class="col-half">
                         <label>School Year</label>
-                        <!-- UPDATED: schoolYear field is now readonly - controlled by admin -->
                         <input type="text" id="schoolYear" value="2025-2026" readonly 
                                style="background: rgba(0,0,0,0.3); cursor: not-allowed;"
                                title="School year is set by the administrator">
@@ -1727,7 +1915,6 @@
                     </div>
                 </div>
                 
-                <!-- College and Program Dropdowns - Dynamic from Database -->
                 <div class="row">
                     <div class="col-half">
                         <label>College / Department</label>
@@ -1897,7 +2084,6 @@
                     <option value="Widowed">Widowed</option>
                 </select>
 
-                <!-- IMPROVED: Mother's Info Section - Cleaner Layout -->
                 <div class="file-upload-group" style="margin-top: 10px; background: rgba(212, 175, 55, 0.03); border: 1px solid rgba(212, 175, 55, 0.1);">
                     <span class="file-label" style="color: var(--primary-gold); font-weight: 600;">
                         <i class="fas fa-female"></i> Mother's Information
@@ -1921,7 +2107,6 @@
                     <input type="tel" id="motherContact" placeholder="Mother's Contact No.">
                 </div>
 
-                <!-- IMPROVED: Father's Info Section - Cleaner Layout -->
                 <div class="file-upload-group" style="margin-top: 10px; background: rgba(212, 175, 55, 0.03); border: 1px solid rgba(212, 175, 55, 0.1);">
                     <span class="file-label" style="color: var(--primary-gold); font-weight: 600;">
                         <i class="fas fa-male"></i> Father's Information
@@ -1959,7 +2144,6 @@
                     </div>
                 </div>
 
-                <!-- ========== IMPROVED SIBLINGS SECTION WITH BETTER BUTTON PLACEMENT ========== -->
                 <div style="margin-top: 15px;"></div>
                 <span class="section-label"><i class="fas fa-users"></i> Siblings (Mga Kapatid)</span>
                 
@@ -1974,7 +2158,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Rows will be added here dynamically via JavaScript -->
                         </tbody>
                     </table>
                     
@@ -2039,10 +2222,7 @@
                     <input type="file" id="fileForm138" accept="image/*,application/pdf">
                 </div>
                 
-                <!-- Other Documents Section -->
-                <div id="otherDocumentsContainer">
-                    <!-- Other documents will be added here -->
-                </div>
+                <div id="otherDocumentsContainer"></div>
                 
                 <button type="button" onclick="addOtherDocumentField()" style="
                     width: 100%; 
@@ -2074,6 +2254,12 @@
                 </button>
                 
                 <div id="sendStatus" class="save-status"></div>
+
+                <!-- TOFOLLOW INFO (NEW) -->
+                <div id="tofollowInfo" style="margin-top: 15px; padding: 10px; background: rgba(255, 152, 0, 0.1); border: 1px dashed #ff9800; border-radius: 4px; font-size: 11px; display: none;">
+                    <i class="fas fa-info-circle" style="color: #ff9800;"></i>
+                    <span id="tofollowMessage">You can upload missing documents later. Your previous uploads will be saved.</span>
+                </div>
             </aside>
         </div>
     </div>
@@ -2094,6 +2280,16 @@
         let currentUser = null;
         let requiresPasswordReset = false;
         let isMobileMenuOpen = false;
+        
+        // Document status tracking
+        let documentStatus = {
+            psa: false,
+            form137: false,
+            form138: false,
+            goodmoral: false
+        };
+        
+        let recordStatus = "INCOMPLETE"; // INCOMPLETE, PENDING, APPROVED, REJECTED
         
         // Store Good Moral data
         let goodmoralData = {
@@ -2121,7 +2317,315 @@
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
-        // ================= NEW: Load School Year from Server =================
+        // ================= LOAD EXISTING RECORD =================
+        async function loadExistingRecord() {
+            try {
+                const response = await fetch('/api/my-records', {
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.records && data.records.length > 0) {
+                        const record = data.records[0];
+                        currentRecordId = record.id;
+                        
+                        // Load document status
+                        if (record.document_status) {
+                            documentStatus = record.document_status;
+                        }
+                        
+                        recordStatus = record.status || "INCOMPLETE";
+                        
+                        // Update document paths
+                        psaImagePath = record.image_path || "";
+                        f137ImagePath = record.form137_path || "";
+                        goodmoralImagePath = record.goodmoral_path || "";
+                        
+                        // Load Good Moral data if exists
+                        if (record.goodmoral_analysis) {
+                            goodmoralAnalysis = record.goodmoral_analysis;
+                            goodmoralData = {
+                                score: record.goodmoral_score || 0,
+                                status: record.disciplinary_status || "UNKNOWN",
+                                hasIssues: record.has_disciplinary_record || false,
+                                disciplinaryDetails: record.disciplinary_details || ""
+                            };
+                        }
+                        
+                        // Populate form with existing data
+                        populateFormWithRecord(record);
+                        
+                        console.log("✅ Loaded existing record:", record.id);
+                        console.log("📄 Document status:", documentStatus);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading existing record:", error);
+            } finally {
+                updateDocumentStatusUI();
+                updateRecordStatusUI();
+                updateTofollowInfo();
+            }
+        }
+
+        function populateFormWithRecord(record) {
+            // Helper function to set value if exists
+            const setValue = (id, value) => {
+                const el = document.getElementById(id);
+                if (el && value) el.value = value;
+            };
+
+            // Enrollment Details
+            setValue('studentType', record.student_type);
+            if (record.college) {
+                const collegeSelect = document.getElementById('collegeSelect');
+                if (collegeSelect) {
+                    // Wait for colleges to load
+                    setTimeout(() => {
+                        collegeSelect.value = record.college;
+                        updatePrograms();
+                        setTimeout(() => {
+                            const programSelect = document.getElementById('programSelect');
+                            if (programSelect && record.program) {
+                                programSelect.value = record.program;
+                            }
+                        }, 500);
+                    }, 1000);
+                }
+            }
+            setValue('lastLevel', record.last_level_attended);
+            
+            // Personal Information
+            setValue('childName', record.name);
+            setValue('childSex', record.sex);
+            setValue('childBirthdate', record.birthdate);
+            setValue('childBirthplace', record.birthplace);
+            setValue('birthOrder', record.birth_order);
+            setValue('childCivilStatus', record.civil_status);
+            setValue('childReligion', record.religion);
+            setValue('childAge', record.age);
+            setValue('childMobile', record.mobile_no);
+            
+            // Special Groups
+            setValue('isIP', record.is_ip);
+            setValue('isPWD', record.is_pwd);
+            setValue('hasMedication', record.has_medication);
+            setValue('isWorking', record.is_working);
+            setValue('isGifted', record.is_gifted);
+            setValue('needsAssistance', record.needs_assistance);
+            
+            // Address
+            setValue('addressRegion', record.region);
+            if (record.region) {
+                setTimeout(() => {
+                    updateProvinces();
+                    setTimeout(() => {
+                        setValue('addressProvince', record.province);
+                    }, 300);
+                }, 300);
+            }
+            setValue('addressSpecific', record.specific_address);
+            setValue('residenceType', record.residence_type);
+            
+            // Employer
+            setValue('employerName', record.employer_name);
+            
+            // Family
+            setValue('maritalStatus', record.marital_status);
+            setValue('motherName', record.mother_name);
+            setValue('motherCitizenship', record.mother_citizenship);
+            setValue('motherOccupation', record.mother_occupation);
+            setValue('motherContact', record.mother_contact);
+            setValue('fatherName', record.father_name);
+            setValue('fatherCitizenship', record.father_citizenship);
+            setValue('fatherOccupation', record.father_occupation);
+            setValue('fatherContact', record.father_contact);
+            setValue('guardianName', record.guardian_name);
+            setValue('guardianRelation', record.guardian_relation);
+            setValue('guardianContact', record.guardian_contact);
+            
+            // Siblings
+            if (record.siblings && record.siblings.length > 0) {
+                const tbody = document.querySelector('#siblingsTable tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    record.siblings.forEach(sib => {
+                        addSiblingRow(sib.name, sib.age, sib.occupation);
+                    });
+                }
+            }
+            
+            // Contact
+            setValue('contactEmail', record.email);
+            
+            // School Record
+            setValue('lrn', record.lrn);
+            setValue('schoolName', record.school_name);
+            setValue('schoolAddress', record.school_address);
+            setValue('schoolType', record.school_type);
+            setValue('yearAttended', record.year_attended);
+            setValue('genAverage', record.final_general_average);
+            
+            // Additional
+            setValue('specialTalents', record.special_talents);
+            setValue('isScholar', record.is_scholar);
+        }
+
+        // ================= DOCUMENT STATUS UI UPDATES =================
+        function updateDocumentStatusUI() {
+            // Update PSA
+            const psaBadge = document.getElementById('psaStatusBadge');
+            const psaStatus = document.getElementById('psaStatus');
+            const psaIcon = document.getElementById('checklistPSAIcon');
+            const psaStatusText = document.getElementById('checklistPSAStatus');
+            
+            if (documentStatus.psa || psaImagePath) {
+                psaBadge.className = 'document-status-badge status-uploaded';
+                psaBadge.innerHTML = '<i class="fas fa-check"></i> Uploaded';
+                psaStatus.innerHTML = '<i class="fas fa-circle" style="color: #4CAF50; font-size: 8px;"></i> Uploaded';
+                if (psaIcon) {
+                    psaIcon.className = 'checklist-icon complete';
+                    psaIcon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+                if (psaStatusText) psaStatusText.textContent = 'Uploaded';
+            } else {
+                psaBadge.className = 'document-status-badge status-missing';
+                psaBadge.innerHTML = '<i class="fas fa-hourglass-half"></i> Missing';
+                psaStatus.innerHTML = '<i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready';
+                if (psaIcon) {
+                    psaIcon.className = 'checklist-icon missing';
+                    psaIcon.innerHTML = '<i class="fas fa-times"></i>';
+                }
+                if (psaStatusText) psaStatusText.textContent = 'Missing';
+            }
+
+            // Update Form 137
+            const f137Badge = document.getElementById('f137StatusBadge');
+            const f137Status = document.getElementById('f137Status');
+            const f137Icon = document.getElementById('checklistForm137Icon');
+            const f137StatusText = document.getElementById('checklistForm137Status');
+            
+            if (documentStatus.form137 || f137ImagePath) {
+                f137Badge.className = 'document-status-badge status-uploaded';
+                f137Badge.innerHTML = '<i class="fas fa-check"></i> Uploaded';
+                f137Status.innerHTML = '<i class="fas fa-circle" style="color: #4CAF50; font-size: 8px;"></i> Uploaded';
+                if (f137Icon) {
+                    f137Icon.className = 'checklist-icon complete';
+                    f137Icon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+                if (f137StatusText) f137StatusText.textContent = 'Uploaded';
+            } else {
+                f137Badge.className = 'document-status-badge status-missing';
+                f137Badge.innerHTML = '<i class="fas fa-hourglass-half"></i> Missing';
+                f137Status.innerHTML = '<i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready';
+                if (f137Icon) {
+                    f137Icon.className = 'checklist-icon missing';
+                    f137Icon.innerHTML = '<i class="fas fa-times"></i>';
+                }
+                if (f137StatusText) f137StatusText.textContent = 'Missing';
+            }
+
+            // Update Good Moral
+            const gmBadge = document.getElementById('goodmoralStatusBadge');
+            const gmStatus = document.getElementById('goodmoralStatus');
+            const gmIcon = document.getElementById('checklistGoodMoralIcon');
+            const gmStatusText = document.getElementById('checklistGoodMoralStatus');
+            
+            if (documentStatus.goodmoral || goodmoralImagePath) {
+                gmBadge.className = 'document-status-badge status-uploaded';
+                gmBadge.innerHTML = '<i class="fas fa-check"></i> Uploaded';
+                gmStatus.innerHTML = '<i class="fas fa-circle" style="color: #4CAF50; font-size: 8px;"></i> Uploaded';
+                if (gmIcon) {
+                    gmIcon.className = 'checklist-icon complete';
+                    gmIcon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+                if (gmStatusText) gmStatusText.textContent = 'Uploaded';
+            } else {
+                gmBadge.className = 'document-status-badge status-missing';
+                gmBadge.innerHTML = '<i class="fas fa-hourglass-half"></i> Missing';
+                gmStatus.innerHTML = '<i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready';
+                if (gmIcon) {
+                    gmIcon.className = 'checklist-icon missing';
+                    gmIcon.innerHTML = '<i class="fas fa-times"></i>';
+                }
+                if (gmStatusText) gmStatusText.textContent = 'Missing';
+            }
+
+            // Form 138 is always optional for now
+            const f138Icon = document.getElementById('checklistForm138Icon');
+            const f138StatusText = document.getElementById('checklistForm138Status');
+            if (f138Icon) {
+                f138Icon.className = 'checklist-icon missing';
+                f138Icon.innerHTML = '<i class="fas fa-minus"></i>';
+            }
+            if (f138StatusText) f138StatusText.textContent = 'Optional';
+        }
+
+        function updateRecordStatusUI() {
+            const container = document.getElementById('recordStatusContainer');
+            const icon = document.getElementById('recordStatusIcon');
+            const title = document.getElementById('recordStatusTitle');
+            const message = document.getElementById('recordStatusMessage');
+
+            if (currentRecordId) {
+                container.style.display = 'block';
+                
+                switch(recordStatus) {
+                    case 'INCOMPLETE':
+                        icon.className = 'status-icon incomplete';
+                        icon.innerHTML = '<i class="fas fa-clock"></i>';
+                        title.textContent = 'Incomplete Record';
+                        message.textContent = 'Some documents are still missing. You can upload them later.';
+                        break;
+                    case 'PENDING':
+                        icon.className = 'status-icon pending';
+                        icon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
+                        title.textContent = 'Pending Review';
+                        message.textContent = 'All documents submitted. Waiting for admin approval.';
+                        break;
+                    case 'APPROVED':
+                        icon.className = 'status-icon approved';
+                        icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                        title.textContent = 'Approved';
+                        message.textContent = 'Your record has been approved.';
+                        break;
+                    case 'REJECTED':
+                        icon.className = 'status-icon incomplete';
+                        icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                        title.textContent = 'Rejected';
+                        message.textContent = 'Please check your documents and resubmit.';
+                        break;
+                    default:
+                        container.style.display = 'none';
+                }
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function updateTofollowInfo() {
+            const info = document.getElementById('tofollowInfo');
+            const message = document.getElementById('tofollowMessage');
+            
+            if (currentRecordId) {
+                info.style.display = 'block';
+                const missingDocs = [];
+                if (!documentStatus.psa && !psaImagePath) missingDocs.push('PSA');
+                if (!documentStatus.form137 && !f137ImagePath) missingDocs.push('Form 137');
+                if (!documentStatus.goodmoral && !goodmoralImagePath) missingDocs.push('Good Moral');
+                
+                if (missingDocs.length > 0) {
+                    message.innerHTML = `<i class="fas fa-info-circle" style="color: #ff9800;"></i> Missing documents: ${missingDocs.join(', ')}. You can upload them now - your previous uploads will be saved.`;
+                } else {
+                    message.innerHTML = '<i class="fas fa-check-circle" style="color: #4CAF50;"></i> All required documents have been uploaded!';
+                }
+            } else {
+                info.style.display = 'none';
+            }
+        }
+
+        // ================= LOAD SCHOOL YEAR =================
         async function loadSchoolYear() {
             try {
                 const response = await fetch('/api/settings/school-year', {
@@ -2135,12 +2639,9 @@
                         schoolYearInput.value = data.school_year;
                         console.log('✅ Loaded school year from server:', data.school_year);
                     }
-                } else {
-                    console.log('⚠️ Using default school year');
                 }
             } catch (error) {
                 console.error('Error loading school year:', error);
-                // Keep default value
             }
         }
 
@@ -2196,23 +2697,21 @@
                 console.log("Session check response:", data);
                 
                 if (data.authenticated && data.user) {
-                    // User is logged in
                     currentUser = data.user;
                     
-                    // Check if password reset is required
                     await checkPasswordReset();
                     
                     if (requiresPasswordReset && currentUser.role === 'STUDENT') {
                         showForcePasswordReset();
                     } else {
                         showScanner(data.user);
-                        // Load school year after showing scanner
                         await loadSchoolYear();
+                        await loadDynamicColleges();
+                        await loadExistingRecord(); // Load existing record if any
                     }
                     
                     return true;
                 } else {
-                    // User is not logged in
                     showAccessDenied();
                     return false;
                 }
@@ -2262,24 +2761,20 @@
         function showScanner(user) {
             console.log("👤 Showing scanner for user:", user);
             
-            // Hide all modals first
             hideForcePasswordReset();
             closeChangePasswordModal();
             
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('scannerInterface').style.display = 'block';
             
-            // Update user info
             document.getElementById('userName').textContent = user.full_name || user.username;
             document.getElementById('currentOperator').textContent = user.full_name || user.username;
             document.getElementById('userRole').textContent = user.role;
             
-            // Set avatar initials
             const name = user.full_name || user.username;
             const initials = name.substring(0, 2).toUpperCase();
             document.getElementById('userAvatar').textContent = initials;
             
-            // Show/hide role-specific buttons
             if (user.role === 'STUDENT') {
                 document.getElementById('studentActions').style.display = 'flex';
                 document.getElementById('adminActions').style.display = 'none';
@@ -2288,11 +2783,7 @@
                 document.getElementById('adminActions').style.display = 'flex';
             }
             
-            // Load colleges and populate regions
-            loadDynamicColleges();
             populateRegions();
-            
-            // Initialize form
             initializeForm();
         }
 
@@ -2305,8 +2796,6 @@
         }
 
         function initializeForm() {
-            // No need to set school year here - it's loaded from server
-            // Add initial sibling row
             addSiblingRow();
         }
 
@@ -2314,10 +2803,8 @@
         function openChangePasswordModal() {
             console.log("Opening change password modal");
             
-            // IMPORTANT: Hide the force reset modal FIRST before showing change password
             hideForcePasswordReset();
             
-            // Then show the change password modal
             document.getElementById('changePasswordModal').style.display = 'flex';
             document.getElementById('passwordAlert').style.display = 'none';
             document.getElementById('changePasswordForm').reset();
@@ -2328,7 +2815,6 @@
         function closeChangePasswordModal() {
             document.getElementById('changePasswordModal').style.display = 'none';
             
-            // If password reset is still required, show the force reset modal again
             if (requiresPasswordReset) {
                 showForcePasswordReset();
             }
@@ -2357,24 +2843,20 @@
                 number: /[0-9]/.test(password)
             };
 
-            // Update requirement indicators
             document.getElementById('reqLength').className = requirements.length ? 'requirement valid' : 'requirement invalid';
             document.getElementById('reqUppercase').className = requirements.uppercase ? 'requirement valid' : 'requirement invalid';
             document.getElementById('reqLowercase').className = requirements.lowercase ? 'requirement valid' : 'requirement invalid';
             document.getElementById('reqNumber').className = requirements.number ? 'requirement valid' : 'requirement invalid';
 
-            // Calculate strength
             let strength = 0;
             if (requirements.length) strength++;
             if (requirements.uppercase) strength++;
             if (requirements.lowercase) strength++;
             if (requirements.number) strength++;
 
-            // Update strength text
             const strengthClasses = ['strength-weak', 'strength-fair', 'strength-good', 'strength-strong'];
             const strengthTexts = ['Weak', 'Fair', 'Good', 'Strong'];
             
-            // Reset all classes
             document.getElementById('passwordStrength').className = 'password-strength';
             
             if (password.length > 0) {
@@ -2384,7 +2866,6 @@
                 strengthElement.textContent = 'Password strength';
             }
 
-            // Check password match
             checkPasswordMatch();
         }
 
@@ -2409,7 +2890,6 @@
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // Validation
             if (!currentPassword || !newPassword || !confirmPassword) {
                 showPasswordAlert('Please fill in all fields', 'error');
                 return;
@@ -2425,7 +2905,6 @@
                 return;
             }
             
-            // Check requirements
             const requirements = {
                 uppercase: /[A-Z]/.test(newPassword),
                 lowercase: /[a-z]/.test(newPassword),
@@ -2459,11 +2938,9 @@
                 if (response.ok) {
                     showPasswordAlert('Password changed successfully!', 'success');
                     
-                    // Reset modal after success
                     setTimeout(() => {
                         closeChangePasswordModal();
                         
-                        // If this was a forced reset, update flag and show scanner
                         if (requiresPasswordReset) {
                             requiresPasswordReset = false;
                             hideForcePasswordReset();
@@ -2475,7 +2952,6 @@
                     btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
                     btn.disabled = false;
                     
-                    // If force reset is still required, show the modal again
                     if (requiresPasswordReset) {
                         setTimeout(() => {
                             showForcePasswordReset();
@@ -2488,7 +2964,6 @@
                 btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
                 btn.disabled = false;
                 
-                // If force reset is still required, show the modal again
                 if (requiresPasswordReset) {
                     setTimeout(() => {
                         showForcePasswordReset();
@@ -2497,34 +2972,29 @@
             }
         }
 
+        document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+
         function showPasswordAlert(message, type) {
             const alertElement = document.getElementById('passwordAlert');
             alertElement.textContent = message;
             alertElement.className = `alert alert-${type}`;
             alertElement.style.display = 'flex';
-            
-            // Scroll to alert
             alertElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        // Attach form submit event
-        document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-
-        // ================= FIXED LOGOUT FUNCTION =================
+        // ================= LOGOUT =================
         function logout() {
             console.log("🚪 Logging out...");
-            // Simple redirect to logout endpoint
             window.location.href = '/logout';
         }
 
-        // ================= OTHER FUNCTIONS =================
+        // ================= VIEW MY RECORDS =================
         function viewMyRecords() {
-            // For students to view their own records
             window.location.href = '/my-records';
             closeMobileMenu();
         }
 
-        // ================= COLLEGE MANAGEMENT FUNCTIONS =================
+        // ================= COLLEGE FUNCTIONS =================
         async function loadDynamicColleges() {
             const collegeSelect = document.getElementById('collegeSelect');
             if (!collegeSelect) {
@@ -2675,17 +3145,16 @@
             }
         }
 
-        // ========== IMPROVED: addSiblingRow function with proper classes ==========
-        function addSiblingRow() {
+        function addSiblingRow(name = '', age = '', occupation = '') {
             const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
             if (!table) return;
             
             const newRow = table.insertRow();
             
             newRow.innerHTML = `
-                <td class="name-column"><input type="text" class="sib-name" placeholder="Full name" style="margin:0; width: 100%;"></td>
-                <td class="age-column"><input type="number" class="sib-age" placeholder="Age" min="0" max="100" style="margin:0; width: 100%;"></td>
-                <td class="occ-column"><input type="text" class="sib-occ" placeholder="School/Employer" style="margin:0; width: 100%;"></td>
+                <td class="name-column"><input type="text" class="sib-name" placeholder="Full name" value="${name}" style="margin:0; width: 100%;"></td>
+                <td class="age-column"><input type="number" class="sib-age" placeholder="Age" min="0" max="100" value="${age}" style="margin:0; width: 100%;"></td>
+                <td class="occ-column"><input type="text" class="sib-occ" placeholder="School/Employer" value="${occupation}" style="margin:0; width: 100%;"></td>
                 <td class="action-column">
                     <button type="button" class="sibling-remove-btn" onclick="removeSiblingRow(this)" title="Remove sibling">
                         <i class="fas fa-times"></i>
@@ -2693,7 +3162,6 @@
                 </td>
             `;
             
-            // Add focus styles for mobile
             const inputs = newRow.querySelectorAll('input');
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
@@ -2707,14 +3175,11 @@
             });
         }
 
-        // IMPROVED: removeSiblingRow function with smooth removal
         function removeSiblingRow(button) {
             const row = button.closest('tr');
             if (row) {
-                // Check if this is the last row
                 const tbody = row.parentNode;
                 if (tbody.children.length <= 1) {
-                    // Don't remove if it's the last row, just clear the inputs
                     const inputs = row.querySelectorAll('input');
                     inputs.forEach(input => {
                         input.value = '';
@@ -2722,7 +3187,6 @@
                     return;
                 }
                 
-                // Add a fade-out effect before removing
                 row.style.transition = 'opacity 0.2s ease, background-color 0.2s ease';
                 row.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
                 row.style.opacity = '0.5';
@@ -2755,14 +3219,12 @@
                     const d = data.structured_data;
                     document.getElementById('psaStatus').innerText = "✅ Data Extracted";
                     
-                    // Fill form fields
                     document.getElementById('childName').value = d.Name || "";
                     document.getElementById('childSex').value = d.Sex || "";
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
                     document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
                     document.getElementById('birthOrder').value = d.BirthOrder || "";
                     
-                    // Family information
                     document.getElementById('motherName').value = d.Mother_MaidenName || "";
                     document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
                     document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
@@ -2771,7 +3233,17 @@
                     document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
                     
                     if(d.Birthdate) calculateAge();
-                    psaImagePath = data.image_paths; 
+                    
+                    // Append new paths to existing
+                    if (psaImagePath) {
+                        psaImagePath += ',' + data.image_paths;
+                    } else {
+                        psaImagePath = data.image_paths;
+                    }
+                    
+                    documentStatus.psa = true;
+                    updateDocumentStatusUI();
+                    
                 } else {
                     document.getElementById('psaStatus').innerText = "❌ Scan Failed";
                 }
@@ -2808,7 +3280,17 @@
                     document.getElementById('schoolName').value = d.school_name || "";
                     document.getElementById('schoolAddress').value = d.school_address || "";
                     document.getElementById('genAverage').value = d.final_general_average || "";
-                    f137ImagePath = data.image_paths;
+                    
+                    // Append new paths to existing
+                    if (f137ImagePath) {
+                        f137ImagePath += ',' + data.image_paths;
+                    } else {
+                        f137ImagePath = data.image_paths;
+                    }
+                    
+                    documentStatus.form137 = true;
+                    updateDocumentStatusUI();
+                    
                 } else {
                     document.getElementById('f137Status').innerText = "❌ Scan Failed";
                 }
@@ -2840,11 +3322,15 @@
                 if (data.analysis) {
                     document.getElementById('goodmoralStatus').innerText = "✅ Analysis Complete";
                     
-                    // Store the analysis data
                     goodmoralAnalysis = data.analysis;
-                    goodmoralImagePath = data.image_paths;
                     
-                    // Update Good Moral data object
+                    // Append new paths to existing
+                    if (goodmoralImagePath) {
+                        goodmoralImagePath += ',' + data.image_paths;
+                    } else {
+                        goodmoralImagePath = data.image_paths;
+                    }
+                    
                     goodmoralData = {
                         score: data.goodmoral_score || 0,
                         status: data.disciplinary_status || "UNKNOWN",
@@ -2852,7 +3338,8 @@
                         disciplinaryDetails: data.disciplinary_details || ""
                     };
                     
-                    // Display the Good Moral status
+                    documentStatus.goodmoral = true;
+                    updateDocumentStatusUI();
                     displayGoodmoralStatus();
                     
                     alert('Good Moral Certificate analyzed successfully!');
@@ -2878,16 +3365,11 @@
             const successElement = document.getElementById('goodmoralSuccess');
             const warningText = document.getElementById('goodmoralWarningText');
             
-            // Show the container
             container.style.display = 'block';
             
-            // Set score with appropriate color
             scoreElement.textContent = goodmoralData.score;
-            
-            // Remove all score classes
             scoreElement.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
             
-            // Determine status and display text
             let statusText = "";
             let recordText = "";
             
@@ -2994,13 +3476,11 @@
         async function saveRecord() {
             console.log("💾 Starting saveRecord function...");
             
-            // Get elements with null checks
             const btn = document.getElementById('saveBtn');
             const nameElement = document.getElementById('childName');
             const collegeElement = document.getElementById('collegeSelect');
             const programElement = document.getElementById('programSelect');
             
-            // Check if elements exist
             if (!btn || !nameElement || !collegeElement || !programElement) {
                 console.error('Required elements not found');
                 alert("System error: Required form elements not found. Please refresh the page.");
@@ -3048,7 +3528,6 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
 
-            // Gather siblings data
             let siblingsList = [];
             const siblingsTable = document.getElementById('siblingsTable');
             if (siblingsTable) {
@@ -3067,7 +3546,6 @@
                 });
             }
 
-            // Prepare Good Moral data
             let goodmoralPayload = {};
             if (goodmoralAnalysis) {
                 goodmoralPayload = {
@@ -3079,13 +3557,11 @@
                 };
             }
 
-            // Helper function to safely get element value
             function getValue(id) {
                 const element = document.getElementById(id);
                 return element ? element.value.trim() : "";
             }
 
-            // Prepare record data
             const recordData = {
                 school_year: getValue('schoolYear'),
                 student_type: getValue('studentType'),
@@ -3142,7 +3618,6 @@
                 f137_image_path: f137ImagePath,
                 goodmoral_image_path: goodmoralImagePath,
                 
-                // Add operator info
                 operator_id: currentUser ? currentUser.id : null,
                 operator_name: currentUser ? currentUser.full_name || currentUser.username : 'Unknown',
                 
@@ -3165,13 +3640,20 @@
                 if(result.status === "success") {
                     currentRecordId = result.db_id;
                     
-                    // Upload Form 138 if selected
+                    // Update document status from response
+                    if (result.document_status) {
+                        documentStatus = result.document_status;
+                    }
+                    
+                    // Update record status
+                    recordStatus = result.record_status || "INCOMPLETE";
+                    
                     const form138File = document.getElementById('fileForm138').files[0];
                     if (form138File && currentRecordId) {
                         await uploadAdditionalFile(currentRecordId, 'form138', form138File);
+                        documentStatus.form138 = true;
                     }
                     
-                    // Upload other documents
                     for (const doc of otherDocuments) {
                         const titleInput = document.getElementById(`otherDocTitle-${doc.id}`);
                         const fileInput = document.getElementById(`otherDocFile-${doc.id}`);
@@ -3185,6 +3667,10 @@
                             }
                         }
                     }
+                    
+                    updateDocumentStatusUI();
+                    updateRecordStatusUI();
+                    updateTofollowInfo();
                     
                     updateStatus('saveStatus', 
                         `✅ Record Saved Successfully! ID: ${currentRecordId}`, 
@@ -3388,6 +3874,8 @@
             const info = {
                 currentUser: currentUser,
                 currentRecordId: currentRecordId,
+                recordStatus: recordStatus,
+                documentStatus: documentStatus,
                 psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
                 f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
                 goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
@@ -3409,6 +3897,8 @@
             alert(`DEBUG INFORMATION:\n\n
 👤 Current User: ${info.currentUser ? JSON.stringify(info.currentUser) : "Not logged in"}
 📋 Record ID: ${info.currentRecordId || "Not saved yet"}
+📊 Record Status: ${info.recordStatus}
+📄 Document Status: ${JSON.stringify(info.documentStatus)}
 📸 PSA Images: ${info.psaImagePath}
 📄 Form 137: ${info.f137ImagePath}
 🛡️ Good Moral: ${info.goodmoralImagePath}
@@ -3426,7 +3916,6 @@
 📅 School Year: ${info.schoolYear}`);
         }
 
-        // ================= FORM FUNCTIONS =================
         function populateRegions() {
             const regionSelect = document.getElementById("addressRegion");
             if (!regionSelect) return;
@@ -3460,14 +3949,11 @@
             }
         }
 
-        // ================= INITIALIZATION =================
         window.addEventListener('load', function() {
             console.log("🔄 Page loaded, initializing...");
             
-            // Check session when page loads
             checkSession();
             
-            // Add event listeners for password fields
             const newPasswordField = document.getElementById('newPassword');
             const confirmPasswordField = document.getElementById('confirmPassword');
             
@@ -3479,7 +3965,6 @@
                 confirmPasswordField.addEventListener('input', checkPasswordMatch);
             }
             
-            // Setup search input for records
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
@@ -3487,7 +3972,6 @@
                 });
             }
             
-            // Add touch event for file inputs on mobile
             const scanFrames = document.querySelectorAll('.scan-frame');
             scanFrames.forEach(frame => {
                 frame.addEventListener('touchstart', function(e) {
@@ -3499,7 +3983,6 @@
                 });
             });
             
-            // Close mobile menu when clicking outside
             document.addEventListener('click', function(event) {
                 const sidebar = document.getElementById('mainSidebar');
                 const toggleBtn = document.querySelector('.mobile-menu-toggle');
@@ -3511,7 +3994,6 @@
                 }
             });
             
-            // Handle window resize
             let resizeTimer;
             window.addEventListener('resize', function() {
                 clearTimeout(resizeTimer);
@@ -3523,7 +4005,6 @@
             });
         });
 
-        // ================= FILTER RECORDS FUNCTION =================
         function filterRecords(searchTerm) {
             const records = document.querySelectorAll('.record-card');
             
