@@ -33,6 +33,10 @@
             --warning: #ffc107;
             --danger: #dc3545;
             --info: #17a2b8;
+            --incomplete: #ff9800;
+            --pending: #2196F3;
+            --approved: #4CAF50;
+            --rejected: #f44336;
         }
 
         * {
@@ -329,6 +333,75 @@
             color: var(--gold);
         }
 
+        /* ===== DOCUMENT STATUS BADGES ===== */
+        .doc-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-right: 3px;
+            margin-bottom: 3px;
+            white-space: nowrap;
+        }
+
+        .doc-status-uploaded {
+            background: rgba(76, 175, 80, 0.15);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .doc-status-missing {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        .doc-status-optional {
+            background: rgba(158, 158, 158, 0.15);
+            color: #9e9e9e;
+            border: 1px solid #9e9e9e;
+        }
+
+        /* ===== RECORD STATUS BADGES ===== */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            margin-bottom: 5px;
+        }
+
+        .status-incomplete {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        .status-pending {
+            background: rgba(33, 150, 243, 0.15);
+            color: #2196F3;
+            border: 1px solid #2196F3;
+        }
+
+        .status-approved {
+            background: rgba(76, 175, 80, 0.15);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .status-rejected {
+            background: rgba(244, 67, 54, 0.15);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
         /* ===== TABLE ===== */
         .table-wrapper {
             width: 100%;
@@ -345,7 +418,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1400px;
+            min-width: 1600px;
         }
 
         thead {
@@ -538,6 +611,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
+            margin-bottom: 8px;
         }
 
         .doc-link {
@@ -583,6 +657,13 @@
         .doc-link.other {
             border-color: #FF9800;
             color: #FFCC80;
+        }
+
+        .document-status-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 5px;
         }
 
         /* ===== MORAL RECORD STATUS ===== */
@@ -686,10 +767,75 @@
             border-color: var(--info);
         }
 
+        .btn-approve:hover {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .btn-reject:hover {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
         .btn-delete:hover {
             background: var(--danger);
             color: white;
             border-color: var(--danger);
+        }
+
+        /* Approve/Reject buttons for status */
+        .status-action-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .status-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .status-btn.approve {
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .status-btn.approve:hover {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-btn.reject {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .status-btn.reject:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .status-btn.pending {
+            color: var(--pending);
+            border-color: var(--pending);
+        }
+
+        .status-btn.pending:hover {
+            background: var(--pending);
+            color: white;
         }
 
         /* ===== EMAIL STATUS ===== */
@@ -897,6 +1043,45 @@
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover {
+            background: var(--success);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        /* Rejection reason modal */
+        .rejection-reason-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--danger);
+            color: var(--text-light);
+            border-radius: 4px;
+            margin-top: 10px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
         /* ===== NOTIFICATION ===== */
         .notification {
             position: fixed;
@@ -1021,7 +1206,7 @@
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 1024px) {
             table {
-                min-width: 1300px;
+                min-width: 1500px;
             }
         }
 
@@ -1084,6 +1269,15 @@
             .document-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            .status-action-buttons {
+                flex-direction: column;
+            }
+
+            .status-btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1121,7 +1315,7 @@
             }
 
             table {
-                min-width: 1200px;
+                min-width: 1400px;
             }
 
             .document-grid {
@@ -1130,6 +1324,14 @@
 
             .program-name {
                 max-width: 200px;
+            }
+
+            .document-status-list {
+                flex-direction: column;
+            }
+
+            .doc-status-badge {
+                width: fit-content;
             }
         }
 
@@ -1170,7 +1372,8 @@
 
         .action-btn,
         .nav-link,
-        .doc-link {
+        .doc-link,
+        .status-btn {
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -1239,8 +1442,16 @@
                 <div class="stat-label">Good Records</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number" id="collegeCount">0</div>
-                <div class="stat-label">Colleges</div>
+                <div class="stat-number" id="incompleteRecords">0</div>
+                <div class="stat-label">Incomplete</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="pendingRecords">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="approvedRecords">0</div>
+                <div class="stat-label">Approved</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="emailSent">0</div>
@@ -1265,6 +1476,14 @@
 
             <select id="statusFilter" class="filter-select">
                 <option value="">All Status</option>
+                <option value="INCOMPLETE">Incomplete</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+            </select>
+
+            <select id="moralFilter" class="filter-select">
+                <option value="">All Moral Status</option>
                 <option value="GOOD">Good Record</option>
                 <option value="FAIR">Fair Record</option>
                 <option value="POOR">Poor Record</option>
@@ -1292,13 +1511,15 @@
                         <th>Academic Details</th>
                         <th>College & Program</th>
                         <th>Documents</th>
-                        <th>Moral Record Status</th>
+                        <th>Document Status</th>
+                        <th>Record Status</th>
+                        <th>Moral Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="6">
+                        <td colspan="8">
                             <div class="loading">
                                 <div class="loading-spinner"></div>
                                 <p>Loading student records...</p>
@@ -1342,12 +1563,34 @@
                             <p><strong>Email:</strong> <span id="emailAddress"></span></p>
                             <p><strong>College:</strong> <span id="emailCollege"></span></p>
                             <p><strong>Program:</strong> <span id="emailProgram"></span></p>
+                            <p><strong>Status:</strong> <span id="emailStatus"></span></p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeModal('emailModal')">Cancel</button>
                     <button class="btn btn-primary" onclick="confirmSendEmail()">Send Email</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- REJECTION REASON MODAL -->
+        <div id="rejectModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-times-circle"></i> Reject Record</h3>
+                    <button class="close-modal" onclick="closeModal('rejectModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Please provide a reason for rejection:</p>
+                    <textarea id="rejectionReason" class="rejection-reason-input" placeholder="e.g., Incomplete documents, Invalid PSA, etc."></textarea>
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
+                        <p><strong>Student:</strong> <span id="rejectStudentName"></span></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
+                    <button class="btn btn-danger" onclick="confirmReject()">Reject Record</button>
                 </div>
             </div>
         </div>
@@ -1364,6 +1607,7 @@
         let filteredRecords = [];
         let serverBaseUrl = window.location.origin;
         let currentEmailRecordId = null;
+        let currentRejectRecordId = null;
         let collegesData = [];
         let userData = {};
 
@@ -1389,6 +1633,7 @@
             document.getElementById('collegeFilter')?.addEventListener('change', applyFilters);
             document.getElementById('programFilter')?.addEventListener('change', applyFilters);
             document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('moralFilter')?.addEventListener('change', applyFilters);
             
             // Modal close on outside click
             window.onclick = function(event) {
@@ -1430,6 +1675,11 @@
                     return;
                 }
                 
+                if (data.user.role !== 'SUPER_ADMIN') {
+                    window.location.href = '/';
+                    return;
+                }
+                
                 userData = data.user;
                 updateUserInfo();
                 
@@ -1464,18 +1714,7 @@
                     allRecords = data.records || [];
                     filteredRecords = [...allRecords];
                     
-                    // DEBUG: Log all records and their Good Moral analysis
-                    console.log('📊 ALL RECORDS LOADED:', allRecords);
-                    allRecords.forEach((record, index) => {
-                        if (record.goodmoral_analysis) {
-                            console.log(`📝 Record ${index + 1} (ID: ${record.id}) - Good Moral Analysis:`, record.goodmoral_analysis);
-                            console.log(`   → Issuing School: ${record.goodmoral_analysis.issuing_school || 'Not Found'}`);
-                            console.log(`   → Issuing Officer: ${record.goodmoral_analysis.issuing_officer || 'Not Found'}`);
-                            console.log(`   → Issued Date: ${record.goodmoral_analysis.issued_date || 'Not Found'}`);
-                        } else {
-                            console.log(`⚠️ Record ${index + 1} (ID: ${record.id}) - No Good Moral Analysis`);
-                        }
-                    });
+                    console.log('📊 Records loaded:', allRecords);
                 }
 
                 if (collegesResponse.ok) {
@@ -1536,6 +1775,35 @@
             }
         }
 
+        // Get document status badge
+        function getDocumentStatusBadge(docType, status) {
+            if (status) {
+                return `<span class="doc-status-badge doc-status-uploaded"><i class="fas fa-check"></i> ${docType}</span>`;
+            } else {
+                if (docType === 'Form 138') {
+                    return `<span class="doc-status-badge doc-status-optional"><i class="fas fa-minus"></i> ${docType}</span>`;
+                } else {
+                    return `<span class="doc-status-badge doc-status-missing"><i class="fas fa-times"></i> ${docType}</span>`;
+                }
+            }
+        }
+
+        // Get record status badge
+        function getRecordStatusBadge(status) {
+            switch(status) {
+                case 'INCOMPLETE':
+                    return '<span class="status-badge status-incomplete"><i class="fas fa-clock"></i> INCOMPLETE</span>';
+                case 'PENDING':
+                    return '<span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> PENDING</span>';
+                case 'APPROVED':
+                    return '<span class="status-badge status-approved"><i class="fas fa-check-circle"></i> APPROVED</span>';
+                case 'REJECTED':
+                    return '<span class="status-badge status-rejected"><i class="fas fa-times-circle"></i> REJECTED</span>';
+                default:
+                    return '<span class="status-badge status-incomplete">UNKNOWN</span>';
+            }
+        }
+
         // Render table
         function renderTable(records) {
             filteredRecords = records;
@@ -1545,7 +1813,7 @@
             if (records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6">
+                        <td colspan="8">
                             <div class="empty-state">
                                 <i class="fas fa-database"></i>
                                 <h3>No Records Found</h3>
@@ -1566,6 +1834,9 @@
                 const goodmoralPath = r.goodmoral_path;
                 const otherDocs = r.other_documents || [];
                 
+                // Get document status
+                const docStatus = r.document_status || { psa: false, form137: false, form138: false, goodmoral: false };
+                
                 // Get college badge class
                 let collegeBadgeClass = 'badge-default';
                 if (r.college) {
@@ -1577,38 +1848,38 @@
                     }
                 }
                 
-                // Determine status
-                let recordStatus = 'UNKNOWN';
-                let statusClass = 'badge-unknown';
+                // Determine moral status
+                let moralStatus = 'UNKNOWN';
+                let moralClass = 'badge-unknown';
                 let reasonText = '';
                 
                 if (r.disciplinary_status) {
                     const status = r.disciplinary_status.toUpperCase();
                     if (status === 'EXCELLENT' || status === 'GOOD') {
-                        recordStatus = 'GOOD RECORD';
-                        statusClass = 'badge-good';
+                        moralStatus = 'GOOD';
+                        moralClass = 'badge-good';
                         reasonText = 'No past incidents in previous school';
                     } else if (status === 'FAIR') {
-                        recordStatus = 'FAIR RECORD';
-                        statusClass = 'badge-fair';
+                        moralStatus = 'FAIR';
+                        moralClass = 'badge-fair';
                         reasonText = 'Some concerns noted';
                     } else if (status === 'POOR') {
-                        recordStatus = 'POOR RECORD';
-                        statusClass = 'badge-poor';
+                        moralStatus = 'POOR';
+                        moralClass = 'badge-poor';
                         reasonText = r.disciplinary_details || 'Disciplinary issues detected';
                     }
                 } else if (r.goodmoral_score !== null && r.goodmoral_score !== undefined) {
                     if (r.goodmoral_score >= 80) {
-                        recordStatus = 'GOOD RECORD';
-                        statusClass = 'badge-good';
+                        moralStatus = 'GOOD';
+                        moralClass = 'badge-good';
                         reasonText = 'No past incidents in previous school';
                     } else if (r.goodmoral_score >= 60) {
-                        recordStatus = 'FAIR RECORD';
-                        statusClass = 'badge-fair';
+                        moralStatus = 'FAIR';
+                        moralClass = 'badge-fair';
                         reasonText = 'Some concerns noted';
                     } else {
-                        recordStatus = 'POOR RECORD';
-                        statusClass = 'badge-poor';
+                        moralStatus = 'POOR';
+                        moralClass = 'badge-poor';
                         reasonText = r.disciplinary_details || 'Disciplinary issues detected';
                     }
                 }
@@ -1632,6 +1903,25 @@
                 
                 // Get gender class
                 const genderClass = r.sex ? (r.sex.toLowerCase().includes('fe') ? 'gender-female' : 'gender-male') : '';
+
+                // Record status
+                const recordStatus = r.status || 'INCOMPLETE';
+                const recordStatusBadge = getRecordStatusBadge(recordStatus);
+
+                // Status action buttons (only show for incomplete/pending)
+                let statusActions = '';
+                if (recordStatus === 'INCOMPLETE' || recordStatus === 'PENDING') {
+                    statusActions = `
+                        <div class="status-action-buttons">
+                            <button onclick="openApproveModal(${r.id})" class="status-btn approve" title="Approve Record">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button onclick="openRejectModal(${r.id})" class="status-btn reject" title="Reject Record">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
+                    `;
+                }
 
                 return `
                 <tr id="row-${r.id}">
@@ -1716,11 +2006,24 @@
                     </td>
 
                     <td>
-                        <div class="record-badge ${statusClass}">
-                            <i class="fas ${statusClass === 'badge-good' ? 'fa-check-circle' : statusClass === 'badge-fair' ? 'fa-exclamation-circle' : statusClass === 'badge-poor' ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
-                            ${recordStatus}
+                        <div class="document-status-list">
+                            ${getDocumentStatusBadge('PSA', docStatus.psa || !!psaPath)}
+                            ${getDocumentStatusBadge('Form 137', docStatus.form137 || !!f137Path)}
+                            ${getDocumentStatusBadge('Good Moral', docStatus.goodmoral || !!goodmoralPath)}
+                            ${getDocumentStatusBadge('Form 138', docStatus.form138 || !!f138Path)}
                         </div>
-                        <div class="reason-text ${statusClass.includes('badge-poor') ? 'reason-bad' : 'reason-good'}">
+                    </td>
+
+                    <td>
+                        ${recordStatusBadge}
+                    </td>
+
+                    <td>
+                        <div class="record-badge ${moralClass}">
+                            <i class="fas ${moralClass === 'badge-good' ? 'fa-check-circle' : moralClass === 'badge-fair' ? 'fa-exclamation-circle' : moralClass === 'badge-poor' ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
+                            ${moralStatus}
+                        </div>
+                        <div class="reason-text ${moralClass.includes('badge-poor') ? 'reason-bad' : 'reason-good'}">
                             ${reasonText}
                         </div>
                         ${r.goodmoral_score ? `
@@ -1750,11 +2053,11 @@
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
+                        
+                        ${statusActions}
                     </td>
                 </tr>
             `}).join('');
-            
-            updateDownloadCount();
         }
 
         // Update stats
@@ -1768,12 +2071,18 @@
                 return r.goodmoral_score >= 80;
             }).length;
             
+            const incompleteRecords = allRecords.filter(r => r.status === 'INCOMPLETE').length;
+            const pendingRecords = allRecords.filter(r => r.status === 'PENDING').length;
+            const approvedRecords = allRecords.filter(r => r.status === 'APPROVED').length;
+            
             const colleges = new Set(allRecords.map(r => r.college).filter(c => c));
             const emailSent = allRecords.filter(r => r.email_sent).length;
             
             document.getElementById('totalRecords').textContent = totalRecords;
             document.getElementById('goodRecords').textContent = goodRecords;
-            document.getElementById('collegeCount').textContent = colleges.size;
+            document.getElementById('incompleteRecords').textContent = incompleteRecords;
+            document.getElementById('pendingRecords').textContent = pendingRecords;
+            document.getElementById('approvedRecords').textContent = approvedRecords;
             document.getElementById('emailSent').textContent = emailSent;
         }
 
@@ -1791,6 +2100,7 @@
             const collegeFilter = document.getElementById('collegeFilter')?.value || '';
             const programFilter = document.getElementById('programFilter')?.value || '';
             const statusFilter = document.getElementById('statusFilter')?.value || '';
+            const moralFilter = document.getElementById('moralFilter')?.value || '';
             
             let filtered = allRecords;
             
@@ -1825,28 +2135,33 @@
             
             // Apply status filter
             if (statusFilter) {
+                filtered = filtered.filter(r => r.status === statusFilter);
+            }
+            
+            // Apply moral filter
+            if (moralFilter) {
                 filtered = filtered.filter(r => {
                     if (!r.disciplinary_status && r.goodmoral_score === undefined) {
-                        return statusFilter === '';
+                        return false;
                     }
                     
                     if (r.disciplinary_status) {
                         const status = r.disciplinary_status.toUpperCase();
-                        if (statusFilter === 'GOOD') {
+                        if (moralFilter === 'GOOD') {
                             return status === 'EXCELLENT' || status === 'GOOD';
-                        } else if (statusFilter === 'FAIR') {
+                        } else if (moralFilter === 'FAIR') {
                             return status === 'FAIR';
-                        } else if (statusFilter === 'POOR') {
+                        } else if (moralFilter === 'POOR') {
                             return status === 'POOR';
                         }
                     }
                     
                     if (r.goodmoral_score !== undefined) {
-                        if (statusFilter === 'GOOD') {
+                        if (moralFilter === 'GOOD') {
                             return r.goodmoral_score >= 80;
-                        } else if (statusFilter === 'FAIR') {
+                        } else if (moralFilter === 'FAIR') {
                             return r.goodmoral_score >= 60 && r.goodmoral_score < 80;
-                        } else if (statusFilter === 'POOR') {
+                        } else if (moralFilter === 'POOR') {
                             return r.goodmoral_score < 60;
                         }
                     }
@@ -1863,6 +2178,7 @@
             document.getElementById('collegeFilter').value = '';
             document.getElementById('programFilter').value = '';
             document.getElementById('statusFilter').value = '';
+            document.getElementById('moralFilter').value = '';
             document.getElementById('programFilter').innerHTML = '<option value="">All Programs</option>';
             
             renderTable(allRecords);
@@ -1877,7 +2193,7 @@
             }
         }
 
-        // DOWNLOAD FUNCTION - Exports filtered data to Excel
+        // DOWNLOAD FUNCTION
         function downloadFilteredData() {
             if (filteredRecords.length === 0) {
                 showNotification('No records to download', 'info');
@@ -1885,52 +2201,42 @@
             }
 
             try {
-                // Prepare data for Excel - Only Name, Mobile Number, and Address
                 const excelData = filteredRecords.map(r => ({
                     'NAME': r.name || 'N/A',
                     'MOBILE NUMBER': r.mobile_no || 'N/A',
                     'ADDRESS': [
                         r.specific_address || '',
                         r.province || ''
-                    ].filter(Boolean).join(', ') || 'N/A'
+                    ].filter(Boolean).join(', ') || 'N/A',
+                    'STATUS': r.status || 'INCOMPLETE',
+                    'DOCUMENTS': [
+                        r.image_path ? 'PSA' : '',
+                        r.form137_path ? 'F137' : '',
+                        r.goodmoral_path ? 'GM' : '',
+                        r.form138_path ? 'F138' : ''
+                    ].filter(Boolean).join(', ') || 'None'
                 }));
 
-                // Create worksheet
                 const ws = XLSX.utils.json_to_sheet(excelData);
-
-                // Set column widths
                 const colWidths = [
-                    { wch: 40 }, // Name
-                    { wch: 20 }, // Mobile Number
-                    { wch: 50 }  // Address
+                    { wch: 40 },
+                    { wch: 20 },
+                    { wch: 50 },
+                    { wch: 15 },
+                    { wch: 30 }
                 ];
                 ws['!cols'] = colWidths;
 
-                // Create workbook
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Student Records');
 
-                // Generate filename with filters
                 const date = new Date();
                 const dateStr = date.toISOString().split('T')[0];
                 const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-');
                 
-                let filename = `student_records_${dateStr}`;
-                
-                // Add filter info to filename
-                const collegeFilter = document.getElementById('collegeFilter')?.value;
-                const programFilter = document.getElementById('programFilter')?.value;
-                const statusFilter = document.getElementById('statusFilter')?.value;
-                
-                if (collegeFilter) filename += `_${collegeFilter.replace(/\s+/g, '_')}`;
-                if (programFilter) filename += `_${programFilter.replace(/\s+/g, '_')}`;
-                if (statusFilter) filename += `_${statusFilter}`;
-                
-                filename += `_${timeStr}.xlsx`;
+                let filename = `student_records_${dateStr}_${timeStr}.xlsx`;
 
-                // Download file
                 XLSX.writeFile(wb, filename);
-                
                 showNotification(`Downloaded ${filteredRecords.length} record(s) successfully!`, 'success');
 
             } catch (error) {
@@ -1939,20 +2245,77 @@
             }
         }
 
-        // View student details - UPDATED with Good Moral debugging
+        // ========== APPROVE/REJECT FUNCTIONS ==========
+        function openApproveModal(recordId) {
+            if (confirm('Are you sure you want to APPROVE this record?')) {
+                updateRecordStatus(recordId, 'APPROVED');
+            }
+        }
+
+        function openRejectModal(recordId) {
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+            
+            currentRejectRecordId = recordId;
+            document.getElementById('rejectStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('rejectionReason').value = '';
+            openModal('rejectModal');
+        }
+
+        function confirmReject() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                showNotification('Please provide a rejection reason', 'error');
+                return;
+            }
+            
+            updateRecordStatus(currentRejectRecordId, 'REJECTED', reason);
+            closeModal('rejectModal');
+        }
+
+        async function updateRecordStatus(recordId, status, reason = '') {
+            try {
+                const response = await fetch(`/api/record/${recordId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify({ status, reason })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification(`Record ${status.toLowerCase()} successfully!`, 'success');
+                    
+                    // Update local record
+                    const recordIndex = allRecords.findIndex(r => r.id === recordId);
+                    if (recordIndex !== -1) {
+                        allRecords[recordIndex].status = status;
+                        if (status === 'REJECTED') {
+                            allRecords[recordIndex].rejection_reason = reason;
+                        }
+                    }
+                    
+                    updateStats();
+                    renderTable(filteredRecords);
+                    
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || `Failed to ${status.toLowerCase()} record`, 'error');
+                }
+            } catch (error) {
+                console.error('Status update error:', error);
+                showNotification('Error updating record status', 'error');
+            }
+        }
+
+        // View student details
         async function viewStudentDetails(id) {
             const record = allRecords.find(r => r.id === id);
             if (!record) {
                 showNotification('Record not found', 'error');
                 return;
-            }
-            
-            // DEBUG: Log the record data
-            console.log(`📝 Viewing record ID ${id}:`, record);
-            if (record.goodmoral_analysis) {
-                console.log('📊 Good Moral Analysis for this record:', record.goodmoral_analysis);
-            } else {
-                console.log('⚠️ No Good Moral Analysis found for this record');
             }
             
             // Get college badge class
@@ -1973,50 +2336,46 @@
                     goodmoralAnalysis = typeof record.goodmoral_analysis === 'string' 
                         ? JSON.parse(record.goodmoral_analysis) 
                         : record.goodmoral_analysis;
-                    
-                    // DEBUG: Log parsed analysis
-                    console.log('✅ Parsed Good Moral Analysis:', goodmoralAnalysis);
-                    console.log('   → Issuing School:', goodmoralAnalysis.issuing_school);
-                    console.log('   → Issuing Officer:', goodmoralAnalysis.issuing_officer);
-                    console.log('   → Issued Date:', goodmoralAnalysis.issued_date);
-                    
                 } catch (e) {
-                    console.error('❌ Failed to parse analysis:', e);
+                    console.error('Failed to parse analysis:', e);
                 }
             }
 
+            // Get document status
+            const docStatus = record.document_status || { psa: false, form137: false, form138: false, goodmoral: false };
+
             // Determine status
-            let recordStatus = 'UNKNOWN';
-            let statusClass = 'badge-unknown';
+            let moralStatus = 'UNKNOWN';
+            let moralClass = 'badge-unknown';
             let reasonText = '';
             
             if (record.disciplinary_status) {
                 const status = record.disciplinary_status.toUpperCase();
                 if (status === 'EXCELLENT' || status === 'GOOD') {
-                    recordStatus = 'GOOD RECORD';
-                    statusClass = 'badge-good';
+                    moralStatus = 'GOOD RECORD';
+                    moralClass = 'badge-good';
                     reasonText = 'No past incidents in previous school';
                 } else if (status === 'FAIR') {
-                    recordStatus = 'FAIR RECORD';
-                    statusClass = 'badge-fair';
+                    moralStatus = 'FAIR RECORD';
+                    moralClass = 'badge-fair';
                     reasonText = 'Some concerns noted';
                 } else if (status === 'POOR') {
-                    recordStatus = 'POOR RECORD';
-                    statusClass = 'badge-poor';
+                    moralStatus = 'POOR RECORD';
+                    moralClass = 'badge-poor';
                     reasonText = record.disciplinary_details || 'Reason not specified';
                 }
             } else if (record.goodmoral_score !== null && record.goodmoral_score !== undefined) {
                 if (record.goodmoral_score >= 80) {
-                    recordStatus = 'GOOD RECORD';
-                    statusClass = 'badge-good';
+                    moralStatus = 'GOOD RECORD';
+                    moralClass = 'badge-good';
                     reasonText = 'No past incidents in previous school';
                 } else if (record.goodmoral_score >= 60) {
-                    recordStatus = 'FAIR RECORD';
-                    statusClass = 'badge-fair';
+                    moralStatus = 'FAIR RECORD';
+                    moralClass = 'badge-fair';
                     reasonText = 'Some concerns noted';
                 } else {
-                    recordStatus = 'POOR RECORD';
-                    statusClass = 'badge-poor';
+                    moralStatus = 'POOR RECORD';
+                    moralClass = 'badge-poor';
                     reasonText = record.disciplinary_details || 'Reason not specified';
                 }
             }
@@ -2039,7 +2398,9 @@
                                 <span>${record.school_name || ''}</span>
                             </div>
                         </div>
-                        <div class="record-badge ${statusClass}">${recordStatus}</div>
+                        <div>
+                            ${getRecordStatusBadge(record.status || 'INCOMPLETE')}
+                        </div>
                     </div>
                 </div>
 
@@ -2066,6 +2427,19 @@
                             <div class="detail-label">Student Type</div>
                             <div class="detail-value">${record.student_type || 'N/A'}</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Document Status Section -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-file-alt"></i> Document Status
+                    </h4>
+                    <div class="document-status-list" style="margin-bottom: 15px;">
+                        ${getDocumentStatusBadge('PSA', docStatus.psa || !!psaPath)}
+                        ${getDocumentStatusBadge('Form 137', docStatus.form137 || !!f137Path)}
+                        ${getDocumentStatusBadge('Good Moral', docStatus.goodmoral || !!goodmoralPath)}
+                        ${getDocumentStatusBadge('Form 138', docStatus.form138 || !!f138Path)}
                     </div>
                 </div>
 
@@ -2241,7 +2615,7 @@
             // Add Good Moral Analysis section
             if (goodmoralAnalysis || record.goodmoral_score) {
                 html += `
-                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${statusClass === 'badge-good' ? '#28a745' : statusClass === 'badge-fair' ? '#ffc107' : '#dc3545'}">
+                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${moralClass === 'badge-good' ? '#28a745' : moralClass === 'badge-fair' ? '#ffc107' : '#dc3545'}">
                         <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                             <i class="fas fa-shield-alt"></i> Good Moral Analysis
                         </h4>
@@ -2256,15 +2630,6 @@
                                 <div style="margin-bottom: 8px;">
                                     <strong>Issued Date:</strong> ${goodmoralAnalysis.issued_date || 'N/A'}
                                 </div>
-                                <div style="margin-bottom: 8px;">
-                                    <strong>Certificate Type:</strong> ${goodmoralAnalysis.certificate_type || 'N/A'}
-                                </div>
-                                ${goodmoralAnalysis.remarks ? `
-                                    <div style="margin-bottom: 8px;">
-                                        <strong>Remarks:</strong><br>
-                                        ${goodmoralAnalysis.remarks}
-                                    </div>
-                                ` : ''}
                             ` : ''}
                             
                             ${record.goodmoral_score ? `
@@ -2274,7 +2639,7 @@
                             ` : ''}
                             
                             <div style="margin-bottom: 8px;">
-                                <strong>Status:</strong> ${recordStatus}
+                                <strong>Status:</strong> ${moralStatus}
                             </div>
                             
                             <div style="margin-bottom: 8px;">
@@ -2283,27 +2648,11 @@
                             
                             ${goodmoralAnalysis && goodmoralAnalysis.disciplinary_details ? `
                                 <div style="margin-bottom: 8px;">
-                                    <strong>Disciplinary Details:</strong><br>
+                                    <strong>Details:</strong><br>
                                     ${goodmoralAnalysis.disciplinary_details}
                                 </div>
                             ` : ''}
-                            
-                            ${record.disciplinary_details ? `
-                                <div style="margin-bottom: 8px;">
-                                    <strong>Recorded Details:</strong><br>
-                                    ${record.disciplinary_details}
-                                </div>
-                            ` : ''}
                         </div>
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid #444;">
-                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                            <i class="fas fa-shield-alt"></i> Good Moral Analysis
-                        </h4>
-                        <p style="color: #888;">No Good Moral analysis available for this record.</p>
                     </div>
                 `;
             }
@@ -2326,6 +2675,7 @@
             document.getElementById('emailAddress').textContent = record.email || 'No email';
             document.getElementById('emailCollege').textContent = record.college || 'Not specified';
             document.getElementById('emailProgram').textContent = record.program || 'Not specified';
+            document.getElementById('emailStatus').textContent = record.status || 'INCOMPLETE';
             
             openModal('emailModal');
         }
@@ -2428,6 +2778,9 @@
             }
             if (modalId === 'emailModal') {
                 currentEmailRecordId = null;
+            }
+            if (modalId === 'rejectModal') {
+                currentRejectRecordId = null;
             }
         }
 
