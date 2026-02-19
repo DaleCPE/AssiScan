@@ -669,11 +669,11 @@ print("="*60)
 if not check_tables_exist():
     print("⚠️ Tables or columns missing, initializing database...")
     if init_db():
-        print("✅ Database initialization successful!")
+        print("✅ Database initialized successfully!")
     else:
         print("❌ Database initialization failed!")
 else:
-    print("✅ Database tables already exist with all required columns")
+    print("✅ All tables and columns already exist")
 
 # ================= USER MANAGEMENT FUNCTIONS =================
 def create_session(user_id, ip_address=None, user_agent=None):
