@@ -496,6 +496,11 @@
             margin-bottom: 2px;
         }
 
+        .student-details small {
+            font-size: 10px;
+            color: #666;
+        }
+
         /* Gender badges */
         .gender-badge {
             display: inline-block;
@@ -518,8 +523,11 @@
         }
 
         /* ===== ACADEMIC DETAILS ===== */
-        .lrn-info {
+        .academic-details {
             font-size: 11px;
+        }
+
+        .lrn-info {
             color: var(--gold);
             font-family: monospace;
             letter-spacing: 0.5px;
@@ -755,6 +763,12 @@
             border: 1px solid #dc3545;
         }
 
+        .moral-unknown {
+            background: rgba(108, 117, 125, 0.15);
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+
         .reason-text {
             font-size: 10px;
             color: #ccc;
@@ -826,6 +840,18 @@
             border-color: var(--danger);
         }
 
+        .btn-approve:hover {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .btn-reject:hover {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
         /* Status action buttons */
         .status-action-buttons {
             display: flex;
@@ -864,6 +890,16 @@
 
         .status-btn.reject:hover {
             background: var(--danger);
+            color: white;
+        }
+
+        .status-btn.pending {
+            color: var(--pending);
+            border-color: var(--pending);
+        }
+
+        .status-btn.pending:hover {
+            background: var(--pending);
             color: white;
         }
 
@@ -1066,6 +1102,19 @@
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover {
+            background: var(--success);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
         .btn-danger {
             background: rgba(220, 53, 69, 0.15);
             color: var(--danger);
@@ -1079,6 +1128,7 @@
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
 
+        /* Rejection reason modal */
         .rejection-reason-input {
             width: 100%;
             padding: 10px;
@@ -1476,7 +1526,7 @@
         <div id="studentModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-user-graduate"></i> Student Record</h3>
+                    <h3><i class="fas fa-user-graduate"></i> Student Complete Record</h3>
                     <button class="close-modal" onclick="closeModal('studentModal')">&times;</button>
                 </div>
                 <div class="modal-body" id="studentModalContent"></div>
@@ -1486,16 +1536,14 @@
             </div>
         </div>
 
-        <!-- OTHER DOCUMENTS MODAL (NEW) -->
+        <!-- OTHER DOCUMENTS MODAL -->
         <div id="otherDocsModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 600px;">
                 <div class="modal-header">
                     <h3><i class="fas fa-folder-open"></i> Other Documents</h3>
                     <button class="close-modal" onclick="closeModal('otherDocsModal')">&times;</button>
                 </div>
-                <div class="modal-body" id="otherDocsModalContent">
-                    <!-- Content will be loaded here -->
-                </div>
+                <div class="modal-body" id="otherDocsModalContent"></div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeModal('otherDocsModal')">Close</button>
                 </div>
@@ -1668,7 +1716,6 @@
             });
         }
 
-        // ========== NEW: Get document icons with other documents ==========
         function getDocumentIcons(r) {
             const docStatus = r.document_status || { psa: false, form137: false, goodmoral: false };
             const psaUploaded = docStatus.psa || r.image_path || r.psa_image_path;
@@ -1702,7 +1749,6 @@
             `;
         }
 
-        // ========== NEW: Show other documents in modal ==========
         function showOtherDocuments(recordId) {
             const record = allRecords.find(r => r.id === recordId);
             if (!record || !record.other_documents || record.other_documents.length === 0) {
@@ -1739,7 +1785,6 @@
             let moralClass = 'moral-good';
             let icon = 'fa-check-circle';
             let text = 'Good';
-            let reason = '';
             
             if (r.disciplinary_status) {
                 const s = r.disciplinary_status.toUpperCase();
@@ -1747,42 +1792,32 @@
                     moralClass = 'moral-good';
                     icon = 'fa-check-circle';
                     text = 'Good';
-                    reason = 'No past incidents';
                 } else if (s === 'FAIR') {
                     moralClass = 'moral-fair';
                     icon = 'fa-exclamation-circle';
                     text = 'Fair';
-                    reason = 'Some concerns';
                 } else if (s === 'POOR') {
                     moralClass = 'moral-poor';
                     icon = 'fa-exclamation-triangle';
                     text = 'Poor';
-                    reason = r.disciplinary_details || 'Issues detected';
                 }
             } else if (r.goodmoral_score !== undefined) {
                 if (r.goodmoral_score >= 80) {
                     moralClass = 'moral-good';
                     icon = 'fa-check-circle';
                     text = 'Good';
-                    reason = 'No past incidents';
                 } else if (r.goodmoral_score >= 60) {
                     moralClass = 'moral-fair';
                     icon = 'fa-exclamation-circle';
                     text = 'Fair';
-                    reason = 'Some concerns';
                 } else {
                     moralClass = 'moral-poor';
                     icon = 'fa-exclamation-triangle';
                     text = 'Poor';
-                    reason = r.disciplinary_details || 'Issues detected';
                 }
             }
             
-            return `
-                <span class="moral-badge-compact ${moralClass}"><i class="fas ${icon}"></i> ${text}</span>
-                ${reason ? `<div class="reason-text ${moralClass.includes('poor') ? 'reason-bad' : 'reason-good'}">${reason}</div>` : ''}
-                ${r.goodmoral_score ? `<small>Score: ${r.goodmoral_score}</small>` : ''}
-            `;
+            return `<span class="moral-badge-compact ${moralClass}"><i class="fas ${icon}"></i> ${text}</span>`;
         }
 
         function getStatusBadge(status) {
@@ -2050,89 +2085,446 @@
             }
         }
 
+        // ========== FIXED: COMPLETE STUDENT DETAILS VIEW ==========
         function viewStudentDetails(id) {
             const record = allRecords.find(r => r.id === id);
             if (!record) return;
-            
-            let html = `
-                <div style="margin-bottom: 15px;">
-                    <h3 style="color: var(--gold);">${record.name || 'Unknown'}</h3>
-                    <p style="color: #888;">LRN: ${record.lrn || 'N/A'}</p>
-                </div>
-                <div class="student-details-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">College</div>
-                        <div class="detail-value">${record.college || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Program</div>
-                        <div class="detail-value">${record.program || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${record.status || 'INCOMPLETE'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Email</div>
-                        <div class="detail-value">${record.email || 'N/A'}</div>
-                    </div>
-                </div>
-                <h4 style="color: var(--gold); margin: 15px 0 10px;">Main Documents</h4>
-                <div class="document-grid">
-            `;
-            
-            const docs = [
-                { name: 'PSA', path: record.image_path || record.psa_image_path, icon: 'fa-id-card', color: '#8cb4f5' },
-                { name: 'Form 137', path: record.form137_path || record.f137_image_path, icon: 'fa-file-contract', color: '#f3d576' },
-                { name: 'Good Moral', path: record.goodmoral_path, icon: 'fa-certificate', color: '#80b918' },
-                { name: 'Form 138', path: record.form138_path, icon: 'fa-file-invoice', color: '#e1bee7' }
-            ];
-            
-            docs.forEach(doc => {
-                if (doc.path) {
-                    html += `
-                        <div class="document-item">
-                            <i class="fas ${doc.icon}" style="color: ${doc.color}; font-size: 20px; margin-bottom: 5px;"></i>
-                            <div>${doc.name}</div>
-                            <a href="${getImageUrl(doc.path)}" target="_blank" style="color: var(--gold); font-size: 11px;">View</a>
-                        </div>
-                    `;
-                }
-            });
-            
-            html += `</div>`;
 
-            // ========== NEW: Add Other Documents section ==========
-            if (record.other_documents && record.other_documents.length > 0) {
-                html += `
-                    <h4 style="color: var(--gold); margin: 20px 0 10px;">Other Documents (${record.other_documents.length})</h4>
-                    <div class="document-grid">
-                `;
-                
-                record.other_documents.forEach((doc, index) => {
-                    const filename = doc.filename || doc;
-                    const title = doc.title || `Document ${index + 1}`;
-                    html += `
-                        <div class="document-item small">
-                            <i class="fas fa-file" style="color: #FF9800; font-size: 20px; margin-bottom: 5px;"></i>
-                            <div>${title}</div>
-                            <a href="${getImageUrl(filename)}" target="_blank" style="color: var(--gold); font-size: 11px;">View</a>
+            // Helper function para i-display ang value o N/A
+            const display = (value) => value || 'N/A';
+
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 style="color: var(--gold); margin-bottom: 5px; font-family: 'Cinzel', serif;">${display(record.name)}</h3>
+                            <div style="color: var(--text-muted); font-size: 13px;">
+                                <span>LRN: ${display(record.lrn)}</span>
+                                <span style="margin: 0 10px;">•</span>
+                                <span>${display(record.school_name)}</span>
+                            </div>
                         </div>
-                    `;
-                });
-                
-                html += `</div>`;
-            }
-            
-            if (record.rejection_reason) {
-                html += `
+                        <div>${getStatusBadge(record.status || 'INCOMPLETE')}</div>
+                    </div>
+                </div>
+
+                <!-- College Section -->
+                <div class="college-section">
+                    <div class="college-header">
+                        <i class="fas fa-university" style="color: var(--gold);"></i>
+                        <h4 class="college-title">College & Program Information</h4>
+                    </div>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">College/Department</div>
+                            <div class="detail-value">${display(record.college)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Program/Course</div>
+                            <div class="detail-value" style="color: #96c93d;">${display(record.program)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Student Type</div>
+                            <div class="detail-value">${display(record.student_type)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">School Year</div>
+                            <div class="detail-value">${display(record.school_year)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Status Section -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-file-alt"></i> Document Status
+                    </h4>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <span class="doc-status-badge ${record.image_path || record.psa_image_path ? 'doc-status-uploaded' : 'doc-status-missing'}">
+                            <i class="fas ${record.image_path || record.psa_image_path ? 'fa-check' : 'fa-times'}"></i> PSA
+                        </span>
+                        <span class="doc-status-badge ${record.form137_path || record.f137_image_path ? 'doc-status-uploaded' : 'doc-status-missing'}">
+                            <i class="fas ${record.form137_path || record.f137_image_path ? 'fa-check' : 'fa-times'}"></i> Form 137
+                        </span>
+                        <span class="doc-status-badge ${record.goodmoral_path ? 'doc-status-uploaded' : 'doc-status-missing'}">
+                            <i class="fas ${record.goodmoral_path ? 'fa-check' : 'fa-times'}"></i> Good Moral
+                        </span>
+                        <span class="doc-status-badge ${record.form138_path ? 'doc-status-uploaded' : 'doc-status-optional'}">
+                            <i class="fas ${record.form138_path ? 'fa-check' : 'fa-minus'}"></i> Form 138
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Personal Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-user-circle"></i> Personal Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Date of Birth</div>
+                            <div class="detail-value">${display(record.birthdate)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Age</div>
+                            <div class="detail-value">${display(record.age)} years old</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Sex</div>
+                            <div class="detail-value">${display(record.sex)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Birthplace</div>
+                            <div class="detail-value">${display(record.birthplace)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Civil Status</div>
+                            <div class="detail-value">${display(record.civil_status)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Nationality</div>
+                            <div class="detail-value">${display(record.nationality)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Religion</div>
+                            <div class="detail-value">${display(record.religion)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Birth Order</div>
+                            <div class="detail-value">${display(record.birth_order)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-address-book"></i> Contact Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Email Address</div>
+                            <div class="detail-value">${display(record.email)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mobile Number</div>
+                            <div class="detail-value">${display(record.mobile_no)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Address</div>
+                            <div class="detail-value">${display(record.specific_address)} ${display(record.province)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Region</div>
+                            <div class="detail-value">${display(record.region)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Residence Type</div>
+                            <div class="detail-value">${display(record.residence_type)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Academic Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-graduation-cap"></i> Academic Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Previous School</div>
+                            <div class="detail-value">${display(record.school_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">School Address</div>
+                            <div class="detail-value">${display(record.school_address)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Final Average</div>
+                            <div class="detail-value">${display(record.final_general_average)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Last Level Attended</div>
+                            <div class="detail-value">${display(record.last_level_attended)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">School Type</div>
+                            <div class="detail-value">${display(record.school_type)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Year Attended</div>
+                            <div class="detail-value">${display(record.year_attended)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Groups -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-notes-medical"></i> Special Groups & Health
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">IP Member</div>
+                            <div class="detail-value">${display(record.is_ip)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">PWD</div>
+                            <div class="detail-value">${display(record.is_pwd)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Medication</div>
+                            <div class="detail-value">${display(record.has_medication)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Working Student</div>
+                            <div class="detail-value">${display(record.is_working)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Gifted Child</div>
+                            <div class="detail-value">${display(record.is_gifted)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Needs Assistance</div>
+                            <div class="detail-value">${display(record.needs_assistance)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Scholar</div>
+                            <div class="detail-value">${display(record.is_scholar)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Special Talents</div>
+                            <div class="detail-value">${display(record.special_talents)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Parent Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Name</div>
+                            <div class="detail-value">${display(record.mother_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Citizenship</div>
+                            <div class="detail-value">${display(record.mother_citizenship)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Occupation</div>
+                            <div class="detail-value">${display(record.mother_occupation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Contact</div>
+                            <div class="detail-value">${display(record.mother_contact)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Name</div>
+                            <div class="detail-value">${display(record.father_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Citizenship</div>
+                            <div class="detail-value">${display(record.father_citizenship)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Occupation</div>
+                            <div class="detail-value">${display(record.father_occupation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Contact</div>
+                            <div class="detail-value">${display(record.father_contact)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Parents' Marital Status</div>
+                            <div class="detail-value">${display(record.marital_status)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guardian Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-user-shield"></i> Guardian Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Guardian Name</div>
+                            <div class="detail-value">${display(record.guardian_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Relationship</div>
+                            <div class="detail-value">${display(record.guardian_relation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Guardian Contact</div>
+                            <div class="detail-value">${display(record.guardian_contact)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employer Information -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-briefcase"></i> Employer Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Employer Name</div>
+                            <div class="detail-value">${display(record.employer_name)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Siblings -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Siblings
+                    </h4>
+                    <div class="student-details-grid">
+                        ${(() => {
+                            try {
+                                const siblings = typeof record.siblings === 'string' ? JSON.parse(record.siblings) : (record.siblings || []);
+                                if (siblings.length > 0) {
+                                    return siblings.map(s => `
+                                        <div class="detail-item">
+                                            <div class="detail-label">${s.name || 'Sibling'}</div>
+                                            <div class="detail-value">Age: ${s.age || 'N/A'} • ${s.occupation || 'N/A'}</div>
+                                        </div>
+                                    `).join('');
+                                } else {
+                                    return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
+                                }
+                            } catch (e) {
+                                return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
+                            }
+                        })()}
+                    </div>
+                </div>
+
+                <!-- Good Moral Analysis -->
+                ${(() => {
+                    if (record.goodmoral_analysis || record.goodmoral_score) {
+                        let analysis = {};
+                        try {
+                            analysis = typeof record.goodmoral_analysis === 'string' 
+                                ? JSON.parse(record.goodmoral_analysis) 
+                                : (record.goodmoral_analysis || {});
+                        } catch (e) {
+                            analysis = {};
+                        }
+                        
+                        return `
+                            <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${record.goodmoral_score >= 80 ? '#28a745' : record.goodmoral_score >= 60 ? '#ffc107' : '#dc3545'}">
+                                <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                                    <i class="fas fa-shield-alt"></i> Good Moral Analysis
+                                </h4>
+                                <div style="font-size: 13px; line-height: 1.5;">
+                                    ${analysis.issuing_school ? `<div style="margin-bottom: 8px;"><strong>Issuing School:</strong> ${analysis.issuing_school}</div>` : ''}
+                                    ${analysis.issuing_officer ? `<div style="margin-bottom: 8px;"><strong>Issuing Officer:</strong> ${analysis.issuing_officer}</div>` : ''}
+                                    ${analysis.issued_date ? `<div style="margin-bottom: 8px;"><strong>Issued Date:</strong> ${analysis.issued_date}</div>` : ''}
+                                    ${record.goodmoral_score ? `<div style="margin-bottom: 8px;"><strong>Score:</strong> ${record.goodmoral_score}/100</div>` : ''}
+                                    ${record.disciplinary_status ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ${record.disciplinary_status}</div>` : ''}
+                                    ${record.disciplinary_details ? `<div style="margin-bottom: 8px;"><strong>Details:</strong><br>${record.disciplinary_details}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    return '';
+                })()}
+
+                <!-- Rejection Reason -->
+                ${record.rejection_reason ? `
                     <div style="margin-top: 20px; padding: 12px; background: rgba(244,67,54,0.1); border: 1px solid #f44336; border-radius: 4px;">
                         <strong style="color: #f44336;">Rejection Reason:</strong>
                         <p style="margin-top: 5px; color: #fff;">${record.rejection_reason}</p>
                     </div>
+                ` : ''}
+            `;
+
+            // Add Documents Section
+            const psaPath = record.image_path || record.psa_image_path;
+            const f137Path = record.form137_path || record.f137_image_path;
+            const f138Path = record.form138_path;
+            const goodmoralPath = record.goodmoral_path;
+            const otherDocs = record.other_documents || [];
+
+            if (psaPath || f137Path || f138Path || goodmoralPath || otherDocs.length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-file-alt"></i> Uploaded Documents
+                        </h4>
+                        <div class="document-grid">
                 `;
+
+                if (psaPath) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-id-card" style="color: #8cb4f5; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">PSA Birth Certificate</div>
+                            <a href="${getImageUrl(psaPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (f137Path) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-file-contract" style="color: #f3d576; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">Form 137 / SF10</div>
+                            <a href="${getImageUrl(f137Path)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (f138Path) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-file-invoice" style="color: #e1bee7; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">Form 138</div>
+                            <a href="${getImageUrl(f138Path)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (goodmoralPath) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-certificate" style="color: #80b918; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">Good Moral</div>
+                            <a href="${getImageUrl(goodmoralPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (otherDocs.length > 0) {
+                    otherDocs.forEach((doc, index) => {
+                        const filename = doc.filename || doc;
+                        const title = doc.title || `Other Document ${index + 1}`;
+                        html += `
+                            <div class="document-item small">
+                                <i class="fas fa-file" style="color: #FF9800; font-size: 20px; margin-bottom: 5px;"></i>
+                                <div style="font-size: 11px; font-weight: bold;">${title}</div>
+                                <a href="${getImageUrl(filename)}" target="_blank" style="color: var(--gold); font-size: 10px;">View</a>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div></div>`;
             }
-            
+
             document.getElementById('studentModalContent').innerHTML = html;
             openModal('studentModal');
         }
