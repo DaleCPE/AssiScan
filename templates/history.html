@@ -453,10 +453,10 @@
         th:nth-child(2), td:nth-child(2) { width: 10%; }  /* LRN */
         th:nth-child(3), td:nth-child(3) { width: 12%; }  /* College */
         th:nth-child(4), td:nth-child(4) { width: 12%; }  /* Program */
-        th:nth-child(5), td:nth-child(5) { width: 12%; }  /* Documents */
+        th:nth-child(5), td:nth-child(5) { width: 15%; }  /* Documents */
         th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
         th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Moral */
-        th:nth-child(8), td:nth-child(8) { width: 20%; }  /* Actions */
+        th:nth-child(8), td:nth-child(8) { width: 17%; }  /* Actions */
 
         /* ===== STUDENT INFO ===== */
         .student-info {
@@ -496,11 +496,6 @@
             margin-bottom: 2px;
         }
 
-        .student-details small {
-            font-size: 10px;
-            color: #666;
-        }
-
         /* Gender badges */
         .gender-badge {
             display: inline-block;
@@ -523,11 +518,8 @@
         }
 
         /* ===== ACADEMIC DETAILS ===== */
-        .academic-details {
-            font-size: 11px;
-        }
-
         .lrn-info {
+            font-size: 11px;
             color: var(--gold);
             font-family: monospace;
             letter-spacing: 0.5px;
@@ -615,6 +607,7 @@
             display: flex;
             gap: 4px;
             flex-wrap: wrap;
+            margin-bottom: 5px;
         }
 
         .doc-icon {
@@ -675,6 +668,17 @@
             border: 1px solid #9e9e9e;
         }
 
+        .doc-icon.other-uploaded {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+            cursor: pointer;
+        }
+
+        .doc-icon.other-uploaded:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
         /* Document links */
         .doc-links {
             display: flex;
@@ -716,6 +720,11 @@
             color: #80b918;
         }
 
+        .doc-link.other {
+            border-color: #FF9800;
+            color: #FFCC80;
+        }
+
         /* ===== MORAL BADGES ===== */
         .moral-badge-compact {
             display: inline-flex;
@@ -744,12 +753,6 @@
             background: rgba(220, 53, 69, 0.15);
             color: #dc3545;
             border: 1px solid #dc3545;
-        }
-
-        .moral-unknown {
-            background: rgba(108, 117, 125, 0.15);
-            color: #6c757d;
-            border: 1px solid #6c757d;
         }
 
         .reason-text {
@@ -823,18 +826,6 @@
             border-color: var(--danger);
         }
 
-        .btn-approve:hover {
-            background: var(--success);
-            color: white;
-            border-color: var(--success);
-        }
-
-        .btn-reject:hover {
-            background: var(--danger);
-            color: white;
-            border-color: var(--danger);
-        }
-
         /* Status action buttons */
         .status-action-buttons {
             display: flex;
@@ -873,16 +864,6 @@
 
         .status-btn.reject:hover {
             background: var(--danger);
-            color: white;
-        }
-
-        .status-btn.pending {
-            color: var(--pending);
-            border-color: var(--pending);
-        }
-
-        .status-btn.pending:hover {
-            background: var(--pending);
             color: white;
         }
 
@@ -1085,19 +1066,6 @@
             transform: translateY(-2px);
         }
 
-        .btn-success {
-            background: rgba(40, 167, 69, 0.15);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-
-        .btn-success:hover {
-            background: var(--success);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-
         .btn-danger {
             background: rgba(220, 53, 69, 0.15);
             color: var(--danger);
@@ -1111,7 +1079,6 @@
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
 
-        /* Rejection reason modal */
         .rejection-reason-input {
             width: 100%;
             padding: 10px;
@@ -1235,6 +1202,15 @@
             border-color: var(--gold);
         }
 
+        .document-item.small {
+            padding: 10px;
+            font-size: 11px;
+        }
+
+        .document-item.small i {
+            font-size: 16px;
+        }
+
         /* Download counter */
         .download-counter {
             font-size: 11px;
@@ -1251,8 +1227,7 @@
                 grid-template-columns: repeat(3, 1fr);
             }
             
-            th:nth-child(4), td:nth-child(4) { width: 10%; }
-            th:nth-child(8), td:nth-child(8) { width: 22%; }
+            th:nth-child(8), td:nth-child(8) { width: 20%; }
         }
 
         @media (max-width: 992px) {
@@ -1338,7 +1313,6 @@
             }
         }
 
-        /* Touch-friendly improvements */
         .touch-target {
             min-height: 44px;
             min-width: 44px;
@@ -1351,7 +1325,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* iOS specific fixes */
         @supports (-webkit-touch-callout: none) {
             .modal-overlay {
                 -webkit-overflow-scrolling: touch;
@@ -1409,7 +1382,7 @@
         <div class="stats-bar">
             <div class="stat-item">
                 <div class="stat-number" id="totalRecords">0</div>
-                <div class="stat-label">Total Students</div>
+                <div class="stat-label">Total</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="goodRecords">0</div>
@@ -1429,7 +1402,7 @@
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="emailSent">0</div>
-                <div class="stat-label">Emails Sent</div>
+                <div class="stat-label">Emails</div>
             </div>
         </div>
 
@@ -1437,15 +1410,11 @@
         <div class="search-filter-container">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search name, LRN, college, or program...">
+                <input type="text" id="searchInput" placeholder="Search name, LRN, college...">
             </div>
 
             <select id="collegeFilter" class="filter-select">
                 <option value="">All Colleges</option>
-            </select>
-
-            <select id="programFilter" class="filter-select">
-                <option value="">All Programs</option>
             </select>
 
             <select id="statusFilter" class="filter-select">
@@ -1475,7 +1444,7 @@
             </div>
         </div>
 
-        <!-- TABLE - FIXED LAYOUT -->
+        <!-- TABLE -->
         <div class="table-wrapper">
             <table id="recordsTable">
                 <thead>
@@ -1495,7 +1464,7 @@
                         <td colspan="8">
                             <div class="loading">
                                 <div class="loading-spinner"></div>
-                                <p>Loading student records...</p>
+                                <p>Loading records...</p>
                             </div>
                         </td>
                     </tr>
@@ -1507,14 +1476,28 @@
         <div id="studentModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-user-graduate"></i> Student Complete Record</h3>
+                    <h3><i class="fas fa-user-graduate"></i> Student Record</h3>
                     <button class="close-modal" onclick="closeModal('studentModal')">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div id="studentModalContent"></div>
-                </div>
+                <div class="modal-body" id="studentModalContent"></div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeModal('studentModal')">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTHER DOCUMENTS MODAL (NEW) -->
+        <div id="otherDocsModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-folder-open"></i> Other Documents</h3>
+                    <button class="close-modal" onclick="closeModal('otherDocsModal')">&times;</button>
+                </div>
+                <div class="modal-body" id="otherDocsModalContent">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('otherDocsModal')">Close</button>
                 </div>
             </div>
         </div>
@@ -1527,12 +1510,10 @@
                     <button class="close-modal" onclick="closeModal('emailModal')">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p>Send email notification to this student?</p>
+                    <p>Send email to this student?</p>
                     <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
                         <p><strong>Student:</strong> <span id="emailStudentName"></span></p>
                         <p><strong>Email:</strong> <span id="emailAddress"></span></p>
-                        <p><strong>College:</strong> <span id="emailCollege"></span></p>
-                        <p><strong>Program:</strong> <span id="emailProgram"></span></p>
                         <p><strong>Status:</strong> <span id="emailStatus"></span></p>
                     </div>
                 </div>
@@ -1543,7 +1524,7 @@
             </div>
         </div>
 
-        <!-- REJECTION REASON MODAL -->
+        <!-- REJECT MODAL -->
         <div id="rejectModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 500px;">
                 <div class="modal-header">
@@ -1552,7 +1533,7 @@
                 </div>
                 <div class="modal-body">
                     <p>Reason for rejection:</p>
-                    <textarea id="rejectionReason" class="rejection-reason-input" placeholder="e.g., Incomplete documents, Invalid PSA..."></textarea>
+                    <textarea id="rejectionReason" class="rejection-reason-input" placeholder="e.g., Incomplete documents..."></textarea>
                     <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
                         <p><strong>Student:</strong> <span id="rejectStudentName"></span></p>
                     </div>
@@ -1567,7 +1548,7 @@
         <!-- NOTIFICATION -->
         <div id="notification" class="notification">
             <i class="fas fa-check-circle"></i>
-            <span id="notificationMessage">Operation successful!</span>
+            <span id="notificationMessage">Success!</span>
         </div>
     </div>
 
@@ -1589,7 +1570,6 @@
             'CBAA': 'badge-cbaa'
         };
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadData();
@@ -1599,7 +1579,6 @@
         function setupEventListeners() {
             document.getElementById('searchInput')?.addEventListener('input', applyFilters);
             document.getElementById('collegeFilter')?.addEventListener('change', applyFilters);
-            document.getElementById('programFilter')?.addEventListener('change', applyFilters);
             document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
             document.getElementById('moralFilter')?.addEventListener('change', applyFilters);
             
@@ -1666,7 +1645,6 @@
                     loadCollegesForFilter();
                 }
 
-                document.getElementById('recordsTable').style.display = 'table';
                 updateStats();
                 renderTable(filteredRecords);
                 updateDownloadCount();
@@ -1679,47 +1657,34 @@
 
         function loadCollegesForFilter() {
             const collegeFilter = document.getElementById('collegeFilter');
-            const programFilter = document.getElementById('programFilter');
-            
-            if (!collegeFilter || !programFilter) return;
+            if (!collegeFilter) return;
             
             collegeFilter.innerHTML = '<option value="">All Colleges</option>';
-            programFilter.innerHTML = '<option value="">All Programs</option>';
-            
             collegesData.forEach(college => {
                 const option = document.createElement('option');
                 option.value = college.name;
-                option.textContent = `${college.code} - ${college.name}`;
+                option.textContent = `${college.code}`;
                 collegeFilter.appendChild(option);
             });
-            
-            collegeFilter.addEventListener('change', function() {
-                const selectedCollege = collegesData.find(c => c.name === this.value);
-                updateProgramFilter(selectedCollege);
-            });
         }
 
-        function updateProgramFilter(college) {
-            const programFilter = document.getElementById('programFilter');
-            if (!programFilter) return;
-            
-            programFilter.innerHTML = '<option value="">All Programs</option>';
-            
-            if (college && college.programs) {
-                college.programs.forEach(program => {
-                    const option = document.createElement('option');
-                    option.value = program.name;
-                    option.textContent = program.name;
-                    programFilter.appendChild(option);
-                });
-            }
-        }
-
+        // ========== NEW: Get document icons with other documents ==========
         function getDocumentIcons(r) {
             const docStatus = r.document_status || { psa: false, form137: false, goodmoral: false };
             const psaUploaded = docStatus.psa || r.image_path || r.psa_image_path;
             const f137Uploaded = docStatus.form137 || r.form137_path || r.f137_image_path;
             const gmUploaded = docStatus.goodmoral || r.goodmoral_path;
+            const otherDocs = r.other_documents || [];
+            
+            let otherDocsHtml = '';
+            if (otherDocs.length > 0) {
+                otherDocsHtml = `
+                    <span class="doc-icon other-uploaded" onclick="showOtherDocuments(${r.id})" title="View ${otherDocs.length} other document(s)">
+                        <i class="fas fa-folder-open"></i>
+                    </span>
+                    <span style="font-size: 8px; color: #FF9800; margin-left: 2px;">+${otherDocs.length}</span>
+                `;
+            }
             
             return `
                 <div class="doc-icons-compact">
@@ -1732,16 +1697,42 @@
                     <span class="doc-icon ${gmUploaded ? 'gm-uploaded' : 'gm-missing'}" title="Good Moral: ${gmUploaded ? 'Uploaded' : 'Missing'}">
                         <i class="fas fa-certificate"></i>
                     </span>
-                    <span class="doc-icon f138-optional" title="Form 138 (Optional)">
-                        <i class="fas fa-file-invoice"></i>
-                    </span>
-                </div>
-                <div class="doc-links">
-                    ${psaUploaded ? `<a href="${getImageUrl(r.image_path || r.psa_image_path)}" target="_blank" class="doc-link psa"><i class="fas fa-external-link-alt"></i> PSA</a>` : ''}
-                    ${f137Uploaded ? `<a href="${getImageUrl(r.form137_path || r.f137_image_path)}" target="_blank" class="doc-link f137"><i class="fas fa-external-link-alt"></i> F137</a>` : ''}
-                    ${gmUploaded ? `<a href="${getImageUrl(r.goodmoral_path)}" target="_blank" class="doc-link gm"><i class="fas fa-external-link-alt"></i> GM</a>` : ''}
+                    ${otherDocsHtml}
                 </div>
             `;
+        }
+
+        // ========== NEW: Show other documents in modal ==========
+        function showOtherDocuments(recordId) {
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record || !record.other_documents || record.other_documents.length === 0) {
+                showNotification('No other documents found', 'info');
+                return;
+            }
+
+            let html = '<div class="document-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">';
+            
+            record.other_documents.forEach((doc, index) => {
+                const filename = doc.filename || doc;
+                const title = doc.title || `Document ${index + 1}`;
+                const fileUrl = getImageUrl(filename);
+                
+                html += `
+                    <div class="document-item small">
+                        <i class="fas fa-file" style="color: #FF9800; font-size: 24px; margin-bottom: 5px;"></i>
+                        <div style="font-weight: bold; margin-bottom: 5px;">${title}</div>
+                        <div style="font-size: 9px; color: #888; margin-bottom: 8px;">${filename.substring(0, 20)}...</div>
+                        <a href="${fileUrl}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                            <i class="fas fa-external-link-alt"></i> View
+                        </a>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            document.getElementById('otherDocsModalContent').innerHTML = html;
+            openModal('otherDocsModal');
         }
 
         function getMoralBadge(r) {
@@ -1796,11 +1787,11 @@
 
         function getStatusBadge(status) {
             switch(status) {
-                case 'INCOMPLETE': return '<span class="status-badge status-incomplete"><i class="fas fa-clock"></i> INCOMPLETE</span>';
-                case 'PENDING': return '<span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> PENDING</span>';
-                case 'APPROVED': return '<span class="status-badge status-approved"><i class="fas fa-check-circle"></i> APPROVED</span>';
-                case 'REJECTED': return '<span class="status-badge status-rejected"><i class="fas fa-times-circle"></i> REJECTED</span>';
-                default: return '<span class="status-badge status-incomplete">UNKNOWN</span>';
+                case 'INCOMPLETE': return '<span class="status-badge status-incomplete">INC</span>';
+                case 'PENDING': return '<span class="status-badge status-pending">PEND</span>';
+                case 'APPROVED': return '<span class="status-badge status-approved">APR</span>';
+                case 'REJECTED': return '<span class="status-badge status-rejected">REJ</span>';
+                default: return '<span class="status-badge status-incomplete">UNK</span>';
             }
         }
 
@@ -1816,7 +1807,7 @@
                             <div class="empty-state">
                                 <i class="fas fa-database"></i>
                                 <h3>No Records Found</h3>
-                                <p>No student records match your search criteria.</p>
+                                <p>No records match your search criteria.</p>
                             </div>
                         </td>
                     </tr>
@@ -1829,16 +1820,15 @@
                 const recordStatus = r.status || 'INCOMPLETE';
                 const initials = r.name ? r.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '??';
                 const age = r.age ? `${r.age}y` : '';
-                const genderIcon = r.sex ? (r.sex.toLowerCase().includes('fe') ? 'fa-female' : 'fa-male') : '';
-                const genderClass = r.sex ? (r.sex.toLowerCase().includes('fe') ? 'gender-female' : 'gender-male') : '';
+                const lrn = r.lrn ? r.lrn.slice(-4) : 'N/A';
                 
                 const statusActions = (recordStatus === 'INCOMPLETE' || recordStatus === 'PENDING') ? `
                     <div class="status-action-buttons">
                         <button onclick="openApproveModal(${r.id})" class="status-btn approve" title="Approve">
-                            <i class="fas fa-check"></i> Approve
+                            <i class="fas fa-check"></i>
                         </button>
                         <button onclick="openRejectModal(${r.id})" class="status-btn reject" title="Reject">
-                            <i class="fas fa-times"></i> Reject
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 ` : '';
@@ -1861,32 +1851,14 @@
                             <div class="student-avatar">${initials}</div>
                             <div class="student-details">
                                 <h4 title="${r.name || ''}">${r.name || 'Unknown'}</h4>
-                                <p>${age} • ${r.birthdate || ''}</p>
-                                ${r.sex ? `<span class="gender-badge ${genderClass}"><i class="fas ${genderIcon}"></i> ${r.sex}</span>` : ''}
-                                ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i> Email Sent</span>' : ''}
+                                <p>${age}</p>
+                                ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i></span>' : ''}
                             </div>
                         </div>
                     </td>
-                    <td>
-                        <div class="lrn-info">${r.lrn || 'N/A'}</div>
-                        ${r.final_general_average ? `<div class="grade-badge">Avg: ${r.final_general_average}</div>` : ''}
-                    </td>
-                    <td>
-                        ${r.college ? `
-                            <span class="college-badge ${collegeBadgeClass}">
-                                <i class="fas fa-university"></i> ${r.college}
-                            </span>
-                        ` : '-'}
-                    </td>
-                    <td>
-                        ${r.program ? `
-                            <div class="program-info">
-                                <i class="fas fa-book program-icon"></i>
-                                <span class="program-name" title="${r.program}">${r.program}</span>
-                            </div>
-                        ` : '-'}
-                        ${r.student_type ? `<small>${r.student_type}</small>` : ''}
-                    </td>
+                    <td>${lrn}</td>
+                    <td>${r.college ? r.college.substring(0, 15) + (r.college.length > 15 ? '...' : '') : '-'}</td>
+                    <td>${r.program ? r.program.substring(0, 15) + (r.program.length > 15 ? '...' : '') : '-'}</td>
                     <td>${getDocumentIcons(r)}</td>
                     <td>${getStatusBadge(recordStatus)}</td>
                     <td>${getMoralBadge(r)}</td>
@@ -1938,6 +1910,7 @@
 
         function getImageUrl(filename) {
             if (!filename) return '#';
+            if (typeof filename === 'object') filename = filename.filename || '';
             const first = filename.split(',')[0].trim();
             return `${serverBaseUrl}/uploads/${first.split('/').pop()}`;
         }
@@ -1945,7 +1918,6 @@
         function applyFilters() {
             const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
             const collegeFilter = document.getElementById('collegeFilter')?.value || '';
-            const programFilter = document.getElementById('programFilter')?.value || '';
             const statusFilter = document.getElementById('statusFilter')?.value || '';
             const moralFilter = document.getElementById('moralFilter')?.value || '';
             
@@ -1955,17 +1927,12 @@
                 filtered = filtered.filter(r => 
                     (r.name || '').toLowerCase().includes(searchTerm) ||
                     (r.lrn || '').toLowerCase().includes(searchTerm) ||
-                    (r.college || '').toLowerCase().includes(searchTerm) ||
-                    (r.program || '').toLowerCase().includes(searchTerm)
+                    (r.college || '').toLowerCase().includes(searchTerm)
                 );
             }
             
             if (collegeFilter) {
                 filtered = filtered.filter(r => (r.college || '') === collegeFilter);
-            }
-            
-            if (programFilter) {
-                filtered = filtered.filter(r => (r.program || '') === programFilter);
             }
             
             if (statusFilter) {
@@ -1995,10 +1962,8 @@
         function clearFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('collegeFilter').value = '';
-            document.getElementById('programFilter').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('moralFilter').value = '';
-            document.getElementById('programFilter').innerHTML = '<option value="">All Programs</option>';
             renderTable(allRecords);
         }
 
@@ -2019,21 +1984,13 @@
                     'COLLEGE': r.college || 'N/A',
                     'PROGRAM': r.program || 'N/A',
                     'STATUS': r.status || 'INCOMPLETE',
-                    'MORAL': r.disciplinary_status || 'N/A',
-                    'EMAIL': r.email || 'N/A',
-                    'MOBILE': r.mobile_no || 'N/A'
+                    'MORAL': r.disciplinary_status || 'N/A'
                 }));
 
                 const ws = XLSX.utils.json_to_sheet(excelData);
-                const colWidths = [
-                    { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 25 }, 
-                    { wch: 12 }, { wch: 10 }, { wch: 25 }, { wch: 15 }
-                ];
-                ws['!cols'] = colWidths;
-
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Records');
-
+                
                 const date = new Date();
                 const filename = `records_${date.toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(wb, filename);
@@ -2082,12 +2039,7 @@
                 if (response.ok) {
                     showNotification(`Record ${status.toLowerCase()}!`, 'success');
                     const record = allRecords.find(r => r.id === id);
-                    if (record) {
-                        record.status = status;
-                        if (status === 'REJECTED') {
-                            record.rejection_reason = reason;
-                        }
-                    }
+                    if (record) record.status = status;
                     updateStats();
                     renderTable(filteredRecords);
                 } else {
@@ -2125,7 +2077,7 @@
                         <div class="detail-value">${record.email || 'N/A'}</div>
                     </div>
                 </div>
-                <h4 style="color: var(--gold); margin: 15px 0 10px;">Documents</h4>
+                <h4 style="color: var(--gold); margin: 15px 0 10px;">Main Documents</h4>
                 <div class="document-grid">
             `;
             
@@ -2148,6 +2100,30 @@
                 }
             });
             
+            html += `</div>`;
+
+            // ========== NEW: Add Other Documents section ==========
+            if (record.other_documents && record.other_documents.length > 0) {
+                html += `
+                    <h4 style="color: var(--gold); margin: 20px 0 10px;">Other Documents (${record.other_documents.length})</h4>
+                    <div class="document-grid">
+                `;
+                
+                record.other_documents.forEach((doc, index) => {
+                    const filename = doc.filename || doc;
+                    const title = doc.title || `Document ${index + 1}`;
+                    html += `
+                        <div class="document-item small">
+                            <i class="fas fa-file" style="color: #FF9800; font-size: 20px; margin-bottom: 5px;"></i>
+                            <div>${title}</div>
+                            <a href="${getImageUrl(filename)}" target="_blank" style="color: var(--gold); font-size: 11px;">View</a>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            }
+            
             if (record.rejection_reason) {
                 html += `
                     <div style="margin-top: 20px; padding: 12px; background: rgba(244,67,54,0.1); border: 1px solid #f44336; border-radius: 4px;">
@@ -2157,7 +2133,6 @@
                 `;
             }
             
-            html += `</div>`;
             document.getElementById('studentModalContent').innerHTML = html;
             openModal('studentModal');
         }
@@ -2168,8 +2143,6 @@
             currentEmailRecordId = id;
             document.getElementById('emailStudentName').textContent = record.name || 'Unknown';
             document.getElementById('emailAddress').textContent = record.email || 'No email';
-            document.getElementById('emailCollege').textContent = record.college || 'Not specified';
-            document.getElementById('emailProgram').textContent = record.program || 'Not specified';
             document.getElementById('emailStatus').textContent = record.status || 'INCOMPLETE';
             openModal('emailModal');
         }
