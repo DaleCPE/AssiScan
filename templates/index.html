@@ -1822,7 +1822,7 @@
                     </span>
                 </div>
                 
-                <!-- RECORD STATUS SECTION (NEW) -->
+                <!-- RECORD STATUS SECTION -->
                 <div id="recordStatusContainer" class="record-status-container" style="display: none;">
                     <div class="status-header">
                         <div class="status-icon incomplete" id="recordStatusIcon">
@@ -1835,7 +1835,7 @@
                     </div>
                 </div>
 
-                <!-- DOCUMENT CHECKLIST (NEW) -->
+                <!-- DOCUMENT CHECKLIST -->
                 <div class="document-checklist" id="documentChecklist">
                     <div class="checklist-item" id="checklistPSA">
                         <div class="checklist-icon missing" id="checklistPSAIcon">
@@ -2255,7 +2255,7 @@
                 
                 <div id="sendStatus" class="save-status"></div>
 
-                <!-- TOFOLLOW INFO (NEW) -->
+                <!-- TOFOLLOW INFO -->
                 <div id="tofollowInfo" style="margin-top: 15px; padding: 10px; background: rgba(255, 152, 0, 0.1); border: 1px dashed #ff9800; border-radius: 4px; font-size: 11px; display: none;">
                     <i class="fas fa-info-circle" style="color: #ff9800;"></i>
                     <span id="tofollowMessage">You can upload missing documents later. Your previous uploads will be saved.</span>
@@ -3473,6 +3473,7 @@
             }
         }
 
+        // ================= FIXED SAVE RECORD FUNCTION =================
         async function saveRecord() {
             console.log("💾 Starting saveRecord function...");
             
@@ -3562,12 +3563,16 @@
                 return element ? element.value.trim() : "";
             }
 
+            // FIXED: Include ALL form fields including school information
             const recordData = {
+                // Enrollment Details
                 school_year: getValue('schoolYear'),
                 student_type: getValue('studentType'),
                 college: college,
                 program: program,
                 last_level_attended: getValue('lastLevel'),
+                
+                // Personal Information
                 name: name,
                 sex: getValue('childSex'),
                 birthdate: getValue('childBirthdate'),
@@ -3577,17 +3582,25 @@
                 religion: getValue('childReligion'),
                 age: getValue('childAge'),
                 mobile_no: getValue('childMobile'),
+                
+                // Special Groups
                 is_ip: getValue('isIP'),
                 is_pwd: getValue('isPWD'),
                 has_medication: getValue('hasMedication'),
                 is_working: getValue('isWorking'),
                 is_gifted: getValue('isGifted'),
                 needs_assistance: getValue('needsAssistance'),
+                
+                // Address
                 region: getValue('addressRegion'),
                 province: getValue('addressProvince'),
                 specific_address: getValue('addressSpecific'),
                 residence_type: getValue('residenceType'),
+                
+                // Employer
                 employer_name: getValue('employerName'),
+                
+                // Family
                 marital_status: getValue('maritalStatus'),
                 mother_name: getValue('motherName'),
                 mother_citizenship: getValue('motherCitizenship'),
@@ -3601,8 +3614,13 @@
                 guardian_relation: getValue('guardianRelation'),
                 guardian_contact: getValue('guardianContact'),
                 
+                // Siblings
                 siblings: siblingsList,
 
+                // Contact
+                email: emailValue,
+                
+                // SCHOOL INFORMATION (FIXED: These were missing!)
                 lrn: getValue('lrn'),
                 school_name: getValue('schoolName'),
                 school_address: getValue('schoolAddress'),
@@ -3612,15 +3630,16 @@
                 special_talents: getValue('specialTalents'),
                 is_scholar: getValue('isScholar'),
                 
-                email: emailValue,
-                
+                // Document paths
                 psa_image_path: psaImagePath,
                 f137_image_path: f137ImagePath,
                 goodmoral_image_path: goodmoralImagePath,
                 
+                // Operator info
                 operator_id: currentUser ? currentUser.id : null,
                 operator_name: currentUser ? currentUser.full_name || currentUser.username : 'Unknown',
                 
+                // Good Moral data
                 ...goodmoralPayload
             };
 
@@ -3887,6 +3906,8 @@
                 college: document.getElementById('collegeSelect') ? document.getElementById('collegeSelect').value : "Not found",
                 program: document.getElementById('programSelect') ? document.getElementById('programSelect').value : "Not found",
                 email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : "Not found",
+                lrn: document.getElementById('lrn') ? document.getElementById('lrn').value : "Not found", // Added LRN
+                schoolName: document.getElementById('schoolName') ? document.getElementById('schoolName').value : "Not found", // Added School Name
                 otherDocumentsCount: otherDocuments.length,
                 requiresPasswordReset: requiresPasswordReset ? "Yes" : "No",
                 screenWidth: window.innerWidth,
@@ -3910,6 +3931,8 @@
 🎓 College: ${info.college}
 📚 Program: ${info.program}
 📧 Email: ${info.email}
+📚 LRN: ${info.lrn}
+🏫 School: ${info.schoolName}
 📎 Other Documents: ${info.otherDocumentsCount}
 🔐 Password Reset Required: ${info.requiresPasswordReset}
 📱 Device: ${info.deviceType} (${info.screenWidth}px)
