@@ -1,5 +1,3 @@
-# realgemini.py - COMPLETE MEMORY OPTIMIZED VERSION
-
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -25,7 +23,7 @@ EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- CONFIGURE GEMINI (OPTIONAL) ---
+# --- CONFIGURE GEMINI ---
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
@@ -33,22 +31,22 @@ if GEMINI_API_KEY:
         
         try:
             models = list(genai.list_models())
-            gemini_models = []
+            gemini_2_5_flash_available = False
             
             for model in models:
                 model_name = model.name
-                if "gemini" in model_name.lower():
-                    gemini_models.append(model_name)
-                    print(f"✨ Found Gemini model: {model_name}")
+                if "gemini-2.5-flash" in model_name:
+                    gemini_2_5_flash_available = True
+                    print(f"✨ Found Gemini 2.5 Flash: {model_name}")
             
-            if not gemini_models:
-                print("⚠️ Warning: No Gemini models found")
+            if not gemini_2_5_flash_available:
+                print("⚠️ Warning: gemini-2.5-flash not found in available models")
         except Exception as e:
             print(f"⚠️ Could not list models: {e}")
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
 else:
-    print("ℹ️ Gemini API key not set - AI features disabled")
+    print("❌ CRITICAL: GEMINI_API_KEY is missing!")
 
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -75,7 +73,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     print(f"📁 Created uploads folder at: {UPLOAD_FOLDER}")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max to save memory
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
 # --- USER ROLES ---
 ROLES = {
@@ -671,11 +669,11 @@ print("="*60)
 if not check_tables_exist():
     print("⚠️ Tables or columns missing, initializing database...")
     if init_db():
-        print("✅ Database initialized successfully!")
+        print("✅ Database initialization successful!")
     else:
         print("❌ Database initialization failed!")
 else:
-    print("✅ All tables and columns already exist")
+    print("✅ Database tables already exist with all required columns")
 
 # ================= USER MANAGEMENT FUNCTIONS =================
 def create_session(user_id, ip_address=None, user_agent=None):
@@ -942,9 +940,10 @@ University of Batangas Lipa
         return True
 
 # ================= HELPER FUNCTIONS =================
-def save_files_only(files, prefix):
-    """Save uploaded files WITHOUT processing - memory efficient"""
+def save_multiple_files(files, prefix):
+    """Save uploaded files and return paths and PIL images"""
     saved_paths = []
+    pil_images = []
     
     for i, file in enumerate(files):
         if file and file.filename:
@@ -953,9 +952,73 @@ def save_files_only(files, prefix):
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
             saved_paths.append(filename)
-            print(f"   ✅ Saved: {filename}")
-    
-    return saved_paths
+            try:
+                img = Image.open(path)
+                pil_images.append(img)
+                print(f"   ✅ Saved: {filename}")
+            except Exception as e:
+                print(f"Error opening image {filename}: {e}")
+    return saved_paths, pil_images
+
+def extract_with_gemini(prompt, images):
+    """Use Gemini 2.5 Flash for text extraction"""
+    try:
+        if not GEMINI_API_KEY:
+            raise Exception("GEMINI_API_KEY not configured")
+        
+        model_name = "gemini-2.5-flash"
+        
+        try:
+            print(f"🤖 Using model: {model_name}")
+            model = genai.GenerativeModel(model_name)
+            
+            content_parts = [prompt]
+            for img in images:
+                content_parts.append(img)
+            
+            response = model.generate_content(
+                content_parts,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.1,
+                    top_p=0.8,
+                    top_k=40,
+                    max_output_tokens=2048,
+                )
+            )
+            
+            if response.text:
+                print(f"✅ Success with model: {model_name}")
+                return response.text
+            else:
+                raise Exception("No response text")
+        except Exception as model_error:
+            print(f"❌ {model_name} failed: {str(model_error)}")
+            print(f"⚠️ Trying to find alternative model...")
+            
+            try:
+                models = list(genai.list_models())
+                for available_model in models:
+                    if "gemini" in available_model.name.lower():
+                        fallback_model_name = available_model.name
+                        print(f"🔄 Trying fallback model: {fallback_model_name}")
+                        model = genai.GenerativeModel(fallback_model_name)
+                        
+                        content_parts = [prompt]
+                        for img in images:
+                            content_parts.append(img)
+                        
+                        response = model.generate_content(content_parts)
+                        
+                        if response.text:
+                            print(f"✅ Success with fallback model: {fallback_model_name}")
+                            return response.text
+                
+                raise Exception(f"No working Gemini model found. Original error: {str(model_error)}")
+            except Exception as fallback_error:
+                raise Exception(f"All models failed. Last error: {str(fallback_error)}")
+    except Exception as e:
+        print(f"❌ Gemini Error: {e}")
+        raise e
 
 def calculate_goodmoral_score(analysis_data):
     """Calculate Good Moral score based on analysis"""
@@ -3168,7 +3231,8 @@ def debug_goodmoral(record_id):
 @permission_required('access_scanner')
 def scan_goodmoral():
     """
-    Scan and analyze Good Moral Certificate - MEMORY OPTIMIZED
+    Scan and analyze Good Moral Certificate
+    Returns: Status, Score, and Analysis
     """
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
@@ -3178,99 +3242,147 @@ def scan_goodmoral():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Save files without processing - memory efficient
-        saved_paths = save_files_only(files, "GOODMORAL")
+        saved_paths, pil_images = save_multiple_files(files, "GOODMORAL")
         
-        # Default response - always return success
-        default_analysis = {
-            "issuing_school": "",
-            "issuing_officer": "",
-            "issued_date": "",
-            "student_name": "",
-            "has_disciplinary_record": False,
-            "disciplinary_details": "",
-            "remarks": ""
-        }
+        if not pil_images:
+            return jsonify({"error": "No valid images found"}), 400
+
+        print(f"📄 Processing Good Moral Certificate with Gemini 2.5 Flash")
         
-        # Try Gemini only if API key exists (optional)
-        if GEMINI_API_KEY and saved_paths:
+        # SIMPLIFIED PROMPT
+        prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
+
+IMPORTANT: Look for these specific details:
+- School name (usually at the top or bottom of the document)
+- Issuing officer name (person who signed, like Registrar, Principal, etc.)
+- Date when certificate was issued
+- Student name
+- Whether there are any disciplinary records mentioned
+
+Return ONLY this exact JSON format with no other text:
+{
+  "issuing_school": "full school name or 'Not Found'",
+  "issuing_officer": "name of person who signed or 'Not Found'",
+  "issued_date": "YYYY-MM-DD format or 'Not Found'",
+  "student_name": "full student name or 'Not Found'",
+  "has_disciplinary_record": false,
+  "disciplinary_details": "any details about disciplinary records or ''",
+  "remarks": "any other remarks or ''"
+}"""
+        
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
+            print(f"📝 RAW RESPONSE FROM GEMINI: {response_text}")
+            
+            cleaned_text = response_text.strip()
+            
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                print(f"❌ Could not find JSON in response")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            print(f"📝 EXTRACTED JSON STRING: {json_str}")
+            
             try:
-                # Open only first image and resize to save memory
-                first_path = os.path.join(app.config['UPLOAD_FOLDER'], saved_paths[0])
-                img = Image.open(first_path)
+                analysis_data = json.loads(json_str)
+                print(f"📊 PARSED ANALYSIS DATA: {json.dumps(analysis_data, indent=2)}")
                 
-                # Aggressive resize to save memory
-                img.thumbnail((800, 800))
+                # Manual extraction fallbacks
+                if analysis_data.get('issuing_school') == 'Not Found' and 'STI College' in response_text:
+                    import re
+                    sti_match = re.search(r'STI College[^\n]*', response_text)
+                    if sti_match:
+                        analysis_data['issuing_school'] = sti_match.group(0).strip()
+                        print(f"✅ Manually extracted issuing_school: {analysis_data['issuing_school']}")
                 
-                prompt = """Extract from Good Moral Certificate. Return JSON:
-                {"issuing_school":"","issuing_officer":"","issued_date":"",
-                "student_name":"","has_disciplinary_record":false,
-                "disciplinary_details":"","remarks":""}"""
+                if analysis_data.get('issuing_officer') == 'Not Found':
+                    import re
+                    # Look for name patterns (e.g., "CAMILLE ANN A. TEMPROSA")
+                    name_pattern = r'[A-Z][A-Z\s]+(?:[A-Z]\.)?\s*[A-Z][A-Z]+'
+                    name_matches = re.findall(name_pattern, response_text)
+                    if name_matches:
+                        # Filter out common non-name strings
+                        valid_names = [n for n in name_matches if len(n) > 5 and not n.startswith('STI')]
+                        if valid_names:
+                            analysis_data['issuing_officer'] = valid_names[-1].strip()
+                            print(f"✅ Manually extracted issuing_officer: {analysis_data['issuing_officer']}")
                 
-                # Quick attempt with timeout
-                model = genai.GenerativeModel('gemini-1.5-flash-8b')
-                response = model.generate_content([prompt, img], 
-                    generation_config={"temperature": 0.1, "max_output_tokens": 512},
-                    request_options={'timeout': 15})
-                
-                if response and response.text:
-                    text = response.text.strip()
-                    if text.startswith('```'):
-                        lines = text.split('\n')
-                        text = '\n'.join(lines[1:-1]) if len(lines) > 2 else text
+                if analysis_data.get('issued_date') == 'Not Found':
+                    import re
+                    date_patterns = [
+                        r'(\d{4}-\d{2}-\d{2})',
+                        r'(\d{1,2})[/-](\d{1,2})[/-](\d{4})',
+                        r'(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})',
+                        r'(March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})'
+                    ]
                     
-                    start = text.find('{')
-                    end = text.rfind('}') + 1
-                    if start != -1 and end > start:
-                        try:
-                            data = json.loads(text[start:end])
-                            # Update default with any extracted data
-                            for key in default_analysis:
-                                if key in data and data[key]:
-                                    default_analysis[key] = data[key]
-                        except:
-                            pass
-            except Exception as e:
-                print(f"⚠️ Gemini error (ignored): {e}")
-        
-        # Calculate score and status
-        score, status = calculate_goodmoral_score(default_analysis)
-        
-        return jsonify({
-            "message": "Success",
-            "analysis": default_analysis,
-            "goodmoral_score": score,
-            "disciplinary_status": status,
-            "has_disciplinary_record": default_analysis.get('has_disciplinary_record', False),
-            "image_paths": ",".join(saved_paths)
-        })
-        
+                    for pattern in date_patterns:
+                        date_match = re.search(pattern, response_text, re.IGNORECASE)
+                        if date_match:
+                            analysis_data['issued_date'] = date_match.group(0)
+                            print(f"✅ Manually extracted issued_date: {analysis_data['issued_date']}")
+                            break
+                
+                # Ensure all fields have values
+                analysis_data['student_name'] = analysis_data.get('student_name', 'Not Found')
+                analysis_data['issuing_school'] = analysis_data.get('issuing_school', 'Not Found')
+                analysis_data['issuing_officer'] = analysis_data.get('issuing_officer', 'Not Found')
+                analysis_data['issued_date'] = analysis_data.get('issued_date', 'Not Found')
+                analysis_data['has_disciplinary_record'] = analysis_data.get('has_disciplinary_record', False)
+                analysis_data['disciplinary_details'] = analysis_data.get('disciplinary_details', '')
+                analysis_data['remarks'] = analysis_data.get('remarks', '')
+                
+                # Calculate score and status
+                score, status = calculate_goodmoral_score(analysis_data)
+                
+                # Add calculated fields
+                analysis_data['goodmoral_score'] = score
+                analysis_data['disciplinary_status'] = status
+                
+                # Get disciplinary details for display
+                disciplinary_details = ""
+                if analysis_data.get('has_disciplinary_record'):
+                    disciplinary_details = analysis_data.get('disciplinary_details', '') or analysis_data.get('remarks', '') or 'Disciplinary issues detected'
+                
+                return jsonify({
+                    "message": "Good Moral Certificate analyzed successfully",
+                    "analysis": analysis_data,
+                    "goodmoral_score": score,
+                    "disciplinary_status": status,
+                    "disciplinary_details": disciplinary_details,
+                    "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Invalid JSON string: {json_str}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
+        except Exception as ai_error:
+            print(f"❌ AI Extraction Failed: {ai_error}")
+            traceback.print_exc()
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
         print(f"❌ Good Moral Scanning Error: {e}")
-        # Always return success with default data
-        return jsonify({
-            "message": "Success",
-            "analysis": {
-                "issuing_school": "",
-                "issuing_officer": "",
-                "issued_date": "",
-                "student_name": "",
-                "has_disciplinary_record": False,
-                "disciplinary_details": "",
-                "remarks": ""
-            },
-            "goodmoral_score": 100,
-            "disciplinary_status": "GOOD",
-            "has_disciplinary_record": False,
-            "image_paths": ""
-        }), 200
+        traceback.print_exc()
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 # ================= PSA EXTRACTION ENDPOINT =================
 @app.route('/extract', methods=['POST'])
 @login_required
 @permission_required('access_scanner')
 def extract_data():
-    """Extract PSA data - MEMORY OPTIMIZED"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -3279,87 +3391,75 @@ def extract_data():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Save files without processing
-        saved_paths = save_files_only(files, "PSA")
+        saved_paths, pil_images = save_multiple_files(files, "PSA")
         
-        # Default data
-        default_data = {
-            "Name": "",
-            "Sex": "",
-            "Birthdate": "",
-            "PlaceOfBirth": "",
-            "BirthOrder": "",
-            "Mother_MaidenName": "",
-            "Mother_Citizenship": "",
-            "Mother_Occupation": "",
-            "Father_Name": "",
-            "Father_Citizenship": "",
-            "Father_Occupation": ""
+        if not pil_images:
+             return jsonify({"error": "No valid images found"}), 400
+
+        print(f"📸 Processing PSA with Gemini 2.5 Flash")
+        
+        prompt = """Extract information from this PSA Birth Certificate.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "is_valid_document": true,
+            "Name": "Full Name Here",
+            "Sex": "Male or Female",
+            "Birthdate": "YYYY-MM-DD format",
+            "PlaceOfBirth": "City/Municipality, Province",
+            "BirthOrder": "1st, 2nd, 3rd, etc",
+            "Mother_MaidenName": "Mother's Maiden Name",
+            "Mother_Citizenship": "Citizenship",
+            "Mother_Occupation": "Occupation if stated",
+            "Father_Name": "Father's Full Name",
+            "Father_Citizenship": "Citizenship",
+            "Father_Occupation": "Occupation if stated"
         }
         
-        # Try Gemini only if API key exists (optional)
-        if GEMINI_API_KEY and saved_paths:
+        IMPORTANT: DO NOT extract Religion field. Religion is selected separately in the system.
+        
+        Return ONLY the JSON, no additional text."""
+        
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            
+            cleaned_text = response_text.strip()
+            
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            
             try:
-                # Open only first image and resize
-                first_path = os.path.join(app.config['UPLOAD_FOLDER'], saved_paths[0])
-                img = Image.open(first_path)
-                img.thumbnail((800, 800))
+                data = json.loads(json_str)
                 
-                prompt = """Extract from PSA birth certificate. Return JSON:
-                {"Name":"","Sex":"","Birthdate":"","PlaceOfBirth":"","BirthOrder":"",
-                "Mother_MaidenName":"","Mother_Citizenship":"","Mother_Occupation":"",
-                "Father_Name":"","Father_Citizenship":"","Father_Occupation":""}"""
+                if not data.get("is_valid_document", False):
+                    return jsonify({
+                        "error": f"Invalid document"
+                    }), 400
                 
-                model = genai.GenerativeModel('gemini-1.5-flash-8b')
-                response = model.generate_content([prompt, img],
-                    generation_config={"temperature": 0.1, "max_output_tokens": 512},
-                    request_options={'timeout': 15})
-                
-                if response and response.text:
-                    text = response.text.strip()
-                    if text.startswith('```'):
-                        lines = text.split('\n')
-                        text = '\n'.join(lines[1:-1]) if len(lines) > 2 else text
-                    
-                    start = text.find('{')
-                    end = text.rfind('}') + 1
-                    if start != -1 and end > start:
-                        try:
-                            data = json.loads(text[start:end])
-                            # Update default with extracted data
-                            for key in default_data:
-                                if key in data and data[key]:
-                                    default_data[key] = data[key]
-                        except:
-                            pass
-            except Exception as e:
-                print(f"⚠️ Gemini error (ignored): {e}")
-        
-        return jsonify({
-            "message": "Success",
-            "structured_data": default_data,
-            "image_paths": ",".join(saved_paths)
-        })
-        
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
+        except Exception as ai_error:
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
-        print(f"❌ PSA Extraction Error: {e}")
-        return jsonify({
-            "message": "Success",
-            "structured_data": {
-                "Name": "",
-                "Sex": "",
-                "Birthdate": "",
-                "PlaceOfBirth": "",
-                "BirthOrder": "",
-                "Mother_MaidenName": "",
-                "Mother_Citizenship": "",
-                "Mother_Occupation": "",
-                "Father_Name": "",
-                "Father_Citizenship": "",
-                "Father_Occupation": ""
-            },
-            "image_paths": ""
-        }), 200
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 # ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
 @app.route('/upload-other-document/<int:record_id>', methods=['POST'])
@@ -3507,7 +3607,6 @@ def delete_other_document(record_id, doc_id):
 @login_required
 @permission_required('access_scanner')
 def extract_form137():
-    """Extract Form 137 data - MEMORY OPTIMIZED"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -3516,69 +3615,62 @@ def extract_form137():
         return jsonify({"error": "No selected file"}), 400
     
     try:
-        # Save files without processing
-        saved_paths = save_files_only(files, "F137")
+        saved_paths, pil_images = save_multiple_files(files, "F137")
+        print(f"📸 Processing Form 137 with Gemini 2.5 Flash")
+
+        if not pil_images:
+            return jsonify({"error": "No valid images found"}), 400
         
-        # Default data
-        default_data = {
-            "lrn": "",
-            "school_name": "",
-            "school_address": "",
-            "final_general_average": ""
+        prompt = """Extract information from this Form 137 / SF10 document.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "lrn": "12-digit Learner Reference Number",
+            "school_name": "Complete School Name",
+            "school_address": "Complete School Address",
+            "final_general_average": "Numerical grade"
         }
         
-        # Try Gemini only if API key exists
-        if GEMINI_API_KEY and saved_paths:
+        Return ONLY the JSON, no additional text."""
+        
+        try:
+            response_text = extract_with_gemini(prompt, pil_images)
+            
+            cleaned_text = response_text.strip()
+            
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                if lines[0].startswith('```'):
+                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+            
+            start = cleaned_text.find('{')
+            end = cleaned_text.rfind('}') + 1
+            
+            if start == -1 or end == 0:
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            
             try:
-                first_path = os.path.join(app.config['UPLOAD_FOLDER'], saved_paths[0])
-                img = Image.open(first_path)
-                img.thumbnail((800, 800))
+                data = json.loads(json_str)
                 
-                prompt = """Extract from Form 137. Return JSON:
-                {"lrn":"","school_name":"","school_address":"","final_general_average":""}"""
+                if 'lrn' in data and data['lrn']:
+                    data['lrn'] = str(data['lrn']).strip()
                 
-                model = genai.GenerativeModel('gemini-1.5-flash-8b')
-                response = model.generate_content([prompt, img],
-                    generation_config={"temperature": 0.1, "max_output_tokens": 512},
-                    request_options={'timeout': 15})
-                
-                if response and response.text:
-                    text = response.text.strip()
-                    if text.startswith('```'):
-                        lines = text.split('\n')
-                        text = '\n'.join(lines[1:-1]) if len(lines) > 2 else text
-                    
-                    start = text.find('{')
-                    end = text.rfind('}') + 1
-                    if start != -1 and end > start:
-                        try:
-                            data = json.loads(text[start:end])
-                            for key in default_data:
-                                if key in data and data[key]:
-                                    default_data[key] = data[key]
-                        except:
-                            pass
-            except Exception as e:
-                print(f"⚠️ Gemini error (ignored): {e}")
-        
-        return jsonify({
-            "message": "Success",
-            "structured_data": default_data,
-            "image_paths": ",".join(saved_paths)
-        })
-        
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
+        except Exception as ai_error:
+            return jsonify({
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
-        print(f"❌ Form137 Error: {e}")
-        return jsonify({
-            "message": "Success",
-            "structured_data": {
-                "lrn": "",
-                "school_name": "",
-                "school_address": "",
-                "final_general_average": ""
-            },
-            "image_paths": ""
-        }), 200
+        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 # ================= EMAIL ENDPOINTS =================
 @app.route('/send-email/<int:record_id>', methods=['POST'])
@@ -3627,6 +3719,11 @@ def send_email_only(record_id):
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Sending email for record ID: {record_id}")
+        print(f"🎓 College: {record.get('college', 'N/A')}")
+        print(f"📚 Program: {record.get('program', 'N/A')}")
+        print(f"🙏 Religion: {record.get('religion', 'N/A')}")
+        print(f"📄 Document Status: {record.get('document_status', {})}")
+        print(f"📋 Record Status: {record.get('status', 'INCOMPLETE')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3701,6 +3798,9 @@ def resend_email(record_id):
             return jsonify({"error": "No email address found"}), 400
         
         print(f"\n📧 Resending email for ID: {record_id}")
+        print(f"🎓 College: {record.get('college', 'N/A')}")
+        print(f"📚 Program: {record.get('program', 'N/A')}")
+        print(f"🙏 Religion: {record.get('religion', 'N/A')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3972,9 +4072,25 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "service": "AssiScan Backend",
-        "memory_optimized": True,
+        "goodmoral_scanning": "ENABLED",
+        "model": "Gemini 2.5 Flash",
+        "user_management": "ENABLED",
+        "roles": ["SUPER_ADMIN", "STUDENT"],
         "timestamp": datetime.now().isoformat(),
-        "database": "connected" if get_db_connection() else "disconnected"
+        "database": "connected" if get_db_connection() else "disconnected",
+        "features": {
+            "password_reset": "ENABLED",
+            "change_password": "ENABLED",
+            "college_management": "ENABLED",
+            "goodmoral_analysis": "ENABLED",
+            "religion_dropdown": "ENABLED",
+            "student_records": "ENABLED",
+            "document_access": "ENABLED",
+            "one_record_per_user": "ENABLED",
+            "school_year_management": "ENABLED",
+            "tofollow_documents": "ENABLED",
+            "approve_reject": "ENABLED"
+        }
     })
 
 @app.route('/list-uploads', methods=['GET'])
@@ -4118,22 +4234,70 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN - ULTIMATE MEMORY OPTIMIZED VERSION")
+    print("🚀 ASSISCAN WITH ENHANCED DATABASE CHECK")
     print("="*60)
-    print(f"🔑 Gemini API: {'✅ SET (optional)' if GEMINI_API_KEY else '❌ NOT SET (AI disabled)'}")
+    print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
+    print(f"🤖 Model: gemini-2.5-flash")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("✅ MEMORY OPTIMIZATIONS ENABLED:")
-    print("   • Max file size: 10MB")
-    print("   • Images saved without processing")
-    print("   • Gemini runs with 15s timeout only")
-    print("   • All endpoints return JSON always")
-    print("   • Aggressive image resizing (800px max)")
+    print("👥 USER ROLES:")
+    print("   • SUPER_ADMIN: Full system access")
+    print("   • STUDENT: Scanner access + View own records + Download documents")
+    print("="*60)
+    print("✅ FIXED FEATURES:")
+    print("   • Database tables will be recreated on startup")
+    print("   • ONE RECORD PER USER enforced")
+    print("   • Foreign key constraints properly set")
+    print("   • Default admin user created")
+    print("="*60)
+    print("🔐 SECURITY FEATURES:")
+    print("   • Role-based access control")
+    print("   • Students can only access their own records")
+    print("   • Document access permissions")
+    print("="*60)
+    print("🔄 DATABASE STATUS:")
+    print("   • Checking table existence...")
+    
+    if not check_tables_exist():
+        print("⚠️ Tables or columns missing, initializing database...")
+        if init_db():
+            print("✅ Database initialized successfully!")
+        else:
+            print("❌ Database initialization failed!")
+    else:
+        print("✅ All tables and columns already exist")
+    
+    if os.path.exists(UPLOAD_FOLDER):
+        file_count = len([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])
+        print(f"📊 Uploads folder contains {file_count} files")
+    
+    print("="*60)
+    print("🔍 DEBUGGING FEATURES:")
+    print("   • /debug-goodmoral/<id> - Check raw database values")
+    print("   • Enhanced logging for Good Moral extraction")
+    print("   • Manual extraction fallbacks")
+    print("="*60)
+    print("📅 SCHOOL YEAR MANAGEMENT:")
+    print("   • /api/settings/school-year - GET/POST school year")
+    print("   • Auto-updates in scanner interface")
+    print("   • Persistent storage in JSON file")
+    print("="*60)
+    print("📄 TOFOLLOW DOCUMENTS:")
+    print("   • Append new uploads to existing record")
+    print("   • Track document status (PSA, Form137, GoodMoral)")
+    print("   • Automatic status updates (INCOMPLETE/PENDING)")
+    print("="*60)
+    print("✅ APPROVE/REJECT SYSTEM:")
+    print("   • /api/record/<id>/status - PUT endpoint")
+    print("   • Status: INCOMPLETE → PENDING → APPROVED/REJECTED")
+    print("   • Rejection reason storage")
     print("="*60)
     print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
     print("="*60)
+    print("💡 IMPORTANT: Make sure PORT environment variable is set in Render!")
+    print("="*60)
     
     # Force Flask to bind to all interfaces
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    app.run(host=host, port=port, debug=debug)
