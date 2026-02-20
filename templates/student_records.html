@@ -1664,6 +1664,7 @@
         let currentImageIndex = 0;
 
         // Required fields and documents for completion check
+        // CITIZENSHIP IS REMOVED FROM REQUIRED FIELDS
         const REQUIRED_FIELDS = [
             { key: 'name', label: 'Full Name', category: 'personal' },
             { key: 'sex', label: 'Sex', category: 'personal' },
@@ -1673,7 +1674,7 @@
             { key: 'civil_status', label: 'Civil Status', category: 'personal' },
             { key: 'nationality', label: 'Nationality', category: 'personal' },
             { key: 'religion', label: 'Religion', category: 'personal' },
-            { key: 'citizenship', label: 'Citizenship', category: 'personal' },
+            // CITIZENSHIP LINE REMOVED FROM HERE
             { key: 'email', label: 'Email Address', category: 'contact' },
             { key: 'mobile_no', label: 'Mobile Number', category: 'contact' },
             { key: 'province', label: 'Province', category: 'contact' },
@@ -2204,6 +2205,7 @@
                 const program = formatValue(record.program);
                 const schoolYear = formatValue(record.school_year);
                 const lrn = formatValue(record.lrn);
+                // Citizenship is OPTIONAL - still displayed if exists but not required
                 const citizenship = formatValue(record.citizenship);
                 
                 return `
