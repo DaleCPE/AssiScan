@@ -1,5 +1,3 @@
-# realgemini.py (COMPLETE BACKEND WITH ULTRA-FAST PROCESSING)
-
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -18,9 +16,6 @@ import hashlib
 import secrets
 from functools import wraps
 import time
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
-import base64
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -36,16 +31,16 @@ if GEMINI_API_KEY:
         
         try:
             models = list(genai.list_models())
-            gemini_models = []
+            gemini_2_5_flash_available = False
             
             for model in models:
                 model_name = model.name
-                if "gemini" in model_name.lower():
-                    gemini_models.append(model_name)
-                    print(f"✨ Found Gemini model: {model_name}")
+                if "gemini-2.5-flash" in model_name:
+                    gemini_2_5_flash_available = True
+                    print(f"✨ Found Gemini 2.5 Flash: {model_name}")
             
-            if not gemini_models:
-                print("⚠️ Warning: No Gemini models found")
+            if not gemini_2_5_flash_available:
+                print("⚠️ Warning: gemini-2.5-flash not found in available models")
         except Exception as e:
             print(f"⚠️ Could not list models: {e}")
     except Exception as e:
@@ -95,12 +90,12 @@ PERMISSIONS = {
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
-        'change_password', 'view_own_documents', 'download_own_documents',
-        'upload_additional_documents'
+        'change_password', 'view_own_documents', 'download_own_documents'
     ]
 }
 
 # ================= DECORATORS FOR ROLE-BASED ACCESS =================
+# MOVED TO TOP - para magamit agad
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -448,9 +443,7 @@ def init_db():
                 has_disciplinary_record BOOLEAN DEFAULT FALSE,
                 disciplinary_details TEXT,
                 other_documents JSONB,
-                document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
-                rejection_reason TEXT,
-                status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
+                status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
@@ -579,9 +572,8 @@ def init_db():
         cur.close()
         conn.close()
 
-# ================= ENHANCED CHECK TABLES FUNCTION =================
 def check_tables_exist():
-    """Check if all required tables AND columns exist"""
+    """Check if all required tables exist"""
     print("🔍 Checking if tables exist...")
     conn = get_db_connection()
     if not conn:
@@ -590,7 +582,6 @@ def check_tables_exist():
     try:
         cur = conn.cursor()
         
-        # Check if tables exist
         tables = ['users', 'user_sessions', 'colleges', 'programs', 'records']
         missing_tables = []
         
@@ -607,57 +598,11 @@ def check_tables_exist():
             if not exists:
                 missing_tables.append(table)
         
-        # If tables are missing, return False to trigger init_db()
         if missing_tables:
             print(f"❌ Missing tables: {missing_tables}")
             return False
         
-        # Check if records table has all required columns
-        print("🔍 Checking required columns in records table...")
-        
-        # List of required columns (add new columns here)
-        required_columns = [
-            'id', 'user_id', 'name', 'sex', 'birthdate', 'birthplace', 
-            'birth_order', 'religion', 'age', 'mother_name', 
-            'mother_citizenship', 'mother_occupation', 'father_name',
-            'father_citizenship', 'father_occupation', 'lrn', 'school_name',
-            'school_address', 'final_general_average', 'image_path',
-            'form137_path', 'form138_path', 'goodmoral_path', 'created_at',
-            'updated_at', 'email_sent', 'email_sent_at', 'email',
-            'civil_status', 'nationality', 'mother_contact', 'father_contact',
-            'guardian_name', 'guardian_relation', 'guardian_contact',
-            'region', 'province', 'specific_address', 'mobile_no',
-            'school_year', 'student_type', 'college', 'program',
-            'last_level_attended', 'is_ip', 'is_pwd', 'has_medication',
-            'is_working', 'residence_type', 'employer_name', 'marital_status',
-            'is_gifted', 'needs_assistance', 'school_type', 'year_attended',
-            'special_talents', 'is_scholar', 'siblings', 'goodmoral_analysis',
-            'disciplinary_status', 'goodmoral_score', 'has_disciplinary_record',
-            'disciplinary_details', 'other_documents', 'document_status',
-            'rejection_reason', 'status'
-        ]
-        
-        missing_columns = []
-        
-        for column in required_columns:
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.columns 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'records' 
-                    AND column_name = %s
-                )
-            """, (column,))
-            exists = cur.fetchone()[0]
-            
-            if not exists:
-                missing_columns.append(column)
-        
-        if missing_columns:
-            print(f"❌ Missing columns in records table: {missing_columns}")
-            return False
-        
-        print("✅ All tables and columns exist")
+        print("✅ All tables exist")
         return True
         
     except Exception as e:
@@ -672,13 +617,13 @@ print("🔄 DATABASE INITIALIZATION")
 print("="*60)
 
 if not check_tables_exist():
-    print("⚠️ Tables or columns missing, initializing database...")
+    print("⚠️ Tables missing, initializing database...")
     if init_db():
-        print("✅ Database initialized successfully!")
+        print("✅ Database initialization successful!")
     else:
         print("❌ Database initialization failed!")
 else:
-    print("✅ All tables and columns already exist")
+    print("✅ Database tables already exist")
 
 # ================= USER MANAGEMENT FUNCTIONS =================
 def create_session(user_id, ip_address=None, user_agent=None):
@@ -788,25 +733,6 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
         
         student_info = ""
         if student_data:
-            # Get document status
-            doc_status = student_data.get('document_status', {})
-            if isinstance(doc_status, str):
-                try:
-                    doc_status = json.loads(doc_status)
-                except:
-                    doc_status = {}
-            
-            # Count submitted documents
-            submitted_docs = []
-            if doc_status.get('psa'): submitted_docs.append("PSA")
-            if doc_status.get('form137'): submitted_docs.append("Form 137")
-            if doc_status.get('form138'): submitted_docs.append("Form 138")
-            if doc_status.get('goodmoral'): submitted_docs.append("Good Moral")
-            
-            doc_summary = ", ".join(submitted_docs) if submitted_docs else "No documents yet"
-            doc_count = len(submitted_docs)
-            doc_status_text = f"{doc_count}/4 documents submitted"
-            
             student_info = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📋 STUDENT INFORMATION
@@ -854,13 +780,6 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 📝 GOOD MORAL CERTIFICATE ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━
 {goodmoral_status}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-📄 DOCUMENT STATUS
-━━━━━━━━━━━━━━━━━━━━━━━━
-• Status: {doc_status_text}
-• Submitted Documents: {doc_summary}
-• Record Status: {student_data.get('status', 'INCOMPLETE')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📅 VERIFICATION DETAILS
@@ -945,34 +864,8 @@ University of Batangas Lipa
         return True
 
 # ================= HELPER FUNCTIONS =================
-def optimize_image(image, max_size=(800, 800)):
-    """Aggressively optimize image to reduce size and improve processing speed"""
-    try:
-        # Convert to RGB if necessary
-        if image.mode in ('RGBA', 'P'):
-            image = image.convert('RGB')
-        
-        # More aggressive resizing - reduce to 800px max
-        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
-            image.thumbnail(max_size, Image.Resampling.LANCZOS)
-            print(f"✅ Image resized to: {image.size}")
-        
-        # Compress JPEG quality
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='JPEG', quality=70, optimize=True)
-        img_byte_arr = img_byte_arr.getvalue()
-        
-        # Convert back to PIL Image
-        optimized_img = Image.open(io.BytesIO(img_byte_arr))
-        print(f"✅ Image compressed: {len(img_byte_arr)/1024:.1f}KB")
-        
-        return optimized_img
-    except Exception as e:
-        print(f"⚠️ Image optimization error: {e}")
-        return image
-
 def save_multiple_files(files, prefix):
-    """Save uploaded files and return paths and PIL images (optimized)"""
+    """Save uploaded files and return paths and PIL images"""
     saved_paths = []
     pil_images = []
     
@@ -985,72 +878,68 @@ def save_multiple_files(files, prefix):
             saved_paths.append(filename)
             try:
                 img = Image.open(path)
-                # Optimize image aggressively
-                img = optimize_image(img)
                 pil_images.append(img)
-                print(f"   ✅ Saved and optimized: {filename} ({img.size[0]}x{img.size[1]})")
+                print(f"   ✅ Saved: {filename}")
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
     return saved_paths, pil_images
 
-def extract_with_gemini(prompt, images, timeout=45):
-    """Use Gemini with proper timeout and retry logic - using faster model first"""
+def extract_with_gemini(prompt, images):
+    """Use Gemini 2.5 Flash for text extraction"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        # Try multiple models in order of preference - fastest first
-        models_to_try = [
-            "gemini-1.5-flash-8b",  # Fastest model
-            "gemini-1.5-flash",      # Fast model
-            "gemini-1.5-pro",        # Slower but more accurate
-            "gemini-pro-vision",      # Fallback
-            "gemini-2.5-flash"        # Last resort
-        ]
+        model_name = "gemini-2.5-flash"
         
-        last_error = None
-        
-        for model_name in models_to_try:
+        try:
+            print(f"🤖 Using model: {model_name}")
+            model = genai.GenerativeModel(model_name)
+            
+            content_parts = [prompt]
+            for img in images:
+                content_parts.append(img)
+            
+            response = model.generate_content(
+                content_parts,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.1,
+                    top_p=0.8,
+                    top_k=40,
+                    max_output_tokens=2048,
+                )
+            )
+            
+            if response.text:
+                print(f"✅ Success with model: {model_name}")
+                return response.text
+            else:
+                raise Exception("No response text")
+        except Exception as model_error:
+            print(f"❌ {model_name} failed: {str(model_error)}")
+            print(f"⚠️ Trying to find alternative model...")
+            
             try:
-                print(f"🤖 Trying model: {model_name}")
-                model = genai.GenerativeModel(model_name)
-                
-                content_parts = [prompt]
-                for img in images:
-                    content_parts.append(img)
-                
-                # Use a shorter timeout for faster models
-                model_timeout = 30 if "flash" in model_name else timeout
-                
-                # Use a future with timeout
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        model.generate_content,
-                        content_parts,
-                        generation_config=genai.types.GenerationConfig(
-                            temperature=0.1,
-                            top_p=0.8,
-                            top_k=40,
-                            max_output_tokens=1024,  # Reduced for speed
-                        )
-                    )
-                    
-                    try:
-                        response = future.result(timeout=model_timeout)
-                        if response and response.text:
-                            print(f"✅ Success with model: {model_name} in {model_timeout}s")
-                            return response.text
-                    except concurrent.futures.TimeoutError:
-                        print(f"⏰ {model_name} timed out after {model_timeout}s")
-                        continue
+                models = list(genai.list_models())
+                for available_model in models:
+                    if "gemini" in available_model.name.lower():
+                        fallback_model_name = available_model.name
+                        print(f"🔄 Trying fallback model: {fallback_model_name}")
+                        model = genai.GenerativeModel(fallback_model_name)
                         
-            except Exception as e:
-                last_error = e
-                print(f"⚠️ {model_name} failed: {str(e)[:100]}")
-                continue
-        
-        raise Exception(f"All models failed. Last error: {str(last_error)}")
-        
+                        content_parts = [prompt]
+                        for img in images:
+                            content_parts.append(img)
+                        
+                        response = model.generate_content(content_parts)
+                        
+                        if response.text:
+                            print(f"✅ Success with fallback model: {fallback_model_name}")
+                            return response.text
+                
+                raise Exception(f"No working Gemini model found. Original error: {str(model_error)}")
+            except Exception as fallback_error:
+                raise Exception(f"All models failed. Last error: {str(fallback_error)}")
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
@@ -1088,63 +977,6 @@ def calculate_goodmoral_score(analysis_data):
         status = 'POOR'
     
     return score, status
-
-def update_document_status(record_id, doc_type, has_file):
-    """Update document status in database"""
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        
-        # Get current document_status
-        cur.execute("SELECT document_status, status FROM records WHERE id = %s", (record_id,))
-        result = cur.fetchone()
-        
-        if result and result[0]:
-            try:
-                if isinstance(result[0], dict):
-                    status = result[0]
-                else:
-                    status = json.loads(result[0])
-            except:
-                status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        else:
-            status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        
-        # Update specific document status
-        status[doc_type] = has_file
-        
-        # Determine overall record status (only if not already APPROVED/REJECTED)
-        current_record_status = result[1] if result and len(result) > 1 else 'INCOMPLETE'
-        
-        if current_record_status not in ['APPROVED', 'REJECTED']:
-            all_docs = all([status.get('psa', False), status.get('form137', False), 
-                           status.get('form138', False), status.get('goodmoral', False)])
-            
-            if all_docs:
-                overall_status = 'PENDING'
-            else:
-                overall_status = 'INCOMPLETE'
-        else:
-            overall_status = current_record_status
-        
-        # Update database
-        cur.execute("""
-            UPDATE records 
-            SET document_status = %s, 
-                status = %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
-        """, (json.dumps(status), overall_status, record_id))
-        
-        conn.commit()
-        print(f"📄 Document status updated for record {record_id}: {doc_type}={has_file}")
-        return status, overall_status
-        
-    except Exception as e:
-        print(f"❌ Error updating document status: {e}")
-        return None, None
-    finally:
-        conn.close()
 
 # ================= DEBUG MIDDLEWARE =================
 @app.before_request
@@ -2452,16 +2284,6 @@ def get_my_records():
             else:
                 r['other_documents'] = []
             
-            # Parse document_status
-            if r.get('document_status'):
-                try:
-                    if isinstance(r['document_status'], str):
-                        r['document_status'] = json.loads(r['document_status'])
-                except:
-                    r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            else:
-                r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
                 if r.get(field):
@@ -2518,17 +2340,6 @@ def get_student_documents(record_id):
             "other_documents": []
         }
         
-        # Parse document status
-        doc_status = {}
-        if record.get('document_status'):
-            try:
-                if isinstance(record['document_status'], str):
-                    doc_status = json.loads(record['document_status'])
-                else:
-                    doc_status = record['document_status']
-            except:
-                doc_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        
         if record.get('image_path'):
             paths = record['image_path'].split(',')
             for path in paths:
@@ -2582,9 +2393,6 @@ def get_student_documents(record_id):
         
         return jsonify({
             "documents": documents,
-            "document_status": doc_status,
-            "record_status": record.get('status', 'INCOMPLETE'),
-            "rejection_reason": record.get('rejection_reason', ''),
             "record_id": record_id
         })
         
@@ -2663,16 +2471,6 @@ def get_records():
             else:
                 r['other_documents'] = []
             
-            # Parse document_status
-            if r.get('document_status'):
-                try:
-                    if isinstance(r['document_status'], str):
-                        r['document_status'] = json.loads(r['document_status'])
-                except:
-                    r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            else:
-                r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            
             image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
             for field in image_fields:
                 if r.get(field):
@@ -2698,61 +2496,6 @@ def get_records():
         if conn:
             conn.close()
         return jsonify({"records": [], "error": str(e)})
-
-# ================= UPDATE RECORD STATUS (APPROVE/REJECT) =================
-@app.route('/api/record/<int:record_id>/status', methods=['PUT'])
-@login_required
-@permission_required('edit_records')
-def update_record_status(record_id):
-    """Update record status (approve/reject) - Super Admin only"""
-    try:
-        data = request.json
-        status = data.get('status')
-        reason = data.get('reason', '')
-        
-        if status not in ['APPROVED', 'REJECTED', 'PENDING']:
-            return jsonify({"error": "Invalid status"}), 400
-        
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor()
-        
-        # Update status and optionally add rejection reason
-        if status == 'REJECTED' and reason:
-            cur.execute("""
-                UPDATE records 
-                SET status = %s, rejection_reason = %s, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = %s
-                RETURNING id
-            """, (status, reason, record_id))
-        else:
-            cur.execute("""
-                UPDATE records 
-                SET status = %s, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = %s
-                RETURNING id
-            """, (status, record_id))
-        
-        if cur.rowcount == 0:
-            conn.close()
-            return jsonify({"error": "Record not found"}), 404
-        
-        updated_id = cur.fetchone()[0]
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Record {status.lower()} successfully",
-            "record_id": updated_id,
-            "status": status
-        })
-        
-    except Exception as e:
-        print(f"❌ Status update error: {e}")
-        return jsonify({"error": str(e)}), 500
 
 # ================= SAVE RECORD ENDPOINT (UPSERT) =================
 @app.route('/save-record', methods=['POST'])
@@ -2803,33 +2546,6 @@ def save_record():
         if existing_record:
             print(f"🔄 Updating existing record ID: {existing_record[0]} for user: {session['user_id']}")
             
-            # Get current document status and paths
-            cur.execute("SELECT document_status, image_path, form137_path, goodmoral_path, status FROM records WHERE id = %s", (existing_record[0],))
-            current = cur.fetchone()
-            current_status = {}
-            if current and current[0]:
-                try:
-                    if isinstance(current[0], dict):
-                        current_status = current[0]
-                    else:
-                        current_status = json.loads(current[0])
-                except:
-                    current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            else:
-                current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            
-            # Get current record status (don't change if already APPROVED/REJECTED)
-            current_record_status = current[4] if current and len(current) > 4 else 'INCOMPLETE'
-            
-            # Update status based on new uploads (only if not APPROVED/REJECTED)
-            if current_record_status not in ['APPROVED', 'REJECTED']:
-                if d.get('psa_image_path') and d.get('psa_image_path') != current[1]:
-                    current_status['psa'] = True
-                if d.get('f137_image_path') and d.get('f137_image_path') != current[2]:
-                    current_status['form137'] = True
-                if d.get('goodmoral_image_path') and d.get('goodmoral_image_path') != current[3]:
-                    current_status['goodmoral'] = True
-            
             goodmoral_analysis_json = None
             if goodmoral_analysis:
                 if isinstance(goodmoral_analysis, dict):
@@ -2839,18 +2555,6 @@ def save_record():
                     goodmoral_analysis_json = goodmoral_analysis
                     print(f"⚠️ goodmoral_analysis is already a string")
             
-            # Determine new overall status (only if not APPROVED/REJECTED)
-            if current_record_status not in ['APPROVED', 'REJECTED']:
-                all_docs = all([current_status.get('psa', False), current_status.get('form137', False), 
-                               current_status.get('form138', False), current_status.get('goodmoral', False)])
-                
-                if all_docs:
-                    overall_status = 'PENDING'
-                else:
-                    overall_status = 'INCOMPLETE'
-            else:
-                overall_status = current_record_status
-            
             cur.execute('''
                 UPDATE records SET
                     name = %s, sex = %s, birthdate = %s, birthplace = %s, 
@@ -2858,21 +2562,9 @@ def save_record():
                     mother_name = %s, mother_citizenship = %s, mother_occupation = %s, 
                     father_name = %s, father_citizenship = %s, father_occupation = %s, 
                     lrn = %s, school_name = %s, school_address = %s, final_general_average = %s,
-                    image_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(image_path, ''), CASE WHEN image_path IS NOT NULL AND image_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE image_path
-                        END, image_path),
-                    form137_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(form137_path, ''), CASE WHEN form137_path IS NOT NULL AND form137_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE form137_path
-                        END, form137_path),
-                    goodmoral_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(goodmoral_path, ''), CASE WHEN goodmoral_path IS NOT NULL AND goodmoral_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE goodmoral_path
-                        END, goodmoral_path),
+                    image_path = COALESCE(%s, image_path), 
+                    form137_path = COALESCE(%s, form137_path), 
+                    goodmoral_path = COALESCE(%s, goodmoral_path),
                     email = %s, mobile_no = %s, civil_status = %s, nationality = %s,
                     mother_contact = %s, father_contact = %s,
                     guardian_name = %s, guardian_relation = %s, guardian_contact = %s,
@@ -2885,8 +2577,6 @@ def save_record():
                     goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
                     has_disciplinary_record = %s, disciplinary_details = %s,
                     other_documents = %s,
-                    document_status = %s,
-                    status = %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s
                 RETURNING id
@@ -2896,12 +2586,7 @@ def save_record():
                 d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
                 d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
                 d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-                # PSA image - append mode
-                d.get('psa_image_path', ''), d.get('psa_image_path', ''), d.get('psa_image_path', ''),
-                # Form137 image - append mode
-                d.get('f137_image_path', ''), d.get('f137_image_path', ''), d.get('f137_image_path', ''),
-                # Good Moral image - append mode
-                d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''),
+                d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
                 d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
                 d.get('mother_contact'), d.get('father_contact'),
                 d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
@@ -2918,8 +2603,6 @@ def save_record():
                 has_disciplinary_record,
                 disciplinary_details,
                 other_documents_json,
-                json.dumps(current_status),
-                overall_status,
                 session['user_id']
             ))
             
@@ -2934,8 +2617,6 @@ def save_record():
             print(f"🙏 Religion: {religion}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
-            print(f"📄 Document Status: {current_status}")
-            print(f"📋 Record Status: {overall_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -2949,31 +2630,12 @@ def save_record():
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
-                "document_status": current_status,
-                "record_status": overall_status,
                 "message": "Record UPDATED successfully.",
                 "operation": "update"
             })
             
         else:
             print(f"🆕 Creating NEW record for user: {session['user_id']}")
-            
-            # Initialize document status
-            doc_status = {
-                "psa": bool(d.get('psa_image_path')),
-                "form137": bool(d.get('f137_image_path')),
-                "form138": False,
-                "goodmoral": bool(d.get('goodmoral_image_path'))
-            }
-            
-            # Determine initial status
-            all_docs = all([doc_status.get('psa', False), doc_status.get('form137', False), 
-                           doc_status.get('form138', False), doc_status.get('goodmoral', False)])
-            
-            if all_docs:
-                initial_status = 'PENDING'
-            else:
-                initial_status = 'INCOMPLETE'
             
             goodmoral_analysis_json = None
             if goodmoral_analysis:
@@ -3002,9 +2664,7 @@ def save_record():
                     special_talents, is_scholar, siblings,
                     goodmoral_analysis, disciplinary_status, goodmoral_score,
                     has_disciplinary_record, disciplinary_details,
-                    other_documents,
-                    document_status,
-                    status
+                    other_documents
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s,
@@ -3023,8 +2683,6 @@ def save_record():
                     %s,
                     %s, %s, %s,
                     %s, %s,
-                    %s,
-                    %s,
                     %s
                 ) 
                 RETURNING id
@@ -3051,9 +2709,7 @@ def save_record():
                 goodmoral_score,
                 has_disciplinary_record,
                 disciplinary_details,
-                other_documents_json,
-                json.dumps(doc_status),
-                initial_status
+                other_documents_json
             ))
             
             new_id = cur.fetchone()[0]
@@ -3067,8 +2723,6 @@ def save_record():
             print(f"🙏 Religion: {religion}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
-            print(f"📄 Document Status: {doc_status}")
-            print(f"📋 Record Status: {initial_status}")
             
             if has_disciplinary_record:
                 print(f"⚠️ Student has disciplinary record: {disciplinary_details}")
@@ -3082,8 +2736,6 @@ def save_record():
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
-                "document_status": doc_status,
-                "record_status": initial_status,
                 "message": "Record CREATED successfully.",
                 "operation": "create"
             })
@@ -3282,8 +2934,9 @@ def scan_goodmoral():
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📄 Processing Good Moral Certificate with Gemini")
+        print(f"📄 Processing Good Moral Certificate with Gemini 2.5 Flash")
         
+        # SIMPLIFIED PROMPT
         prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
 
 IMPORTANT: Look for these specific details:
@@ -3305,8 +2958,9 @@ Return ONLY this exact JSON format with no other text:
 }"""
         
         try:
-            response_text = extract_with_gemini(prompt, pil_images, timeout=45)
-            print(f"✅ Gemini Response received")
+            response_text = extract_with_gemini(prompt, pil_images)
+            print(f"✅ Gemini Response received: {len(response_text)} characters")
+            print(f"📝 RAW RESPONSE FROM GEMINI: {response_text}")
             
             cleaned_text = response_text.strip()
             
@@ -3319,65 +2973,93 @@ Return ONLY this exact JSON format with no other text:
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                print(f"❌ Could not find JSON in response, using defaults")
-                analysis_data = {
-                    "issuing_school": "Not Found",
-                    "issuing_officer": "Not Found",
-                    "issued_date": "Not Found",
-                    "student_name": "Not Found",
-                    "has_disciplinary_record": False,
-                    "disciplinary_details": "",
-                    "remarks": ""
-                }
-            else:
-                json_str = cleaned_text[start:end]
-                try:
-                    analysis_data = json.loads(json_str)
-                except:
-                    analysis_data = {
-                        "issuing_school": "Not Found",
-                        "issuing_officer": "Not Found",
-                        "issued_date": "Not Found",
-                        "student_name": "Not Found",
-                        "has_disciplinary_record": False,
-                        "disciplinary_details": "",
-                        "remarks": ""
-                    }
+                print(f"❌ Could not find JSON in response")
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
+            print(f"📝 EXTRACTED JSON STRING: {json_str}")
             
-            # Calculate score and status
-            score, status = calculate_goodmoral_score(analysis_data)
-            
-            return jsonify({
-                "message": "Good Moral Certificate analyzed successfully",
-                "analysis": analysis_data,
-                "goodmoral_score": score,
-                "disciplinary_status": status,
-                "disciplinary_details": analysis_data.get('disciplinary_details', ''),
-                "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
-                "image_paths": ",".join(saved_paths)
-            })
-            
+            try:
+                analysis_data = json.loads(json_str)
+                print(f"📊 PARSED ANALYSIS DATA: {json.dumps(analysis_data, indent=2)}")
+                
+                # Manual extraction fallbacks
+                if analysis_data.get('issuing_school') == 'Not Found' and 'STI College' in response_text:
+                    import re
+                    sti_match = re.search(r'STI College[^\n]*', response_text)
+                    if sti_match:
+                        analysis_data['issuing_school'] = sti_match.group(0).strip()
+                        print(f"✅ Manually extracted issuing_school: {analysis_data['issuing_school']}")
+                
+                if analysis_data.get('issuing_officer') == 'Not Found':
+                    import re
+                    # Look for name patterns (e.g., "CAMILLE ANN A. TEMPROSA")
+                    name_pattern = r'[A-Z][A-Z\s]+(?:[A-Z]\.)?\s*[A-Z][A-Z]+'
+                    name_matches = re.findall(name_pattern, response_text)
+                    if name_matches:
+                        # Filter out common non-name strings
+                        valid_names = [n for n in name_matches if len(n) > 5 and not n.startswith('STI')]
+                        if valid_names:
+                            analysis_data['issuing_officer'] = valid_names[-1].strip()
+                            print(f"✅ Manually extracted issuing_officer: {analysis_data['issuing_officer']}")
+                
+                if analysis_data.get('issued_date') == 'Not Found':
+                    import re
+                    date_patterns = [
+                        r'(\d{4}-\d{2}-\d{2})',
+                        r'(\d{1,2})[/-](\d{1,2})[/-](\d{4})',
+                        r'(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})',
+                        r'(March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})'
+                    ]
+                    
+                    for pattern in date_patterns:
+                        date_match = re.search(pattern, response_text, re.IGNORECASE)
+                        if date_match:
+                            analysis_data['issued_date'] = date_match.group(0)
+                            print(f"✅ Manually extracted issued_date: {analysis_data['issued_date']}")
+                            break
+                
+                # Ensure all fields have values
+                analysis_data['student_name'] = analysis_data.get('student_name', 'Not Found')
+                analysis_data['issuing_school'] = analysis_data.get('issuing_school', 'Not Found')
+                analysis_data['issuing_officer'] = analysis_data.get('issuing_officer', 'Not Found')
+                analysis_data['issued_date'] = analysis_data.get('issued_date', 'Not Found')
+                analysis_data['has_disciplinary_record'] = analysis_data.get('has_disciplinary_record', False)
+                analysis_data['disciplinary_details'] = analysis_data.get('disciplinary_details', '')
+                analysis_data['remarks'] = analysis_data.get('remarks', '')
+                
+                # Calculate score and status
+                score, status = calculate_goodmoral_score(analysis_data)
+                
+                # Add calculated fields
+                analysis_data['goodmoral_score'] = score
+                analysis_data['disciplinary_status'] = status
+                
+                # Get disciplinary details for display
+                disciplinary_details = ""
+                if analysis_data.get('has_disciplinary_record'):
+                    disciplinary_details = analysis_data.get('disciplinary_details', '') or analysis_data.get('remarks', '') or 'Disciplinary issues detected'
+                
+                return jsonify({
+                    "message": "Good Moral Certificate analyzed successfully",
+                    "analysis": analysis_data,
+                    "goodmoral_score": score,
+                    "disciplinary_status": status,
+                    "disciplinary_details": disciplinary_details,
+                    "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError as json_error:
+                print(f"❌ JSON Parse Error: {json_error}")
+                print(f"❌ Invalid JSON string: {json_str}")
+                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
         except Exception as ai_error:
             print(f"❌ AI Extraction Failed: {ai_error}")
-            # Always return success with images even if AI fails
+            traceback.print_exc()
             return jsonify({
-                "message": "Images saved successfully",
-                "analysis": {
-                    "issuing_school": "Not Found",
-                    "issuing_officer": "Not Found",
-                    "issued_date": "Not Found",
-                    "student_name": "Not Found",
-                    "has_disciplinary_record": False,
-                    "disciplinary_details": "",
-                    "remarks": ""
-                },
-                "goodmoral_score": 100,
-                "disciplinary_status": "GOOD",
-                "has_disciplinary_record": False,
-                "image_paths": ",".join(saved_paths),
-                "warning": "AI analysis unavailable. Please review manually."
-            }), 200
-            
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
         print(f"❌ Good Moral Scanning Error: {e}")
         traceback.print_exc()
@@ -3388,7 +3070,6 @@ Return ONLY this exact JSON format with no other text:
 @login_required
 @permission_required('access_scanner')
 def extract_data():
-    """Extract PSA data with guaranteed response"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -3400,9 +3081,9 @@ def extract_data():
         saved_paths, pil_images = save_multiple_files(files, "PSA")
         
         if not pil_images:
-            return jsonify({"error": "No valid images found"}), 400
+             return jsonify({"error": "No valid images found"}), 400
 
-        print(f"📸 Processing PSA with Gemini")
+        print(f"📸 Processing PSA with Gemini 2.5 Flash")
         
         prompt = """Extract information from this PSA Birth Certificate.
         
@@ -3420,10 +3101,14 @@ def extract_data():
             "Father_Name": "Father's Full Name",
             "Father_Citizenship": "Citizenship",
             "Father_Occupation": "Occupation if stated"
-        }"""
+        }
+        
+        IMPORTANT: DO NOT extract Religion field. Religion is selected separately in the system.
+        
+        Return ONLY the JSON, no additional text."""
         
         try:
-            response_text = extract_with_gemini(prompt, pil_images, timeout=45)
+            response_text = extract_with_gemini(prompt, pil_images)
             
             cleaned_text = response_text.strip()
             
@@ -3436,73 +3121,31 @@ def extract_data():
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                # Return default data
-                data = {
-                    "is_valid_document": True,
-                    "Name": "",
-                    "Sex": "",
-                    "Birthdate": "",
-                    "PlaceOfBirth": "",
-                    "BirthOrder": "",
-                    "Mother_MaidenName": "",
-                    "Mother_Citizenship": "",
-                    "Mother_Occupation": "",
-                    "Father_Name": "",
-                    "Father_Citizenship": "",
-                    "Father_Occupation": ""
-                }
-            else:
-                json_str = cleaned_text[start:end]
-                try:
-                    data = json.loads(json_str)
-                except:
-                    data = {
-                        "is_valid_document": True,
-                        "Name": "",
-                        "Sex": "",
-                        "Birthdate": "",
-                        "PlaceOfBirth": "",
-                        "BirthOrder": "",
-                        "Mother_MaidenName": "",
-                        "Mother_Citizenship": "",
-                        "Mother_Occupation": "",
-                        "Father_Name": "",
-                        "Father_Citizenship": "",
-                        "Father_Occupation": ""
-                    }
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
             
-            return jsonify({
-                "message": "Success", 
-                "structured_data": data, 
-                "image_paths": ",".join(saved_paths)
-            })
-            
+            try:
+                data = json.loads(json_str)
+                
+                if not data.get("is_valid_document", False):
+                    return jsonify({
+                        "error": f"Invalid document"
+                    }), 400
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
         except Exception as ai_error:
-            print(f"❌ AI Error: {ai_error}")
-            # Always return success with images
             return jsonify({
-                "message": "Images saved successfully",
-                "structured_data": {
-                    "is_valid_document": True,
-                    "Name": "",
-                    "Sex": "",
-                    "Birthdate": "",
-                    "PlaceOfBirth": "",
-                    "BirthOrder": "",
-                    "Mother_MaidenName": "",
-                    "Mother_Citizenship": "",
-                    "Mother_Occupation": "",
-                    "Father_Name": "",
-                    "Father_Citizenship": "",
-                    "Father_Occupation": ""
-                },
-                "image_paths": ",".join(saved_paths),
-                "warning": "AI extraction failed. Please fill in manually."
-            }), 200
-            
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
-        print(f"❌ Server Error: {e}")
-        traceback.print_exc()
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 # ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
@@ -3651,7 +3294,6 @@ def delete_other_document(record_id, doc_id):
 @login_required
 @permission_required('access_scanner')
 def extract_form137():
-    """Extract Form 137 data with guaranteed response"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -3661,7 +3303,7 @@ def extract_form137():
     
     try:
         saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137 with Gemini")
+        print(f"📸 Processing Form 137 with Gemini 2.5 Flash")
 
         if not pil_images:
             return jsonify({"error": "No valid images found"}), 400
@@ -3674,10 +3316,12 @@ def extract_form137():
             "school_name": "Complete School Name",
             "school_address": "Complete School Address",
             "final_general_average": "Numerical grade"
-        }"""
+        }
+        
+        Return ONLY the JSON, no additional text."""
         
         try:
-            response_text = extract_with_gemini(prompt, pil_images, timeout=45)
+            response_text = extract_with_gemini(prompt, pil_images)
             
             cleaned_text = response_text.strip()
             
@@ -3690,48 +3334,29 @@ def extract_form137():
             end = cleaned_text.rfind('}') + 1
             
             if start == -1 or end == 0:
-                # Return default data
-                data = {
-                    "lrn": "",
-                    "school_name": "",
-                    "school_address": "",
-                    "final_general_average": ""
-                }
-            else:
-                json_str = cleaned_text[start:end]
-                try:
-                    data = json.loads(json_str)
-                except:
-                    data = {
-                        "lrn": "",
-                        "school_name": "",
-                        "school_address": "",
-                        "final_general_average": ""
-                    }
+                return jsonify({"error": "Invalid JSON response from AI"}), 500
+                
+            json_str = cleaned_text[start:end]
             
-            return jsonify({
-                "message": "Success", 
-                "structured_data": data, 
-                "image_paths": ",".join(saved_paths)
-            })
-            
+            try:
+                data = json.loads(json_str)
+                
+                if 'lrn' in data and data['lrn']:
+                    data['lrn'] = str(data['lrn']).strip()
+                
+                return jsonify({
+                    "message": "Success", 
+                    "structured_data": data, 
+                    "image_paths": ",".join(saved_paths)
+                })
+            except json.JSONDecodeError:
+                return jsonify({"error": "Failed to parse AI response"}), 500
         except Exception as ai_error:
-            print(f"❌ AI Error: {ai_error}")
-            # Always return success with images
             return jsonify({
-                "message": "Images saved successfully",
-                "structured_data": {
-                    "lrn": "",
-                    "school_name": "",
-                    "school_address": "",
-                    "final_general_average": ""
-                },
-                "image_paths": ",".join(saved_paths),
-                "warning": "AI extraction failed. Please fill in manually."
-            }), 200
-            
+                "error": "AI service unavailable",
+                "details": str(ai_error)[:200]
+            }), 500
     except Exception as e:
-        print(f"❌ Server Error: {e}")
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
 # ================= EMAIL ENDPOINTS =================
@@ -3759,7 +3384,7 @@ def send_email_only(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status, rejection_reason
+                   special_talents
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3784,8 +3409,6 @@ def send_email_only(record_id):
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
         print(f"🙏 Religion: {record.get('religion', 'N/A')}")
-        print(f"📄 Document Status: {record.get('document_status', {})}")
-        print(f"📋 Record Status: {record.get('status', 'INCOMPLETE')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -3842,7 +3465,7 @@ def resend_email(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status
+                   special_talents
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3993,16 +3616,6 @@ def view_form(record_id):
                     record['other_documents'] = []
             else:
                 record['other_documents'] = []
-            
-            # Parse document status
-            if record.get('document_status'):
-                try:
-                    if isinstance(record['document_status'], str):
-                        record['document_status'] = json.loads(record['document_status'])
-                except:
-                    record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            else:
-                record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
 
             return render_template('print_form.html', r=record)
         else:
@@ -4062,11 +3675,6 @@ def upload_additional():
         new_path_str = ','.join([p for p in new_paths if p])
         
         cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
-        
-        # Update document status
-        doc_type_map = {'form137': 'form137', 'form138': 'form138', 'goodmoral': 'goodmoral'}
-        update_document_status(rid, doc_type_map[dtype], True)
-        
         conn.commit()
         conn.close()
         return jsonify({"status": "success", "message": "File uploaded successfully"})
@@ -4149,9 +3757,7 @@ def health_check():
             "student_records": "ENABLED",
             "document_access": "ENABLED",
             "one_record_per_user": "ENABLED",
-            "school_year_management": "ENABLED",
-            "tofollow_documents": "ENABLED",
-            "approve_reject": "ENABLED"
+            "school_year_management": "ENABLED"
         }
     })
 
@@ -4255,16 +3861,6 @@ def get_single_record(record_id):
         else:
             record['other_documents'] = []
         
-        # Parse document_status
-        if record.get('document_status'):
-            try:
-                if isinstance(record['document_status'], str):
-                    record['document_status'] = json.loads(record['document_status'])
-            except:
-                record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        else:
-            record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        
         image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
         for field in image_fields:
             if record.get(field):
@@ -4289,30 +3885,65 @@ if __name__ == '__main__':
     # Get port from environment variable (Render sets this automatically)
     port = int(os.environ.get("PORT", 10000))
     
-    # Get host - MUST be 0.0.0.0 for Render
+    # Get host - VERY IMPORTANT: Use 0.0.0.0 for Render
     host = os.environ.get("HOST", "0.0.0.0")
     
     # Debug mode - set to False in production
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH ULTRA-FAST PROCESSING")
+    print("🚀 ASSISCAN WITH GOOD MORAL DEBUGGING & SCHOOL YEAR MANAGEMENT")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"🤖 Models: gemini-1.5-flash-8b (fast), gemini-1.5-flash")
+    print(f"🤖 Model: gemini-2.5-flash")
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("⚡ ULTRA-FAST FEATURES ENABLED:")
-    print("   • Aggressive image optimization (800px max, 70% quality)")
-    print("   • Fastest Gemini model first (gemini-1.5-flash-8b)")
-    print("   • Reduced timeout to 45 seconds")
-    print("   • Always return success even if AI fails")
-    print("   • Graceful error handling")
+    print("👥 USER ROLES:")
+    print("   • SUPER_ADMIN: Full system access")
+    print("   • STUDENT: Scanner access + View own records + Download documents")
     print("="*60)
-    print(f"🌐 Server binding to {host}:{port}")
+    print("✅ FIXED FEATURES:")
+    print("   • Database tables will be recreated on startup")
+    print("   • ONE RECORD PER USER enforced")
+    print("   • Foreign key constraints properly set")
+    print("   • Default admin user created")
+    print("="*60)
+    print("🔐 SECURITY FEATURES:")
+    print("   • Role-based access control")
+    print("   • Students can only access their own records")
+    print("   • Document access permissions")
+    print("="*60)
+    print("🔄 DATABASE STATUS:")
+    print("   • Checking table existence...")
+    
+    if not check_tables_exist():
+        print("   ⚠️ Tables missing, initializing database...")
+        if init_db():
+            print("   ✅ Database initialized successfully!")
+        else:
+            print("   ❌ Database initialization failed!")
+    else:
+        print("   ✅ All tables exist")
+    
+    if os.path.exists(UPLOAD_FOLDER):
+        file_count = len([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])
+        print(f"📊 Uploads folder contains {file_count} files")
+    
+    print("="*60)
+    print("🔍 NEW DEBUGGING FEATURES:")
+    print("   • /debug-goodmoral/<id> - Check raw database values")
+    print("   • Enhanced logging for Good Moral extraction")
+    print("   • Manual extraction fallbacks")
+    print("="*60)
+    print("📅 NEW SCHOOL YEAR MANAGEMENT:")
+    print("   • /api/settings/school-year - GET/POST school year")
+    print("   • Auto-updates in scanner interface")
+    print("   • Persistent storage in JSON file")
+    print("="*60)
+    print(f"🌐 Server starting on {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
     print("="*60)
     
-    # Force Flask to bind to all interfaces with threading enabled
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    # Force Flask to bind to all interfaces
+    app.run(host=host, port=port, debug=debug)
