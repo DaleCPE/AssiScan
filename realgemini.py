@@ -1,3 +1,5 @@
+# realgemini.py (COMPLETE BACKEND WITH TIMEOUT FIXES)
+
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -16,6 +18,8 @@ import hashlib
 import secrets
 from functools import wraps
 import time
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -31,22 +35,25 @@ if GEMINI_API_KEY:
         
         try:
             models = list(genai.list_models())
-            gemini_2_5_flash_available = False
+            gemini_models = []
             
             for model in models:
                 model_name = model.name
-                if "gemini-2.5-flash" in model_name:
-                    gemini_2_5_flash_available = True
-                    print(f"✨ Found Gemini 2.5 Flash: {model_name}")
+                if "gemini" in model_name.lower():
+                    gemini_models.append(model_name)
+                    print(f"✨ Found Gemini model: {model_name}")
             
-            if not gemini_2_5_flash_available:
-                print("⚠️ Warning: gemini-2.5-flash not found in available models")
+            if not gemini_models:
+                print("⚠️ Warning: No Gemini models found")
         except Exception as e:
             print(f"⚠️ Could not list models: {e}")
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
 else:
     print("❌ CRITICAL: GEMINI_API_KEY is missing!")
+
+# Thread pool for async operations
+executor = ThreadPoolExecutor(max_workers=2)
 
 # --- ADMIN SECURITY CONFIG ---
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -940,8 +947,25 @@ University of Batangas Lipa
         return True
 
 # ================= HELPER FUNCTIONS =================
+def optimize_image(image, max_size=(1024, 1024)):
+    """Optimize image to reduce size and improve processing speed"""
+    try:
+        # Convert to RGB if necessary
+        if image.mode in ('RGBA', 'P'):
+            image = image.convert('RGB')
+        
+        # Resize if too large
+        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
+            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+            print(f"✅ Image resized to: {image.size}")
+        
+        return image
+    except Exception as e:
+        print(f"⚠️ Image optimization error: {e}")
+        return image
+
 def save_multiple_files(files, prefix):
-    """Save uploaded files and return paths and PIL images"""
+    """Save uploaded files and return paths and PIL images (optimized)"""
     saved_paths = []
     pil_images = []
     
@@ -954,68 +978,68 @@ def save_multiple_files(files, prefix):
             saved_paths.append(filename)
             try:
                 img = Image.open(path)
+                # Optimize image
+                img = optimize_image(img)
                 pil_images.append(img)
-                print(f"   ✅ Saved: {filename}")
+                print(f"   ✅ Saved and optimized: {filename} ({img.size[0]}x{img.size[1]})")
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
     return saved_paths, pil_images
 
-def extract_with_gemini(prompt, images):
-    """Use Gemini 2.5 Flash for text extraction"""
+def extract_with_gemini(prompt, images, timeout=60):
+    """Use Gemini with proper timeout and retry logic"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        model_name = "gemini-2.5-flash"
+        # Try multiple models in order of preference
+        models_to_try = [
+            "gemini-1.5-flash",  # Faster model first
+            "gemini-1.5-pro",
+            "gemini-pro-vision",
+            "gemini-2.5-flash"   # Fallback to 2.5 if available
+        ]
         
-        try:
-            print(f"🤖 Using model: {model_name}")
-            model = genai.GenerativeModel(model_name)
-            
-            content_parts = [prompt]
-            for img in images:
-                content_parts.append(img)
-            
-            response = model.generate_content(
-                content_parts,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,
-                    top_p=0.8,
-                    top_k=40,
-                    max_output_tokens=2048,
-                )
-            )
-            
-            if response.text:
-                print(f"✅ Success with model: {model_name}")
-                return response.text
-            else:
-                raise Exception("No response text")
-        except Exception as model_error:
-            print(f"❌ {model_name} failed: {str(model_error)}")
-            print(f"⚠️ Trying to find alternative model...")
-            
+        last_error = None
+        
+        for model_name in models_to_try:
             try:
-                models = list(genai.list_models())
-                for available_model in models:
-                    if "gemini" in available_model.name.lower():
-                        fallback_model_name = available_model.name
-                        print(f"🔄 Trying fallback model: {fallback_model_name}")
-                        model = genai.GenerativeModel(fallback_model_name)
-                        
-                        content_parts = [prompt]
-                        for img in images:
-                            content_parts.append(img)
-                        
-                        response = model.generate_content(content_parts)
-                        
-                        if response.text:
-                            print(f"✅ Success with fallback model: {fallback_model_name}")
-                            return response.text
+                print(f"🤖 Trying model: {model_name}")
+                model = genai.GenerativeModel(model_name)
                 
-                raise Exception(f"No working Gemini model found. Original error: {str(model_error)}")
-            except Exception as fallback_error:
-                raise Exception(f"All models failed. Last error: {str(fallback_error)}")
+                content_parts = [prompt]
+                for img in images:
+                    content_parts.append(img)
+                
+                # Use a future with timeout
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        model.generate_content,
+                        content_parts,
+                        generation_config=genai.types.GenerationConfig(
+                            temperature=0.1,
+                            top_p=0.8,
+                            top_k=40,
+                            max_output_tokens=2048,
+                        )
+                    )
+                    
+                    try:
+                        response = future.result(timeout=timeout)
+                        if response and response.text:
+                            print(f"✅ Success with model: {model_name}")
+                            return response.text
+                    except concurrent.futures.TimeoutError:
+                        print(f"⏰ {model_name} timed out after {timeout}s")
+                        continue
+                        
+            except Exception as e:
+                last_error = e
+                print(f"⚠️ {model_name} failed: {str(e)[:100]}")
+                continue
+        
+        raise Exception(f"All models failed. Last error: {str(last_error)}")
+        
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
@@ -4300,4 +4324,4 @@ if __name__ == '__main__':
     print("="*60)
     
     # Force Flask to bind to all interfaces
-    app.run(host=host, port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug, threaded=True)
