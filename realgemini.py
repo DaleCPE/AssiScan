@@ -387,7 +387,6 @@ def init_db():
                 birthplace TEXT,
                 birth_order VARCHAR(50),
                 religion VARCHAR(100),
-                citizenship VARCHAR(100) DEFAULT 'Filipino',
                 age INTEGER,
                 mother_name VARCHAR(255),
                 mother_citizenship VARCHAR(100),
@@ -614,7 +613,7 @@ def check_tables_exist():
         # List of required columns (add new columns here)
         required_columns = [
             'id', 'user_id', 'name', 'sex', 'birthdate', 'birthplace', 
-            'birth_order', 'religion', 'citizenship', 'age', 'mother_name', 
+            'birth_order', 'religion', 'age', 'mother_name', 
             'mother_citizenship', 'mother_occupation', 'father_name',
             'father_citizenship', 'father_occupation', 'lrn', 'school_name',
             'school_address', 'final_general_average', 'image_path',
@@ -815,7 +814,6 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Age: {student_data.get('age', 'N/A')}
 • Civil Status: {student_data.get('civil_status', 'N/A')}
 • Nationality: {student_data.get('nationality', 'N/A')}
-• Citizenship: {student_data.get('citizenship', 'Filipino')}
 • Religion: {student_data.get('religion', 'N/A')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2741,7 +2739,6 @@ def save_record():
         has_disciplinary_record = d.get('has_disciplinary_record', False)
         
         religion = d.get('religion', '')
-        citizenship = d.get('citizenship', 'Filipino')
         
         other_documents = d.get('other_documents')
         if other_documents and isinstance(other_documents, list):
@@ -2758,7 +2755,6 @@ def save_record():
         print(f"🎓 College selected: {college}")
         print(f"📚 Program selected: {program}")
         print(f"🙏 Religion selected: {religion}")
-        print(f"🌏 Citizenship selected: {citizenship}")
         
         conn = get_db_connection()
         if not conn: 
@@ -2823,7 +2819,7 @@ def save_record():
             cur.execute('''
                 UPDATE records SET
                     name = %s, sex = %s, birthdate = %s, birthplace = %s, 
-                    birth_order = %s, religion = %s, citizenship = %s, age = %s,
+                    birth_order = %s, religion = %s, age = %s,
                     mother_name = %s, mother_citizenship = %s, mother_occupation = %s, 
                     father_name = %s, father_citizenship = %s, father_occupation = %s, 
                     lrn = %s, school_name = %s, school_address = %s, final_general_average = %s,
@@ -2861,7 +2857,7 @@ def save_record():
                 RETURNING id
             ''', (
                 d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-                d.get('birth_order'), religion, citizenship, d.get('age'),
+                d.get('birth_order'), religion, d.get('age'),
                 d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
                 d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
                 d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
@@ -2901,7 +2897,6 @@ def save_record():
             print(f"🎓 College: {college}")
             print(f"📚 Program: {program}")
             print(f"🙏 Religion: {religion}")
-            print(f"🌏 Citizenship: {citizenship}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             print(f"📄 Document Status: {current_status}")
@@ -2916,7 +2911,6 @@ def save_record():
                 "college": college,
                 "program": program,
                 "religion": religion,
-                "citizenship": citizenship,
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
@@ -2957,7 +2951,7 @@ def save_record():
             
             cur.execute('''
                 INSERT INTO records (
-                    user_id, name, sex, birthdate, birthplace, birth_order, religion, citizenship, age,
+                    user_id, name, sex, birthdate, birthplace, birth_order, religion, age,
                     mother_name, mother_citizenship, mother_occupation, 
                     father_name, father_citizenship, father_occupation, 
                     lrn, school_name, school_address, final_general_average,
@@ -2978,7 +2972,7 @@ def save_record():
                     status
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, 
                     %s, %s, %s, 
                     %s, %s, %s, %s, 
@@ -3002,7 +2996,7 @@ def save_record():
             ''', (
                 session['user_id'],
                 d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-                d.get('birth_order'), religion, citizenship, d.get('age'),
+                d.get('birth_order'), religion, d.get('age'),
                 d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
                 d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
                 d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
@@ -3036,7 +3030,6 @@ def save_record():
             print(f"🎓 College: {college}")
             print(f"📚 Program: {program}")
             print(f"🙏 Religion: {religion}")
-            print(f"🌏 Citizenship: {citizenship}")
             print(f"📊 Good Moral Score: {goodmoral_score} | Status: {disciplinary_status}")
             print(f"📊 Good Moral Analysis saved: {goodmoral_analysis_json is not None}")
             print(f"📄 Document Status: {doc_status}")
@@ -3051,7 +3044,6 @@ def save_record():
                 "college": college,
                 "program": program,
                 "religion": religion,
-                "citizenship": citizenship,
                 "goodmoral_score": goodmoral_score,
                 "disciplinary_status": disciplinary_status,
                 "has_disciplinary_record": has_disciplinary_record,
@@ -3416,7 +3408,6 @@ def extract_data():
             "Birthdate": "YYYY-MM-DD format",
             "PlaceOfBirth": "City/Municipality, Province",
             "BirthOrder": "1st, 2nd, 3rd, etc",
-            "Citizenship": "Filipino",
             "Mother_MaidenName": "Mother's Maiden Name",
             "Mother_Citizenship": "Citizenship",
             "Mother_Occupation": "Occupation if stated",
@@ -3696,7 +3687,7 @@ def send_email_only(record_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT name, email, email_sent, religion, citizenship,
+            SELECT name, email, email_sent, religion,
                    goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
@@ -3731,7 +3722,6 @@ def send_email_only(record_id):
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
         print(f"🙏 Religion: {record.get('religion', 'N/A')}")
-        print(f"🌏 Citizenship: {record.get('citizenship', 'Filipino')}")
         print(f"📄 Document Status: {record.get('document_status', {})}")
         print(f"📋 Record Status: {record.get('status', 'INCOMPLETE')}")
         
@@ -3780,7 +3770,7 @@ def resend_email(record_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT name, email, religion, citizenship,
+            SELECT name, email, religion,
                    goodmoral_score, disciplinary_status, disciplinary_details,
                    lrn, sex, birthdate, birthplace, age, 
                    civil_status, nationality,
@@ -3811,7 +3801,6 @@ def resend_email(record_id):
         print(f"🎓 College: {record.get('college', 'N/A')}")
         print(f"📚 Program: {record.get('program', 'N/A')}")
         print(f"🙏 Religion: {record.get('religion', 'N/A')}")
-        print(f"🌏 Citizenship: {record.get('citizenship', 'Filipino')}")
         
         student_data = dict(record)
         email_sent = send_email_notification(email_addr, student_name, [], student_data)
@@ -4261,7 +4250,6 @@ if __name__ == '__main__':
     print("   • ONE RECORD PER USER enforced")
     print("   • Foreign key constraints properly set")
     print("   • Default admin user created")
-    print("   • CITIZENSHIP dropdown for child section")
     print("="*60)
     print("🔐 SECURITY FEATURES:")
     print("   • Role-based access control")
