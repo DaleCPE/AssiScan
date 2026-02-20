@@ -2019,8 +2019,7 @@
                     'COLLEGE': r.college || 'N/A',
                     'PROGRAM': r.program || 'N/A',
                     'STATUS': r.status || 'INCOMPLETE',
-                    'MORAL': r.disciplinary_status || 'N/A',
-                    'CITIZENSHIP': r.citizenship || 'Filipino'
+                    'MORAL': r.disciplinary_status || 'N/A'
                 }));
 
                 const ws = XLSX.utils.json_to_sheet(excelData);
@@ -2086,7 +2085,7 @@
             }
         }
 
-        // ========== COMPLETE STUDENT DETAILS VIEW WITH CITIZENSHIP ==========
+        // ========== FIXED: COMPLETE STUDENT DETAILS VIEW ==========
         function viewStudentDetails(id) {
             const record = allRecords.find(r => r.id === id);
             if (!record) return;
@@ -2185,10 +2184,6 @@
                         <div class="detail-item">
                             <div class="detail-label">Nationality</div>
                             <div class="detail-value">${display(record.nationality)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Citizenship</div>
-                            <div class="detail-value">${display(record.citizenship)}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Religion</div>
