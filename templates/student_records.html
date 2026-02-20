@@ -1664,7 +1664,6 @@
         let currentImageIndex = 0;
 
         // Required fields and documents for completion check
-        // CITIZENSHIP IS REMOVED FROM REQUIRED FIELDS
         const REQUIRED_FIELDS = [
             { key: 'name', label: 'Full Name', category: 'personal' },
             { key: 'sex', label: 'Sex', category: 'personal' },
@@ -1674,7 +1673,6 @@
             { key: 'civil_status', label: 'Civil Status', category: 'personal' },
             { key: 'nationality', label: 'Nationality', category: 'personal' },
             { key: 'religion', label: 'Religion', category: 'personal' },
-            // CITIZENSHIP LINE REMOVED FROM HERE
             { key: 'email', label: 'Email Address', category: 'contact' },
             { key: 'mobile_no', label: 'Mobile Number', category: 'contact' },
             { key: 'province', label: 'Province', category: 'contact' },
@@ -2205,8 +2203,6 @@
                 const program = formatValue(record.program);
                 const schoolYear = formatValue(record.school_year);
                 const lrn = formatValue(record.lrn);
-                // Citizenship is OPTIONAL - still displayed if exists but not required
-                const citizenship = formatValue(record.citizenship);
                 
                 return `
                 <div class="record-card" data-id="${record.id}">
@@ -2256,13 +2252,6 @@
                                 <div class="detail-item">
                                     <span class="detail-label">LRN</span>
                                     <span class="detail-value">${lrn}</span>
-                                </div>
-                            ` : ''}
-                            
-                            ${citizenship ? `
-                                <div class="detail-item">
-                                    <span class="detail-label">Citizenship</span>
-                                    <span class="detail-value">${citizenship}</span>
                                 </div>
                             ` : ''}
                             
@@ -2634,9 +2623,7 @@
             if (record.birthplace) { personalInfo += `<div class="details-row"><span class="details-label">Birthplace</span><span class="details-value">${record.birthplace}</span></div>`; hasPersonal = true; }
             if (record.civil_status) { personalInfo += `<div class="details-row"><span class="details-label">Civil Status</span><span class="details-value">${record.civil_status}</span></div>`; hasPersonal = true; }
             if (record.nationality) { personalInfo += `<div class="details-row"><span class="details-label">Nationality</span><span class="details-value">${record.nationality}</span></div>`; hasPersonal = true; }
-            if (record.citizenship) { personalInfo += `<div class="details-row"><span class="details-label">Citizenship</span><span class="details-value">${record.citizenship}</span></div>`; hasPersonal = true; }
             if (record.religion) { personalInfo += `<div class="details-row"><span class="details-label">Religion</span><span class="details-value">${record.religion}</span></div>`; hasPersonal = true; }
-            if (record.birth_order) { personalInfo += `<div class="details-row"><span class="details-label">Birth Order</span><span class="details-value">${record.birth_order}</span></div>`; hasPersonal = true; }
             
             personalInfo += '</div>';
             if (hasPersonal) html += personalInfo;
