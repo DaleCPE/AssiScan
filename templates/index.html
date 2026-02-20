@@ -2000,8 +2000,28 @@
                     </div>
                 </div>
                 
-                <label>Mobile No.</label>
-                <input type="tel" id="childMobile" placeholder="Mobile No.">
+                <div class="row">
+                    <div class="col-half">
+                        <label>Citizenship</label>
+                        <select id="childCitizenship">
+                            <option value="">-- Select Citizenship --</option>
+                            <option value="Filipino">Filipino</option>
+                            <option value="Dual Citizen">Dual Citizen</option>
+                            <option value="American">American</option>
+                            <option value="British">British</option>
+                            <option value="Canadian">Canadian</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Korean">Korean</option>
+                            <option value="Australian">Australian</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-half">
+                        <label>Mobile No.</label>
+                        <input type="tel" id="childMobile" placeholder="Mobile No.">
+                    </div>
+                </div>
 
                 <label>Place of Birth</label>
                 <input type="text" id="childBirthplace" placeholder="Place of Birth">
@@ -2404,6 +2424,7 @@
             setValue('birthOrder', record.birth_order);
             setValue('childCivilStatus', record.civil_status);
             setValue('childReligion', record.religion);
+            setValue('childCitizenship', record.citizenship);
             setValue('childAge', record.age);
             setValue('childMobile', record.mobile_no);
             
@@ -3224,6 +3245,7 @@
                     document.getElementById('childBirthdate').value = d.Birthdate || "";
                     document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
                     document.getElementById('birthOrder').value = d.BirthOrder || "";
+                    document.getElementById('childCitizenship').value = d.Citizenship || "";
                     
                     document.getElementById('motherName').value = d.Mother_MaidenName || "";
                     document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
@@ -3575,6 +3597,7 @@
                 birth_order: getValue('birthOrder'),
                 civil_status: getValue('childCivilStatus'),
                 religion: getValue('childReligion'),
+                citizenship: getValue('childCitizenship'),
                 age: getValue('childAge'),
                 mobile_no: getValue('childMobile'),
                 is_ip: getValue('isIP'),
