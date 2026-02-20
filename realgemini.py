@@ -16,6 +16,7 @@ import hashlib
 import secrets
 from functools import wraps
 import time
+import gc  # Garbage collection
 
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -240,9 +241,9 @@ def get_db_connection():
             if DATABASE_URL:
                 if DATABASE_URL.startswith("postgres://"):
                     DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-                    conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
+                    conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require', connect_timeout=10)
                 else:
-                    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+                    conn = psycopg2.connect(DATABASE_URL, sslmode='require', connect_timeout=10)
                 print(f"✅ Database connection successful (attempt {attempt + 1})")
                 return conn
             else:
@@ -953,18 +954,31 @@ def save_multiple_files(files, prefix):
             file.save(path)
             saved_paths.append(filename)
             try:
+                # Optimize image loading - reduce memory usage
                 img = Image.open(path)
+                # Convert to RGB if necessary and resize if too large
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                # Resize large images to reduce memory
+                max_size = 1200
+                if img.width > max_size or img.height > max_size:
+                    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
                 pil_images.append(img)
-                print(f"   ✅ Saved: {filename}")
+                print(f"   ✅ Saved and optimized: {filename} ({img.width}x{img.height})")
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
     return saved_paths, pil_images
 
 def extract_with_gemini(prompt, images):
-    """Use Gemini 2.5 Flash for text extraction"""
+    """Use Gemini 2.5 Flash for text extraction with timeout and memory management"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
+        
+        # Limit number of images to prevent memory issues
+        if len(images) > 3:
+            print(f"⚠️ Too many images ({len(images)}), limiting to first 3")
+            images = images[:3]
         
         model_name = "gemini-2.5-flash"
         
@@ -976,14 +990,16 @@ def extract_with_gemini(prompt, images):
             for img in images:
                 content_parts.append(img)
             
+            # Set timeout for generation
             response = model.generate_content(
                 content_parts,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.1,
                     top_p=0.8,
                     top_k=40,
-                    max_output_tokens=2048,
-                )
+                    max_output_tokens=1024,  # Reduced token limit
+                ),
+                request_options={'timeout': 30}  # Add timeout
             )
             
             if response.text:
@@ -1019,6 +1035,9 @@ def extract_with_gemini(prompt, images):
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         raise e
+    finally:
+        # Force garbage collection after AI processing
+        gc.collect()
 
 def calculate_goodmoral_score(analysis_data):
     """Calculate Good Moral score based on analysis"""
@@ -3242,6 +3261,11 @@ def scan_goodmoral():
         return jsonify({"error": "No selected file"}), 400
 
     try:
+        # Limit to 3 images max for memory
+        if len(files) > 3:
+            print(f"⚠️ Too many files ({len(files)}), limiting to first 3")
+            files = files[:3]
+            
         saved_paths, pil_images = save_multiple_files(files, "GOODMORAL")
         
         if not pil_images:
@@ -3272,6 +3296,11 @@ Return ONLY this exact JSON format with no other text:
         
         try:
             response_text = extract_with_gemini(prompt, pil_images)
+            
+            # Clear images from memory
+            pil_images = None
+            gc.collect()
+            
             print(f"✅ Gemini Response received: {len(response_text)} characters")
             print(f"📝 RAW RESPONSE FROM GEMINI: {response_text}")
             
@@ -3373,6 +3402,9 @@ Return ONLY this exact JSON format with no other text:
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
+        finally:
+            # Force garbage collection
+            gc.collect()
     except Exception as e:
         print(f"❌ Good Moral Scanning Error: {e}")
         traceback.print_exc()
@@ -3391,6 +3423,11 @@ def extract_data():
         return jsonify({"error": "No selected file"}), 400
 
     try:
+        # Limit to 3 images max for memory
+        if len(files) > 3:
+            print(f"⚠️ Too many files ({len(files)}), limiting to first 3")
+            files = files[:3]
+            
         saved_paths, pil_images = save_multiple_files(files, "PSA")
         
         if not pil_images:
@@ -3422,6 +3459,10 @@ def extract_data():
         
         try:
             response_text = extract_with_gemini(prompt, pil_images)
+            
+            # Clear images from memory
+            pil_images = None
+            gc.collect()
             
             cleaned_text = response_text.strip()
             
@@ -3458,6 +3499,8 @@ def extract_data():
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
+        finally:
+            gc.collect()
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
@@ -3615,6 +3658,11 @@ def extract_form137():
         return jsonify({"error": "No selected file"}), 400
     
     try:
+        # Limit to 3 images max for memory
+        if len(files) > 3:
+            print(f"⚠️ Too many files ({len(files)}), limiting to first 3")
+            files = files[:3]
+            
         saved_paths, pil_images = save_multiple_files(files, "F137")
         print(f"📸 Processing Form 137 with Gemini 2.5 Flash")
 
@@ -3635,6 +3683,10 @@ def extract_form137():
         
         try:
             response_text = extract_with_gemini(prompt, pil_images)
+            
+            # Clear images from memory
+            pil_images = None
+            gc.collect()
             
             cleaned_text = response_text.strip()
             
@@ -3669,6 +3721,8 @@ def extract_form137():
                 "error": "AI service unavailable",
                 "details": str(ai_error)[:200]
             }), 500
+        finally:
+            gc.collect()
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
 
@@ -4003,7 +4057,7 @@ def upload_additional():
         
         # Update document status
         doc_type_map = {'form137': 'form137', 'form138': 'form138', 'goodmoral': 'goodmoral'}
-        update_document_status(rid, doc_type_map[dtype], True)
+        update_document_status(int(rid), doc_type_map[dtype], True)
         
         conn.commit()
         conn.close()
