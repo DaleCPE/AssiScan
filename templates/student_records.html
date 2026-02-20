@@ -1663,7 +1663,7 @@
         let currentImages = [];
         let currentImageIndex = 0;
 
-        // Required fields and documents for completion check
+        // UPDATED: Required fields without nationality
         const REQUIRED_FIELDS = [
             { key: 'name', label: 'Full Name', category: 'personal' },
             { key: 'sex', label: 'Sex', category: 'personal' },
@@ -1671,7 +1671,6 @@
             { key: 'birthplace', label: 'Birthplace', category: 'personal' },
             { key: 'age', label: 'Age', category: 'personal' },
             { key: 'civil_status', label: 'Civil Status', category: 'personal' },
-            { key: 'nationality', label: 'Nationality', category: 'personal' },
             { key: 'religion', label: 'Religion', category: 'personal' },
             { key: 'email', label: 'Email Address', category: 'contact' },
             { key: 'mobile_no', label: 'Mobile Number', category: 'contact' },
@@ -1880,7 +1879,57 @@
             }
         }
 
-        // Render completion status
+        // UPDATED: Check field completion without nationality
+        function checkFieldCompletion(record) {
+            const stats = {
+                total: 0,
+                completed: 0,
+                missing: [],
+                categories: {
+                    personal: { total: 0, completed: 0 },
+                    contact: { total: 0, completed: 0 },
+                    academic: { total: 0, completed: 0 },
+                    parent: { total: 0, completed: 0 }
+                }
+            };
+            
+            REQUIRED_FIELDS.forEach(field => {
+                stats.total++;
+                stats.categories[field.category].total++;
+                
+                const value = record[field.key];
+                if (value && value !== '' && value !== 'N/A' && value !== null && value !== undefined) {
+                    stats.completed++;
+                    stats.categories[field.category].completed++;
+                } else {
+                    stats.missing.push(field.label);
+                }
+            });
+            
+            return stats;
+        }
+
+        // Check document completion
+        function checkDocumentCompletion(record) {
+            const stats = {
+                total: REQUIRED_DOCUMENTS.length,
+                completed: 0,
+                missing: []
+            };
+            
+            REQUIRED_DOCUMENTS.forEach(doc => {
+                const value = record[doc.key];
+                if (value && value !== '' && value !== null && value !== undefined) {
+                    stats.completed++;
+                } else {
+                    stats.missing.push(doc.label);
+                }
+            });
+            
+            return stats;
+        }
+
+        // UPDATED: Render completion status without nationality
         function renderCompletionStatus(record) {
             const completionDiv = document.getElementById('completionStatus');
             
@@ -1927,7 +1976,7 @@
             // Requirements grid
             html += '<div class="requirements-grid">';
             
-            // Personal Information
+            // Personal Information (nationality removed)
             html += `
                 <div class="requirement-item">
                     <div class="requirement-icon ${fieldStats.categories.personal.completed === fieldStats.categories.personal.total ? 'icon-complete' : 'icon-missing'}">
@@ -2022,56 +2071,6 @@
             }
             
             completionDiv.innerHTML = html;
-        }
-
-        // Check field completion
-        function checkFieldCompletion(record) {
-            const stats = {
-                total: 0,
-                completed: 0,
-                missing: [],
-                categories: {
-                    personal: { total: 0, completed: 0 },
-                    contact: { total: 0, completed: 0 },
-                    academic: { total: 0, completed: 0 },
-                    parent: { total: 0, completed: 0 }
-                }
-            };
-            
-            REQUIRED_FIELDS.forEach(field => {
-                stats.total++;
-                stats.categories[field.category].total++;
-                
-                const value = record[field.key];
-                if (value && value !== '' && value !== 'N/A' && value !== null && value !== undefined) {
-                    stats.completed++;
-                    stats.categories[field.category].completed++;
-                } else {
-                    stats.missing.push(field.label);
-                }
-            });
-            
-            return stats;
-        }
-
-        // Check document completion
-        function checkDocumentCompletion(record) {
-            const stats = {
-                total: REQUIRED_DOCUMENTS.length,
-                completed: 0,
-                missing: []
-            };
-            
-            REQUIRED_DOCUMENTS.forEach(doc => {
-                const value = record[doc.key];
-                if (value && value !== '' && value !== null && value !== undefined) {
-                    stats.completed++;
-                } else {
-                    stats.missing.push(doc.label);
-                }
-            });
-            
-            return stats;
         }
 
         // Update stats
@@ -2554,7 +2553,7 @@
             document.getElementById('imageCounter').textContent = `${currentImageIndex + 1}/${currentImages.length}`;
         }
 
-        // Show record modal - Only show fields with data
+        // UPDATED: Show record modal without nationality
         function showRecordModal(record) {
             const modalContent = document.getElementById('recordModalContent');
             
@@ -2612,7 +2611,7 @@
             
             html += '<div class="details-grid">';
             
-            // Personal Information
+            // Personal Information (nationality removed)
             let personalInfo = '<div class="details-group"><h4><i class="fas fa-user"></i> Personal Information</h4>';
             let hasPersonal = false;
             
@@ -2622,7 +2621,6 @@
             if (record.age) { personalInfo += `<div class="details-row"><span class="details-label">Age</span><span class="details-value">${record.age}</span></div>`; hasPersonal = true; }
             if (record.birthplace) { personalInfo += `<div class="details-row"><span class="details-label">Birthplace</span><span class="details-value">${record.birthplace}</span></div>`; hasPersonal = true; }
             if (record.civil_status) { personalInfo += `<div class="details-row"><span class="details-label">Civil Status</span><span class="details-value">${record.civil_status}</span></div>`; hasPersonal = true; }
-            if (record.nationality) { personalInfo += `<div class="details-row"><span class="details-label">Nationality</span><span class="details-value">${record.nationality}</span></div>`; hasPersonal = true; }
             if (record.religion) { personalInfo += `<div class="details-row"><span class="details-label">Religion</span><span class="details-value">${record.religion}</span></div>`; hasPersonal = true; }
             
             personalInfo += '</div>';
