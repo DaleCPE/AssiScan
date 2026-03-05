@@ -391,7 +391,7 @@ def init_db():
         ''')
         print("   ✅ Created programs table")
         
-        print("📝 Creating records table...")
+        print("📝 Creating records table with transferee support...")
         cur.execute('''
             CREATE TABLE records (
                 id SERIAL PRIMARY KEY,
@@ -434,7 +434,7 @@ def init_db():
                 specific_address TEXT,
                 mobile_no VARCHAR(50),
                 school_year VARCHAR(50),
-                student_type VARCHAR(50),
+                student_type VARCHAR(50) DEFAULT 'Regular',
                 college VARCHAR(150),
                 program VARCHAR(150),
                 last_level_attended VARCHAR(100),
@@ -461,11 +461,21 @@ def init_db():
                 document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
                 rejection_reason TEXT,
                 status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
+                
+                -- NEW FIELDS FOR TRANSFEREES
+                is_transferee BOOLEAN DEFAULT FALSE,
+                previous_school VARCHAR(255),
+                previous_school_address TEXT,
+                previous_school_year VARCHAR(50),
+                year_level_to_enroll VARCHAR(50),
+                honorable_dismissal_path TEXT,
+                transfer_credentials_path TEXT,
+                
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
         ''')
-        print("   ✅ Created records table")
+        print("   ✅ Created records table with transferee fields")
         
         conn.commit()
         print("✅ Database tables created successfully")
@@ -599,7 +609,47 @@ def check_tables_exist():
             print(f"❌ Missing tables: {missing_tables}")
             return False
         
-        print("✅ All tables exist")
+        # Check for transferee columns in records table
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'records'
+        """)
+        existing_columns = [col[0] for col in cur.fetchall()]
+        
+        transferee_columns = [
+            'is_transferee', 'previous_school', 'previous_school_address',
+            'previous_school_year', 'year_level_to_enroll', 'honorable_dismissal_path',
+            'transfer_credentials_path'
+        ]
+        
+        missing_columns = [col for col in transferee_columns if col not in existing_columns]
+        
+        if missing_columns:
+            print(f"⚠️ Missing transferee columns: {missing_columns}. Adding them now...")
+            
+            # Add missing columns
+            column_definitions = {
+                'is_transferee': 'BOOLEAN DEFAULT FALSE',
+                'previous_school': 'VARCHAR(255)',
+                'previous_school_address': 'TEXT',
+                'previous_school_year': 'VARCHAR(50)',
+                'year_level_to_enroll': 'VARCHAR(50)',
+                'honorable_dismissal_path': 'TEXT',
+                'transfer_credentials_path': 'TEXT'
+            }
+            
+            for col in missing_columns:
+                try:
+                    cur.execute(f"ALTER TABLE records ADD COLUMN {col} {column_definitions[col]}")
+                    print(f"   ✅ Added column: {col}")
+                except Exception as e:
+                    print(f"   ⚠️ Could not add column {col}: {e}")
+            
+            conn.commit()
+            print("✅ Transferee columns added successfully")
+        
+        print("✅ All tables and columns exist")
         return True
         
     except Exception as e:
@@ -743,9 +793,17 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
             if doc_status.get('form138'): submitted_docs.append("Form 138")
             if doc_status.get('goodmoral'): submitted_docs.append("Good Moral")
             
+            # Check transferee documents
+            is_transferee = student_data.get('is_transferee', False)
+            if is_transferee:
+                if student_data.get('honorable_dismissal_path'):
+                    submitted_docs.append("Honorable Dismissal")
+                if student_data.get('transfer_credentials_path'):
+                    submitted_docs.append("Transfer Credentials")
+            
             doc_summary = ", ".join(submitted_docs) if submitted_docs else "No documents yet"
             doc_count = len(submitted_docs)
-            doc_status_text = f"{doc_count}/4 documents submitted"
+            doc_status_text = f"{doc_count}/" + ("6" if is_transferee else "4") + " documents submitted"
             
             student_info = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -760,6 +818,10 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Civil Status: {student_data.get('civil_status', 'N/A')}
 • Nationality: {student_data.get('nationality', 'N/A')}
 • Religion: {student_data.get('religion', 'N/A')}
+• Student Type: {student_data.get('student_type', 'N/A')}
+{"• Transferee: YES" if is_transferee else "• Transferee: NO"}
+{"• Previous School: " + student_data.get('previous_school', 'N/A') if is_transferee else ""}
+{"• Year Level to Enroll: " + student_data.get('year_level_to_enroll', 'N/A') if is_transferee else ""}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👨‍👩‍👧‍👦 PARENT INFORMATION
@@ -786,7 +848,6 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • School Address: {student_data.get('school_address', 'N/A')}
 • Final General Average: {student_data.get('final_general_average', 'N/A')}
 • Last Level Attended: {student_data.get('last_level_attended', 'N/A')}
-• Student Type: {student_data.get('student_type', 'N/A')}
 • College/Department: {student_data.get('college', 'N/A')}
 • Program Applied: {student_data.get('program', 'N/A')}
 
@@ -2521,7 +2582,7 @@ def get_my_records():
             else:
                 r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
             
-            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path', 'honorable_dismissal_path', 'transfer_credentials_path']
             for field in image_fields:
                 if r.get(field):
                     paths = str(r[field]).split(',')
@@ -2574,6 +2635,8 @@ def get_student_documents(record_id):
             "form137_documents": [],
             "form138_documents": [],
             "goodmoral_documents": [],
+            "honorable_dismissal_documents": [],
+            "transfer_credentials_documents": [],
             "other_documents": []
         }
         
@@ -2609,6 +2672,25 @@ def get_student_documents(record_id):
             for path in paths:
                 if path.strip():
                     documents["goodmoral_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        # Transferee documents
+        if record.get('honorable_dismissal_path'):
+            paths = record['honorable_dismissal_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["honorable_dismissal_documents"].append({
+                        "filename": path.strip(),
+                        "download_url": f"{request.host_url}uploads/{path.strip()}"
+                    })
+        
+        if record.get('transfer_credentials_path'):
+            paths = record['transfer_credentials_path'].split(',')
+            for path in paths:
+                if path.strip():
+                    documents["transfer_credentials_documents"].append({
                         "filename": path.strip(),
                         "download_url": f"{request.host_url}uploads/{path.strip()}"
                     })
@@ -2712,7 +2794,7 @@ def get_records():
             else:
                 r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
             
-            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+            image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path', 'honorable_dismissal_path', 'transfer_credentials_path']
             for field in image_fields:
                 if r.get(field):
                     paths = str(r[field]).split(',')
@@ -2823,6 +2905,15 @@ def save_record():
         college = d.get('college', '')
         program = d.get('program', '')
         
+        # Transferee data
+        is_transferee = d.get('is_transferee', False)
+        previous_school = d.get('previous_school', '')
+        previous_school_address = d.get('previous_school_address', '')
+        previous_school_year = d.get('previous_school_year', '')
+        year_level_to_enroll = d.get('year_level_to_enroll', '')
+        honorable_dismissal_path = d.get('honorable_dismissal_path', '')
+        transfer_credentials_path = d.get('transfer_credentials_path', '')
+        
         conn = get_db_connection()
         if not conn: 
             return jsonify({"error": "DB Connection Failed"}), 500
@@ -2913,6 +3004,22 @@ def save_record():
                     other_documents = %s,
                     document_status = %s,
                     status = %s,
+                    -- Transferee fields
+                    is_transferee = %s,
+                    previous_school = %s,
+                    previous_school_address = %s,
+                    previous_school_year = %s,
+                    year_level_to_enroll = %s,
+                    honorable_dismissal_path = COALESCE(
+                        CASE WHEN %s IS NOT NULL AND %s != '' 
+                             THEN CONCAT(COALESCE(honorable_dismissal_path, ''), CASE WHEN honorable_dismissal_path IS NOT NULL AND honorable_dismissal_path != '' THEN ',' ELSE '' END, %s)
+                             ELSE honorable_dismissal_path
+                        END, honorable_dismissal_path),
+                    transfer_credentials_path = COALESCE(
+                        CASE WHEN %s IS NOT NULL AND %s != '' 
+                             THEN CONCAT(COALESCE(transfer_credentials_path, ''), CASE WHEN transfer_credentials_path IS NOT NULL AND transfer_credentials_path != '' THEN ',' ELSE '' END, %s)
+                             ELSE transfer_credentials_path
+                        END, transfer_credentials_path),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s
                 RETURNING id
@@ -2943,6 +3050,13 @@ def save_record():
                 other_documents_json,
                 json.dumps(current_status),
                 overall_status,
+                is_transferee,
+                previous_school,
+                previous_school_address,
+                previous_school_year,
+                year_level_to_enroll,
+                d.get('honorable_dismissal_path', ''), d.get('honorable_dismissal_path', ''), d.get('honorable_dismissal_path', ''),
+                d.get('transfer_credentials_path', ''), d.get('transfer_credentials_path', ''), d.get('transfer_credentials_path', ''),
                 session['user_id']
             ))
             
@@ -3004,7 +3118,11 @@ def save_record():
                     has_disciplinary_record, disciplinary_details,
                     other_documents,
                     document_status,
-                    status
+                    status,
+                    -- Transferee fields
+                    is_transferee, previous_school, previous_school_address,
+                    previous_school_year, year_level_to_enroll,
+                    honorable_dismissal_path, transfer_credentials_path
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s,
@@ -3025,7 +3143,8 @@ def save_record():
                     %s, %s,
                     %s,
                     %s,
-                    %s
+                    %s,
+                    %s, %s, %s, %s, %s, %s, %s
                 ) 
                 RETURNING id
             ''', (
@@ -3053,7 +3172,14 @@ def save_record():
                 disciplinary_details,
                 other_documents_json,
                 json.dumps(doc_status),
-                initial_status
+                initial_status,
+                is_transferee,
+                previous_school,
+                previous_school_address,
+                previous_school_year,
+                year_level_to_enroll,
+                d.get('honorable_dismissal_path', ''),
+                d.get('transfer_credentials_path', '')
             ))
             
             new_id = cur.fetchone()[0]
@@ -3675,7 +3801,8 @@ def send_email_only(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status, rejection_reason
+                   special_talents, document_status, status, rejection_reason,
+                   is_transferee, previous_school, year_level_to_enroll
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -3950,7 +4077,13 @@ def upload_additional():
 
     full_path_str = ",".join(saved_paths)
     
-    col_map = {'form137': 'form137_path', 'form138': 'form138_path', 'goodmoral': 'goodmoral_path'}
+    col_map = {
+        'form137': 'form137_path', 
+        'form138': 'form138_path', 
+        'goodmoral': 'goodmoral_path',
+        'honorable_dismissal': 'honorable_dismissal_path',
+        'transfer_credentials': 'transfer_credentials_path'
+    }
     
     if dtype not in col_map:
         return jsonify({"error": "Invalid document type"}), 400
@@ -3971,8 +4104,13 @@ def upload_additional():
         
         cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
         
-        doc_type_map = {'form137': 'form137', 'form138': 'form138', 'goodmoral': 'goodmoral'}
-        update_document_status(int(rid), doc_type_map[dtype], True)
+        doc_type_map = {
+            'form137': 'form137', 
+            'form138': 'form138', 
+            'goodmoral': 'goodmoral'
+        }
+        if dtype in doc_type_map:
+            update_document_status(int(rid), doc_type_map[dtype], True)
         
         conn.commit()
         conn.close()
@@ -4060,7 +4198,8 @@ def health_check():
             "one_record_per_user": "ENABLED",
             "school_year_management": "ENABLED",
             "tofollow_documents": "ENABLED",
-            "approve_reject": "ENABLED"
+            "approve_reject": "ENABLED",
+            "transferee_documents": "ENABLED"
         }
     })
 
@@ -4172,7 +4311,7 @@ def get_single_record(record_id):
         else:
             record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
         
-        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path']
+        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path', 'honorable_dismissal_path', 'transfer_credentials_path']
         for field in image_fields:
             if record.get(field):
                 paths = str(record[field]).split(',')
@@ -4212,6 +4351,11 @@ if __name__ == '__main__':
     print("   • Aggressive safety settings - BLOCK_NONE")
     print("   • Multiple model fallbacks - 14 models to try")
     print("   • Direct REST API fallback - ultimate backup")
+    print("="*60)
+    print("📄 NEW FEATURE: Transferee Documents Support")
+    print("   • Honorable Dismissal")
+    print("   • Transfer Credentials")
+    print("   • Previous School Information")
     print("="*60)
     print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
