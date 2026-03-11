@@ -1812,6 +1812,63 @@
                         <input type="file" id="goodmoralInput" hidden accept="image/*,application/pdf" multiple onchange="processGoodMoral(this)">
                     </div>
                 </div>
+
+                <!-- TRANSFEREE DOCUMENTS SECTION -->
+                <div class="scanner-wrapper" id="transfereeScanner" style="display: none;">
+                    <div class="scan-label">
+                        <span><i class="fas fa-file-signature"></i> HONORABLE DISMISSAL (Transfer)</span>
+                        <span id="honorableDismissalStatus" class="status-text">
+                            <i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready
+                        </span>
+                    </div>
+                    <div class="scan-frame" onclick="triggerFileInput('honorableDismissalInput')">
+                        <div class="scan-laser" id="honorableDismissalLaser"></div>
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                        
+                        <div class="document-status-badge status-missing" id="honorableDismissalStatusBadge">
+                            <i class="fas fa-hourglass-half"></i> Missing
+                        </div>
+                        
+                        <div class="upload-placeholder" id="honorableDismissalPlaceholder">
+                            <i class="fas fa-file-signature"></i>
+                            <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">HONORABLE DISMISSAL</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                        </div>
+                        <img id="honorableDismissalPreview" class="img-preview" alt="Honorable Dismissal Preview">
+                        <input type="file" id="honorableDismissalInput" hidden accept="image/*,application/pdf" multiple onchange="processHonorableDismissal(this)">
+                    </div>
+                </div>
+
+                <div class="scanner-wrapper" id="transferCredentialsScanner" style="display: none;">
+                    <div class="scan-label">
+                        <span><i class="fas fa-file-export"></i> TRANSFER CREDENTIALS</span>
+                        <span id="transferCredentialsStatus" class="status-text">
+                            <i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready
+                        </span>
+                    </div>
+                    <div class="scan-frame" onclick="triggerFileInput('transferCredentialsInput')">
+                        <div class="scan-laser" id="transferCredentialsLaser"></div>
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                        
+                        <div class="document-status-badge status-missing" id="transferCredentialsStatusBadge">
+                            <i class="fas fa-hourglass-half"></i> Missing
+                        </div>
+                        
+                        <div class="upload-placeholder" id="transferCredentialsPlaceholder">
+                            <i class="fas fa-file-export"></i>
+                            <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">TRANSFER CREDENTIALS</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                        </div>
+                        <img id="transferCredentialsPreview" class="img-preview" alt="Transfer Credentials Preview">
+                        <input type="file" id="transferCredentialsInput" hidden accept="image/*,application/pdf" multiple onchange="processTransferCredentials(this)">
+                    </div>
+                </div>
             </main>
 
             <aside class="form-panel">
@@ -1870,7 +1927,26 @@
                         </div>
                         <div class="checklist-text">
                             <div class="checklist-name">Form 138</div>
-                            <div class="checklist-status" id="checklistForm138Status">Missing</div>
+                            <div class="checklist-status" id="checklistForm138Status">Optional</div>
+                        </div>
+                    </div>
+                    <!-- Transferee Checklist Items (hidden by default) -->
+                    <div class="checklist-item" id="checklistHonorableDismissal" style="display: none;">
+                        <div class="checklist-icon missing" id="checklistHonorableDismissalIcon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">Honorable Dismissal</div>
+                            <div class="checklist-status" id="checklistHonorableDismissalStatus">Missing</div>
+                        </div>
+                    </div>
+                    <div class="checklist-item" id="checklistTransferCredentials" style="display: none;">
+                        <div class="checklist-icon missing" id="checklistTransferCredentialsIcon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="checklist-text">
+                            <div class="checklist-name">Transfer Credentials</div>
+                            <div class="checklist-status" id="checklistTransferCredentialsStatus">Missing</div>
                         </div>
                     </div>
                 </div>
@@ -1912,6 +1988,54 @@
                             <option value="Irregular">Irregular</option>
                             <option value="Transferee">Transferee</option>
                         </select>
+                    </div>
+                </div>
+                
+                <!-- Transferee Toggle -->
+                <div style="margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="isTransferee" onchange="toggleTransfereeFields()">
+                        <span style="color: var(--gold);"><i class="fas fa-exchange-alt"></i> This is a TRANSFEREE student</span>
+                    </label>
+                </div>
+
+                <!-- Transferee Fields - Hidden by default -->
+                <div id="transfereeFields" style="display: none; margin-top: 15px; padding: 15px; border: 1px solid var(--gold); border-radius: 6px; background: rgba(212, 175, 55, 0.05);">
+                    <h4 style="color: var(--gold); margin-bottom: 15px; font-size: 14px;">
+                        <i class="fas fa-exchange-alt"></i> TRANSFEREE INFORMATION
+                    </h4>
+                    
+                    <label>Previous School</label>
+                    <input type="text" id="previousSchool" placeholder="Name of previous school">
+                    
+                    <label>Previous School Address</label>
+                    <input type="text" id="previousSchoolAddress" placeholder="Address of previous school">
+                    
+                    <div class="row">
+                        <div class="col-half">
+                            <label>Last School Year Attended</label>
+                            <input type="text" id="previousSchoolYear" placeholder="e.g., 2024-2025">
+                        </div>
+                        <div class="col-half">
+                            <label>Year Level to Enroll</label>
+                            <select id="yearLevelToEnroll">
+                                <option value="">-- Select --</option>
+                                <option value="1st Year">1st Year</option>
+                                <option value="2nd Year">2nd Year</option>
+                                <option value="3rd Year">3rd Year</option>
+                                <option value="4th Year">4th Year</option>
+                                <option value="5th Year">5th Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-radius: 4px;">
+                        <p style="font-size: 11px; color: var(--gold);">
+                            <i class="fas fa-info-circle"></i> Transferee students need to submit:
+                            <br>• Honorable Dismissal
+                            <br>• Transfer Credentials
+                            <br>• PSA, Form 137, Good Moral (standard requirements)
+                        </p>
                     </div>
                 </div>
                 
@@ -2281,6 +2405,11 @@
         let requiresPasswordReset = false;
         let isMobileMenuOpen = false;
         
+        // Transferee variables
+        let isTransferee = false;
+        let honorableDismissalImagePath = "";
+        let transferCredentialsImagePath = "";
+        
         // Document status tracking
         let documentStatus = {
             psa: false,
@@ -2329,6 +2458,23 @@
                     if (data.records && data.records.length > 0) {
                         const record = data.records[0];
                         currentRecordId = record.id;
+                        
+                        // Load transferee status
+                        if (record.is_transferee) {
+                            document.getElementById('isTransferee').checked = true;
+                            toggleTransfereeFields();
+                            
+                            // Load transferee data
+                            document.getElementById('previousSchool').value = record.previous_school || '';
+                            document.getElementById('previousSchoolAddress').value = record.previous_school_address || '';
+                            document.getElementById('previousSchoolYear').value = record.previous_school_year || '';
+                            document.getElementById('yearLevelToEnroll').value = record.year_level_to_enroll || '';
+                            
+                            honorableDismissalImagePath = record.honorable_dismissal_path || "";
+                            transferCredentialsImagePath = record.transfer_credentials_path || "";
+                            
+                            updateTransfereeDocumentStatus();
+                        }
                         
                         // Load document status
                         if (record.document_status) {
@@ -2560,6 +2706,65 @@
                 f138Icon.innerHTML = '<i class="fas fa-minus"></i>';
             }
             if (f138StatusText) f138StatusText.textContent = 'Optional';
+            
+            // Update transferee document status if visible
+            updateTransfereeDocumentStatus();
+        }
+
+        function updateTransfereeDocumentStatus() {
+            if (!isTransferee) return;
+            
+            // Update Honorable Dismissal
+            const hdBadge = document.getElementById('honorableDismissalStatusBadge');
+            const hdStatus = document.getElementById('honorableDismissalStatus');
+            const hdIcon = document.getElementById('checklistHonorableDismissalIcon');
+            const hdStatusText = document.getElementById('checklistHonorableDismissalStatus');
+            
+            if (honorableDismissalImagePath) {
+                hdBadge.className = 'document-status-badge status-uploaded';
+                hdBadge.innerHTML = '<i class="fas fa-check"></i> Uploaded';
+                hdStatus.innerHTML = '<i class="fas fa-circle" style="color: #4CAF50; font-size: 8px;"></i> Uploaded';
+                if (hdIcon) {
+                    hdIcon.className = 'checklist-icon complete';
+                    hdIcon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+                if (hdStatusText) hdStatusText.textContent = 'Uploaded';
+            } else {
+                hdBadge.className = 'document-status-badge status-missing';
+                hdBadge.innerHTML = '<i class="fas fa-hourglass-half"></i> Missing';
+                hdStatus.innerHTML = '<i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready';
+                if (hdIcon) {
+                    hdIcon.className = 'checklist-icon missing';
+                    hdIcon.innerHTML = '<i class="fas fa-times"></i>';
+                }
+                if (hdStatusText) hdStatusText.textContent = 'Missing';
+            }
+            
+            // Update Transfer Credentials
+            const tcBadge = document.getElementById('transferCredentialsStatusBadge');
+            const tcStatus = document.getElementById('transferCredentialsStatus');
+            const tcIcon = document.getElementById('checklistTransferCredentialsIcon');
+            const tcStatusText = document.getElementById('checklistTransferCredentialsStatus');
+            
+            if (transferCredentialsImagePath) {
+                tcBadge.className = 'document-status-badge status-uploaded';
+                tcBadge.innerHTML = '<i class="fas fa-check"></i> Uploaded';
+                tcStatus.innerHTML = '<i class="fas fa-circle" style="color: #4CAF50; font-size: 8px;"></i> Uploaded';
+                if (tcIcon) {
+                    tcIcon.className = 'checklist-icon complete';
+                    tcIcon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+                if (tcStatusText) tcStatusText.textContent = 'Uploaded';
+            } else {
+                tcBadge.className = 'document-status-badge status-missing';
+                tcBadge.innerHTML = '<i class="fas fa-hourglass-half"></i> Missing';
+                tcStatus.innerHTML = '<i class="fas fa-circle" style="color: #ff9800; font-size: 8px;"></i> Ready';
+                if (tcIcon) {
+                    tcIcon.className = 'checklist-icon missing';
+                    tcIcon.innerHTML = '<i class="fas fa-times"></i>';
+                }
+                if (tcStatusText) tcStatusText.textContent = 'Missing';
+            }
         }
 
         function updateRecordStatusUI() {
@@ -2614,6 +2819,12 @@
                 if (!documentStatus.psa && !psaImagePath) missingDocs.push('PSA');
                 if (!documentStatus.form137 && !f137ImagePath) missingDocs.push('Form 137');
                 if (!documentStatus.goodmoral && !goodmoralImagePath) missingDocs.push('Good Moral');
+                
+                // Check transferee documents if applicable
+                if (isTransferee) {
+                    if (!honorableDismissalImagePath) missingDocs.push('Honorable Dismissal');
+                    if (!transferCredentialsImagePath) missingDocs.push('Transfer Credentials');
+                }
                 
                 if (missingDocs.length > 0) {
                     message.innerHTML = `<i class="fas fa-info-circle" style="color: #ff9800;"></i> Missing documents: ${missingDocs.join(', ')}. You can upload them now - your previous uploads will be saved.`;
@@ -3356,6 +3567,121 @@
             }
         }
 
+        // ================= TRANSFEREE FUNCTIONS =================
+        function toggleTransfereeFields() {
+            const checkbox = document.getElementById('isTransferee');
+            const transfereeFields = document.getElementById('transfereeFields');
+            const transfereeScanner = document.getElementById('transfereeScanner');
+            const transferCredentialsScanner = document.getElementById('transferCredentialsScanner');
+            const checklistHonorableDismissal = document.getElementById('checklistHonorableDismissal');
+            const checklistTransferCredentials = document.getElementById('checklistTransferCredentials');
+            
+            isTransferee = checkbox.checked;
+            
+            if (isTransferee) {
+                transfereeFields.style.display = 'block';
+                transfereeScanner.style.display = 'block';
+                transferCredentialsScanner.style.display = 'block';
+                checklistHonorableDismissal.style.display = 'flex';
+                checklistTransferCredentials.style.display = 'flex';
+            } else {
+                transfereeFields.style.display = 'none';
+                transfereeScanner.style.display = 'none';
+                transferCredentialsScanner.style.display = 'none';
+                checklistHonorableDismissal.style.display = 'none';
+                checklistTransferCredentials.style.display = 'none';
+                // Clear transferee data
+                honorableDismissalImagePath = "";
+                transferCredentialsImagePath = "";
+                document.getElementById('previousSchool').value = '';
+                document.getElementById('previousSchoolAddress').value = '';
+                document.getElementById('previousSchoolYear').value = '';
+                document.getElementById('yearLevelToEnroll').value = '';
+                updateTransfereeDocumentStatus();
+            }
+        }
+
+        async function processHonorableDismissal(input) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'honorableDismissalPreview', 'honorableDismissalPlaceholder');
+            document.getElementById('honorableDismissalLaser').style.display = 'block';
+            document.getElementById('honorableDismissalStatus').innerText = `Uploading ${files.length} Page(s)...`;
+
+            // Save files
+            if (currentRecordId) {
+                const formData = new FormData();
+                formData.append('id', currentRecordId);
+                formData.append('type', 'honorable_dismissal');
+                
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                try {
+                    const res = await fetch('/upload-additional', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        document.getElementById('honorableDismissalLaser').style.display = 'none';
+                        document.getElementById('honorableDismissalStatus').innerText = "✅ Uploaded";
+                        showNotification('Honorable Dismissal uploaded successfully', 'success');
+                    }
+                } catch (e) {
+                    console.error("Honorable Dismissal upload error:", e);
+                    document.getElementById('honorableDismissalLaser').style.display = 'none';
+                    document.getElementById('honorableDismissalStatus').innerText = "❌ Error";
+                }
+            } else {
+                // Store temporarily
+                honorableDismissalImagePath = "temp_" + Date.now() + "_" + files[0].name;
+                document.getElementById('honorableDismissalLaser').style.display = 'none';
+                document.getElementById('honorableDismissalStatus').innerText = "✅ Ready to Save";
+            }
+            
+            updateTransfereeDocumentStatus();
+        }
+
+        async function processTransferCredentials(input) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'transferCredentialsPreview', 'transferCredentialsPlaceholder');
+            document.getElementById('transferCredentialsLaser').style.display = 'block';
+            document.getElementById('transferCredentialsStatus').innerText = `Uploading ${files.length} Page(s)...`;
+
+            if (currentRecordId) {
+                const formData = new FormData();
+                formData.append('id', currentRecordId);
+                formData.append('type', 'transfer_credentials');
+                
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                try {
+                    const res = await fetch('/upload-additional', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        document.getElementById('transferCredentialsLaser').style.display = 'none';
+                        document.getElementById('transferCredentialsStatus').innerText = "✅ Uploaded";
+                        showNotification('Transfer Credentials uploaded successfully', 'success');
+                    }
+                } catch (e) {
+                    console.error("Transfer Credentials upload error:", e);
+                    document.getElementById('transferCredentialsLaser').style.display = 'none';
+                    document.getElementById('transferCredentialsStatus').innerText = "❌ Error";
+                }
+            } else {
+                // Store temporarily
+                transferCredentialsImagePath = "temp_" + Date.now() + "_" + files[0].name;
+                document.getElementById('transferCredentialsLaser').style.display = 'none';
+                document.getElementById('transferCredentialsStatus').innerText = "✅ Ready to Save";
+            }
+            
+            updateTransfereeDocumentStatus();
+        }
+
         function displayGoodmoralStatus() {
             const container = document.getElementById('goodmoralStatusDisplay');
             const scoreElement = document.getElementById('goodmoralScoreDisplay');
@@ -3473,6 +3799,26 @@
             }
         }
 
+        function showNotification(message, type = 'info') {
+            // Create a temporary notification
+            const notification = document.createElement('div');
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '15px 20px';
+            notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
+            notification.style.color = 'white';
+            notification.style.borderRadius = '4px';
+            notification.style.zIndex = '2000';
+            notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
         // ================= FIXED SAVE RECORD FUNCTION =================
         async function saveRecord() {
             console.log("💾 Starting saveRecord function...");
@@ -3572,6 +3918,15 @@
                 program: program,
                 last_level_attended: getValue('lastLevel'),
                 
+                // Transferee data
+                is_transferee: document.getElementById('isTransferee').checked,
+                previous_school: getValue('previousSchool'),
+                previous_school_address: getValue('previousSchoolAddress'),
+                previous_school_year: getValue('previousSchoolYear'),
+                year_level_to_enroll: getValue('yearLevelToEnroll'),
+                honorable_dismissal_path: honorableDismissalImagePath,
+                transfer_credentials_path: transferCredentialsImagePath,
+                
                 // Personal Information
                 name: name,
                 sex: getValue('childSex'),
@@ -3620,7 +3975,7 @@
                 // Contact
                 email: emailValue,
                 
-                // SCHOOL INFORMATION (FIXED: These were missing!)
+                // SCHOOL INFORMATION
                 lrn: getValue('lrn'),
                 school_name: getValue('schoolName'),
                 school_address: getValue('schoolAddress'),
@@ -3895,6 +4250,9 @@
                 currentRecordId: currentRecordId,
                 recordStatus: recordStatus,
                 documentStatus: documentStatus,
+                isTransferee: isTransferee,
+                honorableDismissalPath: honorableDismissalImagePath ? "✓ Set" : "✗ Not set",
+                transferCredentialsPath: transferCredentialsImagePath ? "✓ Set" : "✗ Not set",
                 psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
                 f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
                 goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
@@ -3906,8 +4264,10 @@
                 college: document.getElementById('collegeSelect') ? document.getElementById('collegeSelect').value : "Not found",
                 program: document.getElementById('programSelect') ? document.getElementById('programSelect').value : "Not found",
                 email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : "Not found",
-                lrn: document.getElementById('lrn') ? document.getElementById('lrn').value : "Not found", // Added LRN
-                schoolName: document.getElementById('schoolName') ? document.getElementById('schoolName').value : "Not found", // Added School Name
+                lrn: document.getElementById('lrn') ? document.getElementById('lrn').value : "Not found",
+                schoolName: document.getElementById('schoolName') ? document.getElementById('schoolName').value : "Not found",
+                previousSchool: document.getElementById('previousSchool') ? document.getElementById('previousSchool').value : "Not set",
+                yearLevelToEnroll: document.getElementById('yearLevelToEnroll') ? document.getElementById('yearLevelToEnroll').value : "Not set",
                 otherDocumentsCount: otherDocuments.length,
                 requiresPasswordReset: requiresPasswordReset ? "Yes" : "No",
                 screenWidth: window.innerWidth,
@@ -3919,10 +4279,15 @@
 👤 Current User: ${info.currentUser ? JSON.stringify(info.currentUser) : "Not logged in"}
 📋 Record ID: ${info.currentRecordId || "Not saved yet"}
 📊 Record Status: ${info.recordStatus}
+🔄 Transferee: ${info.isTransferee ? "Yes" : "No"}
+📝 Previous School: ${info.previousSchool}
+📋 Year Level: ${info.yearLevelToEnroll}
 📄 Document Status: ${JSON.stringify(info.documentStatus)}
 📸 PSA Images: ${info.psaImagePath}
 📄 Form 137: ${info.f137ImagePath}
 🛡️ Good Moral: ${info.goodmoralImagePath}
+📜 Honorable Dismissal: ${info.honorableDismissalPath}
+📋 Transfer Credentials: ${info.transferCredentialsPath}
 ⭐ Good Moral Score: ${info.goodmoralScore}/100
 📊 Good Moral Status: ${info.goodmoralStatus}
 ⚠️ Disciplinary Record: ${info.hasDisciplinaryRecord}
