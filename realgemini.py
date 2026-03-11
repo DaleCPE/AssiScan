@@ -84,12 +84,18 @@ CORS(app, resources={
 # Setup Upload Folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+ARCHIVE_FOLDER = os.path.join(BASE_DIR, 'archives')
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     print(f"📁 Created uploads folder at: {UPLOAD_FOLDER}")
 
+if not os.path.exists(ARCHIVE_FOLDER):
+    os.makedirs(ARCHIVE_FOLDER, exist_ok=True)
+    print(f"📁 Created archives folder at: {ARCHIVE_FOLDER}")
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['ARCHIVE_FOLDER'] = ARCHIVE_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
 # --- USER ROLES ---
@@ -101,9 +107,9 @@ ROLES = {
 PERMISSIONS = {
     'SUPER_ADMIN': [
         'manage_users', 'manage_colleges', 'manage_programs',
-        'view_all_records', 'edit_records', 'delete_records',
-        'send_emails', 'view_dashboard', 'access_admin_panel',
-        'manage_settings'
+        'view_all_records', 'edit_records', 'archive_records',
+        'view_archived_records', 'send_emails', 'view_dashboard', 
+        'access_admin_panel', 'manage_settings'
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
@@ -391,7 +397,7 @@ def init_db():
         ''')
         print("   ✅ Created programs table")
         
-        print("📝 Creating records table with transferee support...")
+        print("📝 Creating records table with archive support...")
         cur.execute('''
             CREATE TABLE records (
                 id SERIAL PRIMARY KEY,
@@ -462,7 +468,7 @@ def init_db():
                 rejection_reason TEXT,
                 status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
                 
-                -- NEW FIELDS FOR TRANSFEREES
+                -- Transferee fields
                 is_transferee BOOLEAN DEFAULT FALSE,
                 previous_school VARCHAR(255),
                 previous_school_address TEXT,
@@ -471,11 +477,22 @@ def init_db():
                 honorable_dismissal_path TEXT,
                 transfer_credentials_path TEXT,
                 
+                -- ARCHIVE FIELDS
+                is_archived BOOLEAN DEFAULT FALSE,
+                archived_at TIMESTAMP,
+                archived_by INTEGER,
+                archive_reason VARCHAR(50) CHECK (archive_reason IN ('GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER')),
+                archive_notes TEXT,
+                restored_at TIMESTAMP,
+                restored_by INTEGER,
+                
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (archived_by) REFERENCES users(id),
+                FOREIGN KEY (restored_by) REFERENCES users(id),
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
         ''')
-        print("   ✅ Created records table with transferee fields")
+        print("   ✅ Created records table with archive support")
         
         conn.commit()
         print("✅ Database tables created successfully")
@@ -609,7 +626,7 @@ def check_tables_exist():
             print(f"❌ Missing tables: {missing_tables}")
             return False
         
-        # Check for transferee columns in records table
+        # Check for archive columns in records table
         cur.execute("""
             SELECT column_name 
             FROM information_schema.columns 
@@ -617,26 +634,25 @@ def check_tables_exist():
         """)
         existing_columns = [col[0] for col in cur.fetchall()]
         
-        transferee_columns = [
-            'is_transferee', 'previous_school', 'previous_school_address',
-            'previous_school_year', 'year_level_to_enroll', 'honorable_dismissal_path',
-            'transfer_credentials_path'
+        archive_columns = [
+            'is_archived', 'archived_at', 'archived_by', 
+            'archive_reason', 'archive_notes', 'restored_at', 'restored_by'
         ]
         
-        missing_columns = [col for col in transferee_columns if col not in existing_columns]
+        missing_columns = [col for col in archive_columns if col not in existing_columns]
         
         if missing_columns:
-            print(f"⚠️ Missing transferee columns: {missing_columns}. Adding them now...")
+            print(f"⚠️ Missing archive columns: {missing_columns}. Adding them now...")
             
             # Add missing columns
             column_definitions = {
-                'is_transferee': 'BOOLEAN DEFAULT FALSE',
-                'previous_school': 'VARCHAR(255)',
-                'previous_school_address': 'TEXT',
-                'previous_school_year': 'VARCHAR(50)',
-                'year_level_to_enroll': 'VARCHAR(50)',
-                'honorable_dismissal_path': 'TEXT',
-                'transfer_credentials_path': 'TEXT'
+                'is_archived': 'BOOLEAN DEFAULT FALSE',
+                'archived_at': 'TIMESTAMP',
+                'archived_by': 'INTEGER REFERENCES users(id)',
+                'archive_reason': "VARCHAR(50) CHECK (archive_reason IN ('GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER'))",
+                'archive_notes': 'TEXT',
+                'restored_at': 'TIMESTAMP',
+                'restored_by': 'INTEGER REFERENCES users(id)'
             }
             
             for col in missing_columns:
@@ -647,7 +663,7 @@ def check_tables_exist():
                     print(f"   ⚠️ Could not add column {col}: {e}")
             
             conn.commit()
-            print("✅ Transferee columns added successfully")
+            print("✅ Archive columns added successfully")
         
         print("✅ All tables and columns exist")
         return True
@@ -965,6 +981,58 @@ def save_multiple_files(files, prefix):
             except Exception as e:
                 print(f"Error opening image {filename}: {e}")
     return saved_paths, pil_images
+
+def move_to_archive(filename):
+    """Move a file from uploads to archives folder"""
+    if not filename:
+        return filename
+    
+    try:
+        source_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(source_path):
+            return filename
+        
+        # Create archive subfolder based on date
+        date_folder = datetime.now().strftime('%Y-%m')
+        archive_subfolder = os.path.join(app.config['ARCHIVE_FOLDER'], date_folder)
+        if not os.path.exists(archive_subfolder):
+            os.makedirs(archive_subfolder, exist_ok=True)
+        
+        # Move file
+        dest_path = os.path.join(archive_subfolder, filename)
+        os.rename(source_path, dest_path)
+        print(f"📦 Moved file to archive: {filename}")
+        
+        return os.path.join(date_folder, filename)
+    except Exception as e:
+        print(f"❌ Error moving file to archive: {e}")
+        return filename
+
+def restore_from_archive(archive_path):
+    """Restore a file from archives back to uploads"""
+    if not archive_path:
+        return archive_path
+    
+    try:
+        # If it's just a filename without path, assume it's in uploads
+        if '/' not in archive_path:
+            return archive_path
+        
+        source_path = os.path.join(app.config['ARCHIVE_FOLDER'], archive_path)
+        if not os.path.exists(source_path):
+            return archive_path
+        
+        filename = os.path.basename(archive_path)
+        dest_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Move file back
+        os.rename(source_path, dest_path)
+        print(f"📦 Restored file from archive: {filename}")
+        
+        return filename
+    except Exception as e:
+        print(f"❌ Error restoring file from archive: {e}")
+        return archive_path
 
 # ================= FIXED EXTRACT WITH GEMINI (USING GEMINI 3 FLASH) =================
 def extract_with_gemini(prompt, images):
@@ -2539,7 +2607,7 @@ def get_my_records():
         
         cur.execute("""
             SELECT * FROM records 
-            WHERE user_id = %s 
+            WHERE user_id = %s AND is_archived = FALSE
             ORDER BY updated_at DESC
             LIMIT 1
         """, (session['user_id'],))
@@ -2725,7 +2793,7 @@ def get_student_documents(record_id):
 @app.route('/get-records', methods=['GET'])
 @login_required
 def get_records():
-    """Get records - Students see their own, Super Admin sees all"""
+    """Get records - Students see their own, Super Admin sees all active records"""
     conn = get_db_connection()
     if not conn: 
         return jsonify({"records": [], "error": "Database connection failed"})
@@ -2739,7 +2807,7 @@ def get_records():
                 SELECT r.*, u.username, u.email as user_email, u.full_name as user_full_name
                 FROM records r
                 JOIN users u ON r.user_id = u.id
-                WHERE r.user_id = %s 
+                WHERE r.user_id = %s AND r.is_archived = FALSE
                 ORDER BY r.updated_at DESC
                 LIMIT 1
             """, (session['user_id'],))
@@ -2749,7 +2817,7 @@ def get_records():
                        r.*, u.username, u.email as user_email, u.full_name as user_full_name
                 FROM records r
                 JOIN users u ON r.user_id = u.id
-                WHERE u.role = 'STUDENT'
+                WHERE u.role = 'STUDENT' AND r.is_archived = FALSE
                 ORDER BY r.user_id, r.updated_at DESC
             """)
         else:
@@ -2820,6 +2888,82 @@ def get_records():
             conn.close()
         return jsonify({"records": [], "error": str(e)})
 
+# ================= GET ARCHIVED RECORDS =================
+@app.route('/get-archived-records', methods=['GET'])
+@login_required
+@permission_required('view_archived_records')
+def get_archived_records():
+    """Get archived records (Super Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"records": [], "error": "Database connection failed"})
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT DISTINCT ON (r.user_id) 
+                   r.*, u.username, u.email as user_email, u.full_name as user_full_name,
+                   archiver.full_name as archived_by_name,
+                   restorer.full_name as restored_by_name
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN users archiver ON r.archived_by = archiver.id
+            LEFT JOIN users restorer ON r.restored_by = restorer.id
+            WHERE u.role = 'STUDENT' AND r.is_archived = TRUE
+            ORDER BY r.user_id, r.updated_at DESC
+        """)
+        
+        rows = cur.fetchall()
+        conn.close()
+        
+        for r in rows:
+            if r['created_at']: 
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['updated_at']: 
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['archived_at']: 
+                r['archived_at'] = r['archived_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['restored_at']: 
+                r['restored_at'] = r['restored_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if r['birthdate']: 
+                r['birthdate'] = str(r['birthdate'])
+            
+            if r.get('goodmoral_analysis'):
+                try:
+                    if isinstance(r['goodmoral_analysis'], str):
+                        r['goodmoral_analysis'] = json.loads(r['goodmoral_analysis'])
+                except:
+                    r['goodmoral_analysis'] = {}
+            
+            if r.get('other_documents'):
+                try:
+                    if isinstance(r['other_documents'], str):
+                        r['other_documents'] = json.loads(r['other_documents'])
+                except:
+                    r['other_documents'] = []
+            else:
+                r['other_documents'] = []
+            
+            if r.get('document_status'):
+                try:
+                    if isinstance(r['document_status'], str):
+                        r['document_status'] = json.loads(r['document_status'])
+                except:
+                    r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+            else:
+                r['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        
+        return jsonify({
+            "records": rows,
+            "server_url": request.host_url.rstrip('/')
+        })
+    except Exception as e:
+        print(f"❌ Error in get-archived-records: {e}")
+        if conn:
+            conn.close()
+        return jsonify({"records": [], "error": str(e)}), 500
+
 # ================= UPDATE RECORD STATUS (APPROVE/REJECT) =================
 @app.route('/api/record/<int:record_id>/status', methods=['PUT'])
 @login_required
@@ -2874,6 +3018,194 @@ def update_record_status(record_id):
         print(f"❌ Status update error: {e}")
         return jsonify({"error": str(e)}), 500
 
+# ================= ARCHIVE RECORD =================
+@app.route('/api/record/<int:record_id>/archive', methods=['POST'])
+@login_required
+@permission_required('archive_records')
+def archive_record(record_id):
+    """Archive a record (move to archives)"""
+    try:
+        data = request.json
+        reason = data.get('reason')
+        notes = data.get('notes', '')
+        
+        valid_reasons = ['GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER']
+        if reason not in valid_reasons:
+            return jsonify({"error": "Invalid archive reason"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Get document paths to move to archive folder
+        cur.execute("""
+            SELECT image_path, form137_path, form138_path, goodmoral_path,
+                   honorable_dismissal_path, transfer_credentials_path
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
+        paths = cur.fetchone()
+        if paths:
+            # Move files to archive
+            for path in paths:
+                if path:
+                    file_paths = path.split(',')
+                    for fp in file_paths:
+                        if fp.strip():
+                            move_to_archive(fp.strip())
+        
+        # Update record as archived
+        cur.execute("""
+            UPDATE records 
+            SET is_archived = TRUE, 
+                archived_at = CURRENT_TIMESTAMP, 
+                archived_by = %s,
+                archive_reason = %s,
+                archive_notes = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            RETURNING id
+        """, (session['user_id'], reason, notes, record_id))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "Record not found"}), 404
+        
+        archived_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Record archived successfully",
+            "record_id": archived_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Archive error: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
+
+# ================= RESTORE RECORD =================
+@app.route('/api/record/<int:record_id>/restore', methods=['POST'])
+@login_required
+@permission_required('archive_records')
+def restore_record(record_id):
+    """Restore an archived record"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Get document paths to restore from archive
+        cur.execute("""
+            SELECT image_path, form137_path, form138_path, goodmoral_path,
+                   honorable_dismissal_path, transfer_credentials_path
+            FROM records WHERE id = %s AND is_archived = TRUE
+        """, (record_id,))
+        
+        paths = cur.fetchone()
+        if not paths:
+            conn.close()
+            return jsonify({"error": "Archived record not found"}), 404
+        
+        # Restore files from archive
+        for path in paths:
+            if path:
+                file_paths = path.split(',')
+                for fp in file_paths:
+                    if fp.strip():
+                        restore_from_archive(fp.strip())
+        
+        # Update record as restored
+        cur.execute("""
+            UPDATE records 
+            SET is_archived = FALSE, 
+                restored_at = CURRENT_TIMESTAMP, 
+                restored_by = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            RETURNING id
+        """, (session['user_id'], record_id))
+        
+        restored_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Record restored successfully",
+            "record_id": restored_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Restore error: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
+
+# ================= PERMANENT DELETE RECORD (Super Admin only) =================
+@app.route('/api/record/<int:record_id>/permanent-delete', methods=['DELETE'])
+@login_required
+@permission_required('delete_records')
+def permanent_delete_record(record_id):
+    """Permanently delete a record (Super Admin only)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Get document paths to delete
+        cur.execute("""
+            SELECT image_path, form137_path, form138_path, goodmoral_path,
+                   honorable_dismissal_path, transfer_credentials_path
+            FROM records WHERE id = %s
+        """, (record_id,))
+        
+        paths = cur.fetchone()
+        if paths:
+            # Delete files from archive or uploads
+            for path in paths:
+                if path:
+                    file_paths = path.split(',')
+                    for fp in file_paths:
+                        if fp.strip():
+                            # Check if in archive or uploads
+                            if '/' in fp:
+                                file_path = os.path.join(app.config['ARCHIVE_FOLDER'], fp)
+                            else:
+                                file_path = os.path.join(app.config['UPLOAD_FOLDER'], fp)
+                            
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                print(f"🗑️ Deleted file: {fp}")
+        
+        # Delete record from database
+        cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Record permanently deleted"
+        })
+        
+    except Exception as e:
+        print(f"❌ Permanent delete error: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
+
 # ================= SAVE RECORD ENDPOINT (UPSERT) =================
 @app.route('/save-record', methods=['POST'])
 @login_required
@@ -2920,7 +3252,7 @@ def save_record():
         
         cur = conn.cursor()
         
-        cur.execute("SELECT id FROM records WHERE user_id = %s", (session['user_id'],))
+        cur.execute("SELECT id FROM records WHERE user_id = %s AND is_archived = FALSE", (session['user_id'],))
         existing_record = cur.fetchone()
         
         if existing_record:
@@ -3021,7 +3353,7 @@ def save_record():
                              ELSE transfer_credentials_path
                         END, transfer_credentials_path),
                     updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = %s
+                WHERE user_id = %s AND is_archived = FALSE
                 RETURNING id
             ''', (
                 d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
@@ -3940,17 +4272,21 @@ def uploaded_file(filename):
             return "Invalid filename", 400
         
         clean_filename = filename.split('/')[-1] if '/' in filename else filename
+        
+        # Try uploads folder first
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
         
+        # If not found, try archives
         if not os.path.exists(file_path):
-            print(f"❌ File not found: {clean_filename}")
-            if os.path.exists(app.config['UPLOAD_FOLDER']):
-                all_files = os.listdir(app.config['UPLOAD_FOLDER'])
-                matching = [f for f in all_files if clean_filename in f]
-                if matching:
-                    return send_from_directory(app.config['UPLOAD_FOLDER'], matching[0])
+            file_path = os.path.join(app.config['ARCHIVE_FOLDER'], clean_filename)
             
-            return jsonify({"error": f"File '{clean_filename}' not found"}), 404
+            # Try with date subfolder
+            if not os.path.exists(file_path) and '/' in filename:
+                file_path = os.path.join(app.config['ARCHIVE_FOLDER'], filename)
+        
+        if not os.path.exists(file_path):
+            print(f"❌ File not found: {filename}")
+            return jsonify({"error": f"File not found"}), 404
         
         mime_types = {
             '.jpg': 'image/jpeg',
@@ -4125,18 +4461,8 @@ def upload_additional():
 @login_required
 @permission_required('delete_records')
 def delete_record(record_id):
-    """Delete record (Super Admin only)"""
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({"success": True})
-    except Exception as e:
-        if conn:
-            conn.close()
-        return jsonify({"error": str(e)}), 500
+    """Delete record (Super Admin only) - DEPRECATED, use archive instead"""
+    return jsonify({"error": "Direct deletion is not allowed. Use archive function instead."}), 400
 
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
 @login_required
@@ -4199,7 +4525,8 @@ def health_check():
             "school_year_management": "ENABLED",
             "tofollow_documents": "ENABLED",
             "approve_reject": "ENABLED",
-            "transferee_documents": "ENABLED"
+            "transferee_documents": "ENABLED",
+            "archive_system": "ENABLED"
         }
     })
 
@@ -4225,6 +4552,35 @@ def list_uploads():
             "count": len(files),
             "files": files[:20],
             "folder": UPLOAD_FOLDER
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/list-archives', methods=['GET'])
+@login_required
+@permission_required('view_archived_records')
+def list_archives():
+    """List archived files"""
+    try:
+        if not os.path.exists(ARCHIVE_FOLDER):
+            return jsonify({"error": "Archives folder not found"}), 404
+        
+        files = []
+        for root, dirs, filenames in os.walk(ARCHIVE_FOLDER):
+            for filename in filenames:
+                rel_path = os.path.relpath(os.path.join(root, filename), ARCHIVE_FOLDER)
+                filepath = os.path.join(root, filename)
+                files.append({
+                    "name": filename,
+                    "path": rel_path,
+                    "size": os.path.getsize(filepath),
+                    "url": f"{request.host_url}uploads/{rel_path}"
+                })
+        
+        return jsonify({
+            "count": len(files),
+            "files": files[:50],
+            "folder": ARCHIVE_FOLDER
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -4337,7 +4693,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH GEMINI 3 FLASH (FIXED)")
+    print("🚀 ASSISCAN WITH ARCHIVE SYSTEM")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🚀 Transport: REST (SSL errors bypassed)")
@@ -4345,22 +4701,18 @@ if __name__ == '__main__':
     print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("🔧 FIXES APPLIED:")
-    print("   • transport='rest' - bypasses SSL errors")
-    print("   • Gemini 3 Flash models - latest available")
-    print("   • Aggressive safety settings - BLOCK_NONE")
-    print("   • Multiple model fallbacks - 14 models to try")
-    print("   • Direct REST API fallback - ultimate backup")
+    print("🔧 NEW FEATURES ADDED:")
+    print("   • Archive System - replaces delete")
+    print("   • Archive reasons: GRADUATED, TRANSFERRED_OUT, COMPLETED")
+    print("   • Separate archives folder for storage")
+    print("   • Restore functionality for archived records")
+    print("   • Permanent delete only for Super Admin")
     print("="*60)
-    print("📄 NEW FEATURE: Transferee Documents Support")
-    print("   • Honorable Dismissal")
-    print("   • Transfer Credentials")
-    print("   • Previous School Information")
+    print(f"📁 Upload folder: {UPLOAD_FOLDER}")
+    print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
     print("="*60)
     print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
-    print("="*60)
-    print("💡 Test Gemini: /test-gemini")
     print("="*60)
     
     app.run(host=host, port=port, debug=debug)
