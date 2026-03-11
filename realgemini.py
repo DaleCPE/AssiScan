@@ -4,7 +4,7 @@ from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import json
 import requests
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -17,6 +17,9 @@ import secrets
 from functools import wraps
 import time
 import base64
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # --- FIX SSL/TLS ISSUES - FORCE REST TRANSPORT ---
 import certifi
@@ -26,8 +29,11 @@ os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")  # For SMTP
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 
 # --- CONFIGURE GEMINI WITH REST TRANSPORT ---
 if GEMINI_API_KEY:
@@ -109,12 +115,13 @@ PERMISSIONS = {
         'manage_users', 'manage_colleges', 'manage_programs',
         'view_all_records', 'edit_records', 'archive_records',
         'view_archived_records', 'send_emails', 'view_dashboard', 
-        'access_admin_panel', 'manage_settings'
+        'access_admin_panel', 'manage_settings', 'send_notifications',
+        'view_all_notifications'
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
         'change_password', 'view_own_documents', 'download_own_documents',
-        'upload_additional_documents'
+        'upload_additional_documents', 'view_own_notifications'
     ]
 }
 
@@ -185,50 +192,36 @@ def save_school_year(school_year):
         print(f"❌ Error saving school year: {e}")
         return False
 
-@app.route('/api/settings/school-year', methods=['GET'])
-@login_required
-def get_school_year_endpoint():
-    """Get current active school year"""
-    try:
-        school_year = get_school_year()
-        return jsonify({
-            "school_year": school_year,
-            "success": True
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# ================= ENROLLMENT PERIOD SETTINGS =================
+ENROLLMENT_FILE = os.path.join(BASE_DIR, 'enrollment_settings.json')
 
-@app.route('/api/settings/school-year', methods=['POST'])
-@login_required
-@permission_required('manage_settings')
-def set_school_year():
-    """Set active school year (Super Admin only)"""
+def get_enrollment_settings():
+    """Get enrollment period settings"""
+    default_settings = {
+        "enrollment_start": (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
+        "enrollment_end": (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+        "reminder_frequency": "weekly",  # daily, weekly, monthly
+        "auto_send_reminders": True,
+        "reminder_days_before_deadline": [7, 3, 1]
+    }
     try:
-        data = request.json
-        school_year = data.get('school_year')
-        
-        if not school_year:
-            return jsonify({"error": "School year is required"}), 400
-        
-        if not re.match(r'^\d{4}-\d{4}$', school_year):
-            return jsonify({"error": "Invalid format. Use YYYY-YYYY (e.g., 2025-2026)"}), 400
-        
-        start_year, end_year = map(int, school_year.split('-'))
-        if end_year != start_year + 1:
-            return jsonify({"error": "End year must be exactly one year after start year"}), 400
-        
-        if save_school_year(school_year):
-            return jsonify({
-                "success": True,
-                "message": "School year updated successfully",
-                "school_year": school_year
-            })
-        else:
-            return jsonify({"error": "Failed to save school year"}), 500
-            
+        if os.path.exists(ENROLLMENT_FILE):
+            with open(ENROLLMENT_FILE, 'r') as f:
+                data = json.load(f)
+                return {**default_settings, **data}
     except Exception as e:
-        print(f"❌ Error setting school year: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"⚠️ Error reading enrollment file: {e}")
+    return default_settings
+
+def save_enrollment_settings(settings):
+    """Save enrollment period settings"""
+    try:
+        with open(ENROLLMENT_FILE, 'w') as f:
+            json.dump({**settings, 'updated_at': datetime.now().isoformat()}, f)
+        return True
+    except Exception as e:
+        print(f"❌ Error saving enrollment settings: {e}")
+        return False
 
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
@@ -289,6 +282,7 @@ def drop_all_tables():
         cur = conn.cursor()
         
         tables = [
+            'notifications',
             'user_sessions',
             'records',
             'programs',
@@ -345,7 +339,12 @@ def init_db():
                 last_login TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_by INTEGER,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                -- Notification preferences
+                email_notifications BOOLEAN DEFAULT TRUE,
+                sms_notifications BOOLEAN DEFAULT FALSE,
+                mobile_number VARCHAR(20)
             )
         ''')
         print("   ✅ Created users table")
@@ -486,6 +485,10 @@ def init_db():
                 restored_at TIMESTAMP,
                 restored_by INTEGER,
                 
+                -- Notification tracking
+                last_reminder_sent TIMESTAMP,
+                reminder_count INTEGER DEFAULT 0,
+                
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (archived_by) REFERENCES users(id),
                 FOREIGN KEY (restored_by) REFERENCES users(id),
@@ -493,6 +496,44 @@ def init_db():
             )
         ''')
         print("   ✅ Created records table with archive support")
+        
+        print("📝 Creating notifications table...")
+        cur.execute('''
+            CREATE TABLE notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER')),
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                data JSONB,
+                is_read BOOLEAN DEFAULT FALSE,
+                is_emailed BOOLEAN DEFAULT FALSE,
+                emailed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                priority INTEGER DEFAULT 0, -- 0: normal, 1: high, 2: urgent
+                
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created notifications table")
+        
+        print("📝 Creating notification_preferences table...")
+        cur.execute('''
+            CREATE TABLE notification_preferences (
+                user_id INTEGER PRIMARY KEY,
+                email_missing_docs BOOLEAN DEFAULT TRUE,
+                email_approvals BOOLEAN DEFAULT TRUE,
+                email_reminders BOOLEAN DEFAULT TRUE,
+                email_rejections BOOLEAN DEFAULT TRUE,
+                sms_missing_docs BOOLEAN DEFAULT FALSE,
+                sms_reminders BOOLEAN DEFAULT FALSE,
+                in_app_all BOOLEAN DEFAULT TRUE,
+                
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created notification_preferences table")
         
         conn.commit()
         print("✅ Database tables created successfully")
@@ -518,6 +559,12 @@ def init_db():
                 False
             ))
             admin_id = cur.fetchone()[0]
+            
+            # Create notification preferences for admin
+            cur.execute("""
+                INSERT INTO notification_preferences (user_id) VALUES (%s)
+            """, (admin_id,))
+            
             print(f"✅ Default Super Admin created with ID: {admin_id}")
             
             print("📝 Inserting default colleges...")
@@ -606,7 +653,7 @@ def check_tables_exist():
     try:
         cur = conn.cursor()
         
-        tables = ['users', 'user_sessions', 'colleges', 'programs', 'records']
+        tables = ['users', 'user_sessions', 'colleges', 'programs', 'records', 'notifications', 'notification_preferences']
         missing_tables = []
         
         for table in tables:
@@ -625,45 +672,6 @@ def check_tables_exist():
         if missing_tables:
             print(f"❌ Missing tables: {missing_tables}")
             return False
-        
-        # Check for archive columns in records table
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'records'
-        """)
-        existing_columns = [col[0] for col in cur.fetchall()]
-        
-        archive_columns = [
-            'is_archived', 'archived_at', 'archived_by', 
-            'archive_reason', 'archive_notes', 'restored_at', 'restored_by'
-        ]
-        
-        missing_columns = [col for col in archive_columns if col not in existing_columns]
-        
-        if missing_columns:
-            print(f"⚠️ Missing archive columns: {missing_columns}. Adding them now...")
-            
-            # Add missing columns
-            column_definitions = {
-                'is_archived': 'BOOLEAN DEFAULT FALSE',
-                'archived_at': 'TIMESTAMP',
-                'archived_by': 'INTEGER REFERENCES users(id)',
-                'archive_reason': "VARCHAR(50) CHECK (archive_reason IN ('GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER'))",
-                'archive_notes': 'TEXT',
-                'restored_at': 'TIMESTAMP',
-                'restored_by': 'INTEGER REFERENCES users(id)'
-            }
-            
-            for col in missing_columns:
-                try:
-                    cur.execute(f"ALTER TABLE records ADD COLUMN {col} {column_definitions[col]}")
-                    print(f"   ✅ Added column: {col}")
-                except Exception as e:
-                    print(f"   ⚠️ Could not add column {col}: {e}")
-            
-            conn.commit()
-            print("✅ Archive columns added successfully")
         
         print("✅ All tables and columns exist")
         return True
@@ -755,9 +763,277 @@ def logout_session(session_token):
     finally:
         conn.close()
 
+# ================= NOTIFICATION FUNCTIONS =================
+def create_notification(user_id, notification_type, title, message, data=None, priority=0, expires_at=None):
+    """Create a new notification for a user"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        
+        # Check if user has preferences
+        cur.execute("SELECT * FROM notification_preferences WHERE user_id = %s", (user_id,))
+        prefs = cur.fetchone()
+        
+        if not prefs:
+            # Create default preferences
+            cur.execute("INSERT INTO notification_preferences (user_id) VALUES (%s)", (user_id,))
+        
+        # Insert notification
+        cur.execute("""
+            INSERT INTO notifications (user_id, type, title, message, data, priority, expires_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (user_id, notification_type, title, message, json.dumps(data) if data else None, priority, expires_at))
+        
+        notification_id = cur.fetchone()[0]
+        conn.commit()
+        
+        # Check if should send email
+        should_email = False
+        if prefs:
+            if notification_type == 'MISSING_DOCUMENT' and prefs[1]:  # email_missing_docs
+                should_email = True
+            elif notification_type in ['RECORD_APPROVED', 'RECORD_REJECTED'] and prefs[2]:  # email_approvals
+                should_email = True
+            elif notification_type == 'ENROLLMENT_REMINDER' and prefs[3]:  # email_reminders
+                should_email = True
+        
+        if should_email:
+            # Send email asynchronously (you might want to use a queue system)
+            send_notification_email(user_id, title, message)
+        
+        return notification_id
+    except Exception as e:
+        print(f"❌ Error creating notification: {e}")
+        return None
+    finally:
+        conn.close()
+
+def send_notification_email(user_id, title, message):
+    """Send email notification to user"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT email, full_name FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+        
+        if not user or not user[0]:
+            return False
+        
+        email = user[0]
+        name = user[1]
+        
+        # Send email using SMTP
+        if EMAIL_SENDER and EMAIL_PASSWORD:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = EMAIL_SENDER
+                msg['To'] = email
+                msg['Subject'] = f"AssiScan Notification: {title}"
+                
+                body = f"""
+                Dear {name},
+                
+                {message}
+                
+                --------------------
+                This is an automated notification from the AssiScan System.
+                Please log in to your account to view more details.
+                
+                Best regards,
+                The AssiScan Team
+                """
+                
+                msg.attach(MIMEText(body, 'plain'))
+                
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+                server.starttls()
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                server.send_message(msg)
+                server.quit()
+                
+                # Mark as emailed
+                cur.execute("UPDATE notifications SET is_emailed = TRUE, emailed_at = CURRENT_TIMESTAMP WHERE id = %s", (notification_id,))
+                conn.commit()
+                
+                return True
+            except Exception as e:
+                print(f"❌ SMTP email error: {e}")
+                return False
+    except Exception as e:
+        print(f"❌ Error sending notification email: {e}")
+        return False
+    finally:
+        conn.close()
+
+def check_missing_documents(record_id=None):
+    """Check for missing documents and create notifications"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        query = """
+            SELECT r.*, u.id as user_id, u.email, u.full_name, 
+                   np.email_missing_docs
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN notification_preferences np ON u.id = np.user_id
+            WHERE r.is_archived = FALSE
+        """
+        
+        if record_id:
+            query += " AND r.id = %s"
+            cur.execute(query, (record_id,))
+        else:
+            cur.execute(query)
+        
+        records = cur.fetchall()
+        
+        for record in records:
+            missing_docs = []
+            
+            # Check document status
+            doc_status = record.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            if not doc_status.get('psa') and not record.get('image_path'):
+                missing_docs.append("PSA Birth Certificate")
+            
+            if not doc_status.get('form137') and not record.get('form137_path'):
+                missing_docs.append("Form 137")
+            
+            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
+                missing_docs.append("Good Moral Certificate")
+            
+            # Check transferee documents
+            if record.get('is_transferee'):
+                if not record.get('honorable_dismissal_path'):
+                    missing_docs.append("Honorable Dismissal")
+                if not record.get('transfer_credentials_path'):
+                    missing_docs.append("Transfer Credentials")
+            
+            if missing_docs:
+                # Check if already notified recently
+                cur.execute("""
+                    SELECT created_at FROM notifications 
+                    WHERE user_id = %s AND type = 'MISSING_DOCUMENT' 
+                    ORDER BY created_at DESC LIMIT 1
+                """, (record['user_id'],))
+                
+                last_notification = cur.fetchone()
+                
+                should_notify = True
+                if last_notification:
+                    # Don't notify more than once every 3 days
+                    days_since = (datetime.now() - last_notification[0]).days
+                    if days_since < 3:
+                        should_notify = False
+                
+                if should_notify:
+                    doc_list = ", ".join(missing_docs)
+                    message = f"You are missing the following required documents: {doc_list}. Please upload them to complete your application."
+                    
+                    create_notification(
+                        user_id=record['user_id'],
+                        notification_type='MISSING_DOCUMENT',
+                        title="Missing Required Documents",
+                        message=message,
+                        data={
+                            'record_id': record['id'],
+                            'missing_docs': missing_docs
+                        },
+                        priority=1
+                    )
+        
+        return True
+    except Exception as e:
+        print(f"❌ Error checking missing documents: {e}")
+        return False
+    finally:
+        conn.close()
+
+def send_enrollment_reminders():
+    """Send enrollment reminders to students with incomplete requirements"""
+    settings = get_enrollment_settings()
+    
+    if not settings.get('auto_send_reminders'):
+        return
+    
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get students with incomplete records
+        cur.execute("""
+            SELECT r.*, u.id as user_id, u.email, u.full_name,
+                   np.email_reminders
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN notification_preferences np ON u.id = np.user_id
+            WHERE r.is_archived = FALSE 
+              AND r.status IN ('INCOMPLETE', 'PENDING')
+              AND (r.last_reminder_sent IS NULL 
+                   OR r.last_reminder_sent < NOW() - INTERVAL '7 days')
+              AND r.reminder_count < 3
+        """)
+        
+        records = cur.fetchall()
+        
+        for record in records:
+            # Calculate days until enrollment deadline
+            enrollment_end = datetime.strptime(settings['enrollment_end'], '%Y-%m-%d')
+            days_until_deadline = (enrollment_end - datetime.now()).days
+            
+            if days_until_deadline <= 0:
+                message = "The enrollment deadline has passed. Please contact the admissions office immediately."
+                priority = 2
+            elif days_until_deadline <= 3:
+                message = f"URGENT: Only {days_until_deadline} days left until the enrollment deadline. Please complete your requirements."
+                priority = 2
+            elif days_until_deadline <= 7:
+                message = f"Reminder: Only {days_until_deadline} days left until the enrollment deadline."
+                priority = 1
+            else:
+                message = "Please complete your admission requirements to ensure your enrollment."
+                priority = 0
+            
+            create_notification(
+                user_id=record['user_id'],
+                notification_type='ENROLLMENT_REMINDER',
+                title=f"Enrollment Reminder - {days_until_deadline} Days Left",
+                message=message,
+                data={
+                    'record_id': record['id'],
+                    'days_until_deadline': days_until_deadline,
+                    'deadline': settings['enrollment_end']
+                },
+                priority=priority,
+                expires_at=enrollment_end
+            )
+            
+            # Update reminder tracking
+            cur.execute("""
+                UPDATE records 
+                SET last_reminder_sent = CURRENT_TIMESTAMP,
+                    reminder_count = reminder_count + 1
+                WHERE id = %s
+            """, (record['id'],))
+        
+        conn.commit()
+        print(f"✅ Sent {len(records)} enrollment reminders")
+        
+    except Exception as e:
+        print(f"❌ Error sending enrollment reminders: {e}")
+    finally:
+        conn.close()
+
 # ================= EMAIL FUNCTION =================
 def send_email_notification(recipient_email, student_name, file_paths, student_data=None):
-    """Send email notification using SendGrid"""
+    """Send email notification using SendGrid or SMTP"""
     print(f"\n📧 Preparing email for: {recipient_email}")
     
     if not recipient_email or not isinstance(recipient_email, str):
@@ -770,8 +1046,8 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
         print("❌ Invalid email format")
         return False
     
-    if not SENDGRID_API_KEY or not EMAIL_SENDER:
-        print("❌ SendGrid credentials not configured")
+    if not SENDGRID_API_KEY and (not EMAIL_SENDER or not EMAIL_PASSWORD):
+        print("❌ Email credentials not configured")
         return True
     
     try:
@@ -794,23 +1070,53 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
             else:
                 goodmoral_status = "📄 Good Moral Status: Pending analysis"
         
+        # Check for missing documents
+        missing_docs = []
+        doc_status = student_data.get('document_status', {})
+        if isinstance(doc_status, str):
+            try:
+                doc_status = json.loads(doc_status)
+            except:
+                doc_status = {}
+        
+        if not doc_status.get('psa') and not student_data.get('image_path'):
+            missing_docs.append("PSA Birth Certificate")
+        if not doc_status.get('form137') and not student_data.get('form137_path'):
+            missing_docs.append("Form 137")
+        if not doc_status.get('goodmoral') and not student_data.get('goodmoral_path'):
+            missing_docs.append("Good Moral Certificate")
+        
+        is_transferee = student_data.get('is_transferee', False)
+        if is_transferee:
+            if not student_data.get('honorable_dismissal_path'):
+                missing_docs.append("Honorable Dismissal")
+            if not student_data.get('transfer_credentials_path'):
+                missing_docs.append("Transfer Credentials")
+        
+        missing_docs_text = ""
+        if missing_docs:
+            missing_docs_text = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ MISSING REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━
+The following documents are still missing:
+• {"\n• ".join(missing_docs)}
+
+Please upload these documents as soon as possible to complete your application.
+"""
+        
         student_info = ""
         if student_data:
-            doc_status = student_data.get('document_status', {})
-            if isinstance(doc_status, str):
-                try:
-                    doc_status = json.loads(doc_status)
-                except:
-                    doc_status = {}
-            
             submitted_docs = []
-            if doc_status.get('psa'): submitted_docs.append("PSA")
-            if doc_status.get('form137'): submitted_docs.append("Form 137")
-            if doc_status.get('form138'): submitted_docs.append("Form 138")
-            if doc_status.get('goodmoral'): submitted_docs.append("Good Moral")
+            if doc_status.get('psa') or student_data.get('image_path'): 
+                submitted_docs.append("PSA")
+            if doc_status.get('form137') or student_data.get('form137_path'): 
+                submitted_docs.append("Form 137")
+            if doc_status.get('form138'): 
+                submitted_docs.append("Form 138")
+            if doc_status.get('goodmoral') or student_data.get('goodmoral_path'): 
+                submitted_docs.append("Good Moral")
             
-            # Check transferee documents
-            is_transferee = student_data.get('is_transferee', False)
             if is_transferee:
                 if student_data.get('honorable_dismissal_path'):
                     submitted_docs.append("Honorable Dismissal")
@@ -819,7 +1125,8 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
             
             doc_summary = ", ".join(submitted_docs) if submitted_docs else "No documents yet"
             doc_count = len(submitted_docs)
-            doc_status_text = f"{doc_count}/" + ("6" if is_transferee else "4") + " documents submitted"
+            required_count = 6 if is_transferee else 4
+            doc_status_text = f"{doc_count}/{required_count} documents submitted"
             
             student_info = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -829,48 +1136,10 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • LRN: {student_data.get('lrn', 'N/A')}
 • Sex: {student_data.get('sex', 'N/A')}
 • Birthdate: {student_data.get('birthdate', 'N/A')}
-• Birthplace: {student_data.get('birthplace', 'N/A')}
-• Age: {student_data.get('age', 'N/A')}
-• Civil Status: {student_data.get('civil_status', 'N/A')}
-• Nationality: {student_data.get('nationality', 'N/A')}
-• Religion: {student_data.get('religion', 'N/A')}
-• Student Type: {student_data.get('student_type', 'N/A')}
-{"• Transferee: YES" if is_transferee else "• Transferee: NO"}
-{"• Previous School: " + student_data.get('previous_school', 'N/A') if is_transferee else ""}
-{"• Year Level to Enroll: " + student_data.get('year_level_to_enroll', 'N/A') if is_transferee else ""}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-👨‍👩‍👧‍👦 PARENT INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━━━
-• Mother's Name: {student_data.get('mother_name', 'N/A')}
-• Mother's Citizenship: {student_data.get('mother_citizenship', 'N/A')}
-• Mother's Contact: {student_data.get('mother_contact', 'N/A')}
-• Father's Name: {student_data.get('father_name', 'N/A')}
-• Father's Citizenship: {student_data.get('father_citizenship', 'N/A')}
-• Father's Contact: {student_data.get('father_contact', 'N/A')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🏠 ADDRESS & CONTACT
-━━━━━━━━━━━━━━━━━━━━━━━━
-• Province: {student_data.get('province', 'N/A')}
-• Specific Address: {student_data.get('specific_address', 'N/A')}
-• Mobile Number: {student_data.get('mobile_no', 'N/A')}
-• Email: {recipient_email}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎓 EDUCATIONAL BACKGROUND
-━━━━━━━━━━━━━━━━━━━━━━━━
-• Previous School: {student_data.get('school_name', 'N/A')}
-• School Address: {student_data.get('school_address', 'N/A')}
-• Final General Average: {student_data.get('final_general_average', 'N/A')}
-• Last Level Attended: {student_data.get('last_level_attended', 'N/A')}
 • College/Department: {student_data.get('college', 'N/A')}
 • Program Applied: {student_data.get('program', 'N/A')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-📝 GOOD MORAL CERTIFICATE ANALYSIS
-━━━━━━━━━━━━━━━━━━━━━━━━
-{goodmoral_status}
+• Student Type: {student_data.get('student_type', 'N/A')}
+{"• Transferee: YES" if is_transferee else "• Transferee: NO"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📄 DOCUMENT STATUS
@@ -879,32 +1148,27 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
 • Submitted Documents: {doc_summary}
 • Record Status: {student_data.get('status', 'INCOMPLETE')}
 
+{missing_docs_text}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📅 VERIFICATION DETAILS
+📝 GOOD MORAL ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━
-• Verification Date: {datetime.now().strftime('%B %d, %Y')}
-• Verification Time: {datetime.now().strftime('%I:%M %p')}
-• Reference ID: {ref_id}
-• Status: ✅ VERIFIED & PROCESSED
+{goodmoral_status}
 """
-        else:
-            student_info = "⚠️ Student information not available in this record."
         
         body = f"""📋 ADMISSION RECORD VERIFICATION
 
 Dear {student_name},
 
-Your admission documents have been successfully processed through the AssiScan System. Below is a summary of your extracted information:
+Your admission documents have been processed through the AssiScan System. Below is a summary:
 
 {student_info}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📝 NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━
-1. Keep this email as your verification receipt
-2. Proceed to the Admissions Office for enrollment
-3. Present your name and this reference for verification
-4. Complete any remaining requirements
+1. { "Upload your missing documents immediately" if missing_docs else "Proceed to the Admissions Office for enrollment"}
+2. Present your name and reference ID for verification
+3. Complete any remaining requirements
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🏫 CONTACT INFORMATION
@@ -912,54 +1176,95 @@ Your admission documents have been successfully processed through the AssiScan S
 • Admissions Office: University of Batangas Lipa
 • Email: admissions@ublipa.edu.ph
 • Phone: (043) 1234-5678
+• Reference ID: {ref_id}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📌 IMPORTANT REMINDER
 ━━━━━━━━━━━━━━━━━━━━━━━━
 This is an automated notification from the AssiScan System.
-All information above was extracted from your submitted documents.
-Please verify the accuracy of the information.
-For corrections, please contact the Admissions Office.
+Please verify the accuracy of the information above.
 
 Best regards,
-
 The AssiScan Team
-Admissions Processing System
-University of Batangas Lipa
-{datetime.now().strftime('%Y')}"""
+"""
         
-        url = "https://api.sendgrid.com/v3/mail/send"
-        headers = {
-            "Authorization": f"Bearer {SENDGRID_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        # Try SendGrid first if available
+        if SENDGRID_API_KEY:
+            try:
+                url = "https://api.sendgrid.com/v3/mail/send"
+                headers = {
+                    "Authorization": f"Bearer {SENDGRID_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                
+                data = {
+                    "personalizations": [{
+                        "to": [{"email": recipient_email}],
+                        "subject": subject
+                    }],
+                    "from": {"email": EMAIL_SENDER, "name": "AssiScan System"},
+                    "content": [{
+                        "type": "text/plain",
+                        "value": body
+                    }]
+                }
+                
+                response = requests.post(url, headers=headers, json=data, timeout=30)
+                
+                if response.status_code == 202:
+                    print(f"✅ Email sent via SendGrid to {recipient_email}")
+                    
+                    # Create notification for email sent
+                    if student_data and 'user_id' in student_data:
+                        create_notification(
+                            user_id=student_data['user_id'],
+                            notification_type='SYSTEM',
+                            title="Record Processed",
+                            message=f"Your admission record has been processed and emailed to you.",
+                            data={'record_id': student_data.get('id')}
+                        )
+                    
+                    return True
+            except Exception as e:
+                print(f"⚠️ SendGrid failed: {e}")
         
-        data = {
-            "personalizations": [{
-                "to": [{"email": recipient_email}],
-                "subject": subject
-            }],
-            "from": {"email": EMAIL_SENDER, "name": "AssiScan System"},
-            "content": [{
-                "type": "text/plain",
-                "value": body
-            }]
-        }
+        # Fallback to SMTP
+        if EMAIL_SENDER and EMAIL_PASSWORD:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = EMAIL_SENDER
+                msg['To'] = recipient_email
+                msg['Subject'] = subject
+                
+                msg.attach(MIMEText(body, 'plain'))
+                
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+                server.starttls()
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                server.send_message(msg)
+                server.quit()
+                
+                print(f"✅ Email sent via SMTP to {recipient_email}")
+                
+                # Create notification
+                if student_data and 'user_id' in student_data:
+                    create_notification(
+                        user_id=student_data['user_id'],
+                        notification_type='SYSTEM',
+                        title="Record Processed",
+                        message=f"Your admission record has been processed and emailed to you.",
+                        data={'record_id': student_data.get('id')}
+                    )
+                
+                return True
+            except Exception as e:
+                print(f"⚠️ SMTP failed: {e}")
         
-        print(f"🔧 Sending via SendGrid API...")
-        response = requests.post(url, headers=headers, json=data, timeout=30)
-        
-        if response.status_code == 202:
-            print(f"✅ Email sent successfully to {recipient_email}")
-            print(f"📧 Reference ID: {ref_id}")
-            return True
-        else:
-            print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
-            return True
-    except Exception as e:
-        print(f"⚠️ SendGrid failed: {e}")
         print(f"📝 [FALLBACK LOG] Email for {student_name} to {recipient_email}")
         return True
+    except Exception as e:
+        print(f"❌ Email error: {e}")
+        return False
 
 # ================= HELPER FUNCTIONS =================
 def save_multiple_files(files, prefix):
@@ -1261,12 +1566,12 @@ def calculate_goodmoral_score(analysis_data):
     return score, status
 
 def update_document_status(record_id, doc_type, has_file):
-    """Update document status in database"""
+    """Update document status in database and check for missing docs"""
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         
-        cur.execute("SELECT document_status, status FROM records WHERE id = %s", (record_id,))
+        cur.execute("SELECT document_status, status, user_id FROM records WHERE id = %s", (record_id,))
         result = cur.fetchone()
         
         if result and result[0]:
@@ -1280,7 +1585,29 @@ def update_document_status(record_id, doc_type, has_file):
         else:
             status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
         
+        old_value = status.get(doc_type, False)
         status[doc_type] = has_file
+        
+        # If document was just uploaded, send notification
+        if not old_value and has_file:
+            user_id = result[2] if result and len(result) > 2 else None
+            if user_id:
+                doc_names = {
+                    'psa': 'PSA Birth Certificate',
+                    'form137': 'Form 137',
+                    'form138': 'Form 138',
+                    'goodmoral': 'Good Moral Certificate'
+                }
+                doc_name = doc_names.get(doc_type, doc_type)
+                
+                create_notification(
+                    user_id=user_id,
+                    notification_type='DOCUMENT_UPLOADED',
+                    title="Document Uploaded Successfully",
+                    message=f"Your {doc_name} has been uploaded successfully.",
+                    data={'record_id': record_id, 'doc_type': doc_type},
+                    priority=0
+                )
         
         current_record_status = result[1] if result and len(result) > 1 else 'INCOMPLETE'
         
@@ -1290,6 +1617,16 @@ def update_document_status(record_id, doc_type, has_file):
             
             if all_docs:
                 overall_status = 'PENDING'
+                # Notify admin that record is complete and pending review
+                if user_id:
+                    create_notification(
+                        user_id=1,  # Admin user ID
+                        notification_type='SYSTEM',
+                        title="Record Ready for Review",
+                        message=f"Student record #{record_id} has all documents and is ready for review.",
+                        data={'record_id': record_id},
+                        priority=1
+                    )
             else:
                 overall_status = 'INCOMPLETE'
         else:
@@ -1305,6 +1642,10 @@ def update_document_status(record_id, doc_type, has_file):
         
         conn.commit()
         print(f"📄 Document status updated for record {record_id}: {doc_type}={has_file}")
+        
+        # Check for missing documents after update
+        check_missing_documents(record_id)
+        
         return status, overall_status
         
     except Exception as e:
@@ -1348,6 +1689,420 @@ def test_gemini():
             "transport": "REST"
         }), 500
 
+# ================= NOTIFICATION ENDPOINTS =================
+@app.route('/api/notifications', methods=['GET'])
+@login_required
+def get_notifications():
+    """Get notifications for current user"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get query parameters
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        limit = int(request.args.get('limit', 50))
+        
+        query = """
+            SELECT * FROM notifications 
+            WHERE user_id = %s
+        """
+        params = [session['user_id']]
+        
+        if unread_only:
+            query += " AND is_read = FALSE"
+        
+        query += " ORDER BY priority DESC, created_at DESC LIMIT %s"
+        params.append(limit)
+        
+        cur.execute(query, params)
+        notifications = cur.fetchall()
+        
+        # Get unread count
+        cur.execute("""
+            SELECT COUNT(*) FROM notifications 
+            WHERE user_id = %s AND is_read = FALSE
+        """, (session['user_id'],))
+        unread_count = cur.fetchone()['count']
+        
+        conn.close()
+        
+        for n in notifications:
+            n['created_at'] = n['created_at'].isoformat() if n['created_at'] else None
+            n['expires_at'] = n['expires_at'].isoformat() if n['expires_at'] else None
+        
+        return jsonify({
+            "notifications": notifications,
+            "unread_count": unread_count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting notifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE 
+            WHERE id = %s AND user_id = %s
+            RETURNING id
+        """, (notification_id, session['user_id']))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "Notification not found"}), 404
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        print(f"❌ Error marking notification read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    """Mark all notifications as read for current user"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE 
+            WHERE user_id = %s AND is_read = FALSE
+        """, (session['user_id'],))
+        
+        updated_count = cur.rowcount
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error marking all notifications read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/preferences', methods=['GET'])
+@login_required
+def get_notification_preferences():
+    """Get notification preferences for current user"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT * FROM notification_preferences 
+            WHERE user_id = %s
+        """, (session['user_id'],))
+        
+        prefs = cur.fetchone()
+        conn.close()
+        
+        if not prefs:
+            # Create default preferences
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO notification_preferences (user_id) 
+                VALUES (%s) RETURNING user_id
+            """, (session['user_id'],))
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                "email_missing_docs": True,
+                "email_approvals": True,
+                "email_reminders": True,
+                "email_rejections": True,
+                "sms_missing_docs": False,
+                "sms_reminders": False,
+                "in_app_all": True
+            })
+        
+        return jsonify(prefs)
+        
+    except Exception as e:
+        print(f"❌ Error getting notification preferences: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/preferences', methods=['PUT'])
+@login_required
+def update_notification_preferences():
+    """Update notification preferences for current user"""
+    try:
+        data = request.json
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        updates = []
+        values = []
+        
+        pref_fields = [
+            'email_missing_docs', 'email_approvals', 'email_reminders',
+            'email_rejections', 'sms_missing_docs', 'sms_reminders',
+            'in_app_all'
+        ]
+        
+        for field in pref_fields:
+            if field in data:
+                updates.append(f"{field} = %s")
+                values.append(data[field])
+        
+        if not updates:
+            conn.close()
+            return jsonify({"error": "No preferences to update"}), 400
+        
+        values.append(session['user_id'])
+        
+        cur.execute(f"""
+            UPDATE notification_preferences 
+            SET {', '.join(updates)}
+            WHERE user_id = %s
+        """, values)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Preferences updated successfully"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error updating notification preferences: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ================= MISSING DOCUMENTS ENDPOINTS =================
+@app.route('/api/missing-documents', methods=['GET'])
+@login_required
+@permission_required('view_all_records')
+def get_missing_documents():
+    """Get all students with missing documents (Admin only)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT r.*, u.id as user_id, u.email, u.full_name,
+                   u.mobile_number
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.is_archived = FALSE 
+              AND r.status IN ('INCOMPLETE', 'PENDING')
+            ORDER BY r.updated_at DESC
+        """)
+        
+        records = cur.fetchall()
+        
+        missing_docs_list = []
+        for record in records:
+            missing_docs = []
+            
+            doc_status = record.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            if not doc_status.get('psa') and not record.get('image_path'):
+                missing_docs.append({
+                    'type': 'psa',
+                    'name': 'PSA Birth Certificate'
+                })
+            
+            if not doc_status.get('form137') and not record.get('form137_path'):
+                missing_docs.append({
+                    'type': 'form137',
+                    'name': 'Form 137'
+                })
+            
+            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
+                missing_docs.append({
+                    'type': 'goodmoral',
+                    'name': 'Good Moral Certificate'
+                })
+            
+            if record.get('is_transferee'):
+                if not record.get('honorable_dismissal_path'):
+                    missing_docs.append({
+                        'type': 'honorable_dismissal',
+                        'name': 'Honorable Dismissal'
+                    })
+                if not record.get('transfer_credentials_path'):
+                    missing_docs.append({
+                        'type': 'transfer_credentials',
+                        'name': 'Transfer Credentials'
+                    })
+            
+            if missing_docs:
+                record['missing_documents'] = missing_docs
+                record['missing_count'] = len(missing_docs)
+                missing_docs_list.append(record)
+        
+        conn.close()
+        
+        # Sort by most missing documents first
+        missing_docs_list.sort(key=lambda x: x['missing_count'], reverse=True)
+        
+        return jsonify({
+            "students": missing_docs_list,
+            "total_count": len(missing_docs_list)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting missing documents: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/missing-documents/remind-all', methods=['POST'])
+@login_required
+@permission_required('send_notifications')
+def remind_all_missing_documents():
+    """Send reminders to all students with missing documents"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT r.*, u.id as user_id, u.email, u.full_name,
+                   np.email_missing_docs
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN notification_preferences np ON u.id = np.user_id
+            WHERE r.is_archived = FALSE 
+              AND r.status IN ('INCOMPLETE', 'PENDING')
+        """)
+        
+        records = cur.fetchall()
+        
+        sent_count = 0
+        for record in records:
+            missing_docs = []
+            
+            doc_status = record.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            if not doc_status.get('psa') and not record.get('image_path'):
+                missing_docs.append("PSA Birth Certificate")
+            if not doc_status.get('form137') and not record.get('form137_path'):
+                missing_docs.append("Form 137")
+            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
+                missing_docs.append("Good Moral Certificate")
+            
+            if record.get('is_transferee'):
+                if not record.get('honorable_dismissal_path'):
+                    missing_docs.append("Honorable Dismissal")
+                if not record.get('transfer_credentials_path'):
+                    missing_docs.append("Transfer Credentials")
+            
+            if missing_docs:
+                doc_list = ", ".join(missing_docs)
+                message = f"Reminder: You are missing the following required documents: {doc_list}. Please upload them to complete your application."
+                
+                create_notification(
+                    user_id=record['user_id'],
+                    notification_type='MISSING_DOCUMENT',
+                    title="Reminder: Missing Documents",
+                    message=message,
+                    data={
+                        'record_id': record['id'],
+                        'missing_docs': missing_docs
+                    },
+                    priority=1
+                )
+                sent_count += 1
+        
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Sent reminders to {sent_count} students",
+            "sent_count": sent_count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error sending reminders: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ================= ENROLLMENT SETTINGS ENDPOINTS =================
+@app.route('/api/enrollment/settings', methods=['GET'])
+@login_required
+def get_enrollment_settings_endpoint():
+    """Get enrollment period settings"""
+    try:
+        settings = get_enrollment_settings()
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enrollment/settings', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def update_enrollment_settings():
+    """Update enrollment period settings"""
+    try:
+        data = request.json
+        if save_enrollment_settings(data):
+            return jsonify({
+                "success": True,
+                "message": "Enrollment settings updated successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to save settings"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enrollment/check-reminders', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def trigger_reminder_check():
+    """Manually trigger enrollment reminder check"""
+    try:
+        send_enrollment_reminders()
+        return jsonify({
+            "success": True,
+            "message": "Reminder check completed"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # ================= DATABASE INITIALIZATION ENDPOINT =================
 @app.route('/api/init-db', methods=['POST'])
 def initialize_database():
@@ -1386,7 +2141,7 @@ def check_database():
         
         cur = conn.cursor()
         
-        tables = ['users', 'colleges', 'programs', 'records', 'user_sessions']
+        tables = ['users', 'colleges', 'programs', 'records', 'user_sessions', 'notifications', 'notification_preferences']
         table_status = {}
         
         for table in tables:
@@ -1473,6 +2228,16 @@ def login_user():
         session['session_token'] = session_token
         session['requires_password_reset'] = user['requires_password_reset']
         
+        # Create login notification
+        create_notification(
+            user_id=user['id'],
+            notification_type='SYSTEM',
+            title="New Login Detected",
+            message=f"New login from {ip_address}",
+            data={'ip': ip_address, 'user_agent': user_agent},
+            priority=0
+        )
+        
         user_response = {
             'id': user['id'],
             'username': user['username'],
@@ -1548,6 +2313,20 @@ def check_session():
     
     if user:
         print(f"✅ Valid session for user: {user['username']}, role: {user['role']}")
+        
+        # Get unread notification count
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT COUNT(*) FROM notifications 
+                WHERE user_id = %s AND is_read = FALSE
+            """, (user['id'],))
+            unread_count = cur.fetchone()[0]
+            conn.close()
+        else:
+            unread_count = 0
+        
         return jsonify({
             "authenticated": True,
             "user": {
@@ -1557,6 +2336,7 @@ def check_session():
                 'email': user['email'],
                 'role': user['role'].upper()
             },
+            "unread_notifications": unread_count,
             "permissions": PERMISSIONS.get(user['role'].upper(), [])
         })
     else:
@@ -1616,6 +2396,15 @@ def change_password():
         conn.close()
         
         session['requires_password_reset'] = False
+        
+        # Create notification
+        create_notification(
+            user_id=session['user_id'],
+            notification_type='SYSTEM',
+            title="Password Changed",
+            message="Your password was successfully changed.",
+            priority=0
+        )
         
         return jsonify({
             "status": "success",
@@ -1683,7 +2472,8 @@ def get_users():
             SELECT u.id, u.username, u.full_name, u.email, u.role, u.is_active,
                    u.requires_password_reset, u.last_login, u.created_at,
                    c.name as college_name, p.name as program_name,
-                   creator.full_name as created_by_name
+                   creator.full_name as created_by_name,
+                   u.email_notifications, u.mobile_number
             FROM users u
             LEFT JOIN colleges c ON u.college_id = c.id
             LEFT JOIN programs p ON u.program_id = p.id
@@ -1746,9 +2536,9 @@ def create_user():
             INSERT INTO users (
                 username, password_hash, full_name, email, role,
                 college_id, program_id, is_active, requires_password_reset,
-                created_by
+                created_by, email_notifications, mobile_number
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id, username, full_name, email, role, is_active, created_at
         """, (
             data['username'],
@@ -1760,10 +2550,18 @@ def create_user():
             program_id,
             data.get('is_active', True),
             True,
-            session['user_id']
+            session['user_id'],
+            data.get('email_notifications', True),
+            data.get('mobile_number')
         ))
         
         new_user = cur.fetchone()
+        
+        # Create notification preferences
+        cur.execute("""
+            INSERT INTO notification_preferences (user_id) VALUES (%s)
+        """, (new_user[0],))
+        
         conn.commit()
         conn.close()
         
@@ -1855,6 +2653,14 @@ def update_user(user_id):
             updates.append("program_id = %s")
             values.append(data['program_id'])
         
+        if 'email_notifications' in data:
+            updates.append("email_notifications = %s")
+            values.append(data['email_notifications'])
+        
+        if 'mobile_number' in data:
+            updates.append("mobile_number = %s")
+            values.append(data['mobile_number'])
+        
         if data.get('reset_password'):
             temp_password = generate_temp_password()
             password_hash = hash_password(temp_password)
@@ -1888,6 +2694,8 @@ def update_user(user_id):
             'is_active': updated_user['is_active'],
             'college_id': updated_user['college_id'],
             'program_id': updated_user['program_id'],
+            'email_notifications': updated_user['email_notifications'],
+            'mobile_number': updated_user['mobile_number'],
             'updated_at': updated_user['updated_at'].isoformat() if updated_user['updated_at'] else None
         }
         
@@ -1994,7 +2802,8 @@ def get_profile():
             SELECT u.id, u.username, u.full_name, u.email, u.role, u.is_active,
                    u.requires_password_reset, u.last_login, u.created_at,
                    c.name as college_name, p.name as program_name,
-                   u.college_id, u.program_id
+                   u.college_id, u.program_id,
+                   u.email_notifications, u.mobile_number
             FROM users u
             LEFT JOIN colleges c ON u.college_id = c.id
             LEFT JOIN programs p ON u.program_id = p.id
@@ -2002,6 +2811,11 @@ def get_profile():
         """, (session['user_id'],))
         
         profile = cur.fetchone()
+        
+        # Get notification preferences
+        cur.execute("SELECT * FROM notification_preferences WHERE user_id = %s", (session['user_id'],))
+        prefs = cur.fetchone()
+        
         conn.close()
         
         if not profile:
@@ -2013,6 +2827,7 @@ def get_profile():
             profile['created_at'] = profile['created_at'].isoformat()
         
         profile['permissions'] = PERMISSIONS.get(profile['role'].upper(), [])
+        profile['notification_preferences'] = prefs if prefs else {}
         
         return jsonify(profile)
         
@@ -2052,6 +2867,14 @@ def update_profile():
                 return jsonify({"error": "Email already in use"}), 409
             updates.append("email = %s")
             values.append(data['email'])
+        
+        if 'mobile_number' in data:
+            updates.append("mobile_number = %s")
+            values.append(data['mobile_number'])
+        
+        if 'email_notifications' in data:
+            updates.append("email_notifications = %s")
+            values.append(data['email_notifications'])
         
         if not updates:
             conn.close()
@@ -2984,6 +3807,11 @@ def update_record_status(record_id):
         
         cur = conn.cursor()
         
+        # Get user_id before update
+        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
+        user_id = result[0] if result else None
+        
         if status == 'REJECTED' and reason:
             cur.execute("""
                 UPDATE records 
@@ -3006,6 +3834,27 @@ def update_record_status(record_id):
         updated_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
+        
+        # Send notification to student
+        if user_id:
+            if status == 'APPROVED':
+                create_notification(
+                    user_id=user_id,
+                    notification_type='RECORD_APPROVED',
+                    title="Application Approved",
+                    message="Congratulations! Your application has been approved.",
+                    data={'record_id': record_id},
+                    priority=1
+                )
+            elif status == 'REJECTED':
+                create_notification(
+                    user_id=user_id,
+                    notification_type='RECORD_REJECTED',
+                    title="Application Rejected",
+                    message=f"Your application has been rejected. Reason: {reason}",
+                    data={'record_id': record_id, 'reason': reason},
+                    priority=1
+                )
         
         return jsonify({
             "success": True,
@@ -3038,6 +3887,11 @@ def archive_record(record_id):
             return jsonify({"error": "Database connection failed"}), 500
         
         cur = conn.cursor()
+        
+        # Get user_id before archive
+        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
+        user_id = result[0] if result else None
         
         # Get document paths to move to archive folder
         cur.execute("""
@@ -3077,6 +3931,24 @@ def archive_record(record_id):
         conn.commit()
         conn.close()
         
+        # Notify student
+        if user_id:
+            reason_text = {
+                'GRADUATED': 'you have graduated',
+                'TRANSFERRED_OUT': 'you have transferred out',
+                'COMPLETED': 'your document process is completed',
+                'OTHER': 'your record has been archived'
+            }.get(reason, 'your record has been archived')
+            
+            create_notification(
+                user_id=user_id,
+                notification_type='SYSTEM',
+                title="Record Archived",
+                message=f"Your record has been archived because {reason_text}.",
+                data={'record_id': record_id, 'reason': reason},
+                priority=0
+            )
+        
         return jsonify({
             "success": True,
             "message": "Record archived successfully",
@@ -3102,6 +3974,11 @@ def restore_record(record_id):
             return jsonify({"error": "Database connection failed"}), 500
         
         cur = conn.cursor()
+        
+        # Get user_id before restore
+        cur.execute("SELECT user_id FROM records WHERE id = %s AND is_archived = TRUE", (record_id,))
+        result = cur.fetchone()
+        user_id = result[0] if result else None
         
         # Get document paths to restore from archive
         cur.execute("""
@@ -3137,6 +4014,17 @@ def restore_record(record_id):
         restored_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
+        
+        # Notify student
+        if user_id:
+            create_notification(
+                user_id=user_id,
+                notification_type='SYSTEM',
+                title="Record Restored",
+                message="Your archived record has been restored.",
+                data={'record_id': record_id},
+                priority=0
+            )
         
         return jsonify({
             "success": True,
@@ -3188,6 +4076,9 @@ def permanent_delete_record(record_id):
                             if os.path.exists(file_path):
                                 os.remove(file_path)
                                 print(f"🗑️ Deleted file: {fp}")
+        
+        # Delete notifications for this record
+        cur.execute("DELETE FROM notifications WHERE data->>'record_id' = %s", (str(record_id),))
         
         # Delete record from database
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
@@ -3396,6 +4287,9 @@ def save_record():
             conn.commit()
             conn.close()
             
+            # Check for missing documents after update
+            check_missing_documents(updated_id)
+            
             return jsonify({
                 "status": "success", 
                 "db_id": updated_id,
@@ -3518,6 +4412,9 @@ def save_record():
             conn.commit()
             conn.close()
 
+            # Check for missing documents after creation
+            check_missing_documents(new_id)
+            
             return jsonify({
                 "status": "success", 
                 "db_id": new_id,
@@ -3633,6 +4530,19 @@ def my_records_page():
         return redirect('/')
     
     return render_template('student_records.html')
+
+@app.route('/notifications')
+@login_required
+def notifications_page():
+    """Notifications page"""
+    return render_template('notifications.html')
+
+@app.route('/admin/missing-documents')
+@login_required
+@permission_required('view_all_records')
+def missing_documents_page():
+    """Missing documents page for admin"""
+    return render_template('admin_missing_docs.html')
 
 # ================= DEBUG ENDPOINT FOR GOOD MORAL =================
 @app.route('/debug-goodmoral/<int:record_id>', methods=['GET'])
@@ -3962,6 +4872,16 @@ def upload_other_document(record_id):
         conn.commit()
         conn.close()
         
+        # Send notification
+        create_notification(
+            user_id=session['user_id'],
+            notification_type='DOCUMENT_UPLOADED',
+            title="Document Uploaded",
+            message=f"Your document '{title}' has been uploaded successfully.",
+            data={'record_id': record_id, 'title': title},
+            priority=0
+        )
+        
         return jsonify({
             "status": "success",
             "message": "Document uploaded successfully",
@@ -4134,7 +5054,8 @@ def send_email_only(record_id):
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
                    special_talents, document_status, status, rejection_reason,
-                   is_transferee, previous_school, year_level_to_enroll
+                   is_transferee, previous_school, year_level_to_enroll,
+                   user_id
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -4168,6 +5089,17 @@ def send_email_only(record_id):
             """, (record_id,))
             conn.commit()
             conn.close()
+            
+            # Create notification
+            if record.get('user_id'):
+                create_notification(
+                    user_id=record['user_id'],
+                    notification_type='SYSTEM',
+                    title="Email Sent",
+                    message=f"Your record summary has been emailed to {email_addr}",
+                    data={'record_id': record_id},
+                    priority=0
+                )
             
             print(f"✅ Email sent for ID: {record_id}")
             return jsonify({
@@ -4212,7 +5144,8 @@ def resend_email(record_id):
                    school_name, school_address, final_general_average,
                    last_level_attended, student_type, college, program,
                    school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status
+                   special_talents, document_status, status,
+                   user_id
             FROM records WHERE id = %s
         """, (record_id,))
         
@@ -4242,6 +5175,17 @@ def resend_email(record_id):
             """, (record_id,))
             conn.commit()
             conn.close()
+            
+            # Create notification
+            if record.get('user_id'):
+                create_notification(
+                    user_id=record['user_id'],
+                    notification_type='SYSTEM',
+                    title="Email Resent",
+                    message=f"Your record summary has been resent to {email_addr}",
+                    data={'record_id': record_id},
+                    priority=0
+                )
             
             print(f"✅ Email resent for ID: {record_id}")
             return jsonify({
@@ -4450,6 +5394,17 @@ def upload_additional():
         
         conn.commit()
         conn.close()
+        
+        # Send notification
+        create_notification(
+            user_id=session['user_id'],
+            notification_type='DOCUMENT_UPLOADED',
+            title="Document Uploaded",
+            message=f"Your {dtype} document has been uploaded successfully.",
+            data={'record_id': int(rid), 'type': dtype},
+            priority=0
+        )
+        
         return jsonify({"status": "success", "message": "File uploaded successfully"})
     except Exception as e:
         print(f"❌ Upload error: {e}")
@@ -4526,7 +5481,10 @@ def health_check():
             "tofollow_documents": "ENABLED",
             "approve_reject": "ENABLED",
             "transferee_documents": "ENABLED",
-            "archive_system": "ENABLED"
+            "archive_system": "ENABLED",
+            "notification_system": "ENABLED",
+            "missing_document_alerts": "ENABLED",
+            "enrollment_reminders": "ENABLED"
         }
     })
 
@@ -4686,6 +5644,30 @@ def get_single_record(record_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
+# ================= SCHEDULED TASKS =================
+def run_scheduled_tasks():
+    """Run scheduled tasks like checking missing documents and sending reminders"""
+    while True:
+        try:
+            print("🔄 Running scheduled tasks...")
+            
+            # Check for missing documents
+            check_missing_documents()
+            
+            # Send enrollment reminders
+            send_enrollment_reminders()
+            
+            # Sleep for 1 hour
+            time.sleep(3600)
+        except Exception as e:
+            print(f"❌ Error in scheduled tasks: {e}")
+            time.sleep(3600)
+
+# Start scheduled tasks in background thread
+import threading
+scheduler_thread = threading.Thread(target=run_scheduled_tasks, daemon=True)
+scheduler_thread.start()
+
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
@@ -4693,26 +5675,34 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH ARCHIVE SYSTEM")
+    print("🚀 ASSISCAN WITH NOTIFICATION SYSTEM")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🚀 Transport: REST (SSL errors bypassed)")
     print(f"🤖 Models: Gemini 3 Flash, Gemini 1.5 Flash")
-    print(f"📧 SendGrid: {'✅ SET' if SENDGRID_API_KEY else '❌ NOT SET'}")
+    print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
     print("🔧 NEW FEATURES ADDED:")
-    print("   • Archive System - replaces delete")
-    print("   • Archive reasons: GRADUATED, TRANSFERRED_OUT, COMPLETED")
-    print("   • Separate archives folder for storage")
-    print("   • Restore functionality for archived records")
-    print("   • Permanent delete only for Super Admin")
+    print("   • Notification System - In-app and email notifications")
+    print("   • Missing Document Alerts - Automatic checking")
+    print("   • Enrollment Reminders - Based on deadline")
+    print("   • Notification Preferences - User customizable")
+    print("   • Admin Dashboard for Missing Documents")
+    print("   • Student Notification Center")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
     print("="*60)
     print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
+    print("="*60)
+    print("💡 New Endpoints:")
+    print("   • /api/notifications - Get user notifications")
+    print("   • /api/missing-documents - View missing docs")
+    print("   • /api/enrollment/settings - Manage enrollment")
+    print("   • /notifications - Notification center")
+    print("   • /admin/missing-documents - Admin view")
     print("="*60)
     
     app.run(host=host, port=port, debug=debug)
