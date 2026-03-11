@@ -20,6 +20,7 @@ import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import threading
 
 # --- FIX SSL/TLS ISSUES - FORCE REST TRANSPORT ---
 import certifi
@@ -29,7 +30,7 @@ os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 # --- CONFIGURATION ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")  # For SMTP
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -38,32 +39,15 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 # --- CONFIGURE GEMINI WITH REST TRANSPORT ---
 if GEMINI_API_KEY:
     try:
-        # Force REST transport to avoid gRPC SSL errors
         genai.configure(
             api_key=GEMINI_API_KEY,
             transport='rest'
         )
         print("✅ Google Generative AI Configured with REST transport")
         
-        # Test the connection
         try:
             models = list(genai.list_models())
             print(f"✅ Successfully connected to Gemini API. Found {len(models)} models.")
-            
-            # List available models for debugging
-            available_models = []
-            for model in models:
-                model_name = model.name
-                available_models.append(model_name)
-                if "gemini-3" in model_name:
-                    print(f"✨ Found Gemini 3: {model_name}")
-                elif "gemini-2" in model_name:
-                    print(f"✨ Found Gemini 2: {model_name}")
-                elif "gemini-1.5" in model_name:
-                    print(f"✨ Found Gemini 1.5: {model_name}")
-            
-            print(f"📋 Available models: {available_models[:10]}...")
-            
         except Exception as e:
             print(f"⚠️ Could not list models: {e}")
     except Exception as e:
@@ -168,7 +152,6 @@ def permission_required(permission):
 SCHOOL_YEAR_FILE = os.path.join(BASE_DIR, 'school_year.json')
 
 def get_school_year():
-    """Get the current active school year"""
     default_year = "2025-2026"
     try:
         if os.path.exists(SCHOOL_YEAR_FILE):
@@ -180,7 +163,6 @@ def get_school_year():
     return default_year
 
 def save_school_year(school_year):
-    """Save the active school year"""
     try:
         with open(SCHOOL_YEAR_FILE, 'w') as f:
             json.dump({
@@ -192,15 +174,57 @@ def save_school_year(school_year):
         print(f"❌ Error saving school year: {e}")
         return False
 
+@app.route('/api/settings/school-year', methods=['GET'])
+@login_required
+def get_school_year_endpoint():
+    try:
+        school_year = get_school_year()
+        return jsonify({
+            "school_year": school_year,
+            "success": True
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/settings/school-year', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def set_school_year():
+    try:
+        data = request.json
+        school_year = data.get('school_year')
+        
+        if not school_year:
+            return jsonify({"error": "School year is required"}), 400
+        
+        if not re.match(r'^\d{4}-\d{4}$', school_year):
+            return jsonify({"error": "Invalid format. Use YYYY-YYYY (e.g., 2025-2026)"}), 400
+        
+        start_year, end_year = map(int, school_year.split('-'))
+        if end_year != start_year + 1:
+            return jsonify({"error": "End year must be exactly one year after start year"}), 400
+        
+        if save_school_year(school_year):
+            return jsonify({
+                "success": True,
+                "message": "School year updated successfully",
+                "school_year": school_year
+            })
+        else:
+            return jsonify({"error": "Failed to save school year"}), 500
+            
+    except Exception as e:
+        print(f"❌ Error setting school year: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # ================= ENROLLMENT PERIOD SETTINGS =================
 ENROLLMENT_FILE = os.path.join(BASE_DIR, 'enrollment_settings.json')
 
 def get_enrollment_settings():
-    """Get enrollment period settings"""
     default_settings = {
         "enrollment_start": (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
         "enrollment_end": (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
-        "reminder_frequency": "weekly",  # daily, weekly, monthly
+        "reminder_frequency": "weekly",
         "auto_send_reminders": True,
         "reminder_days_before_deadline": [7, 3, 1]
     }
@@ -214,7 +238,6 @@ def get_enrollment_settings():
     return default_settings
 
 def save_enrollment_settings(settings):
-    """Save enrollment period settings"""
     try:
         with open(ENROLLMENT_FILE, 'w') as f:
             json.dump({**settings, 'updated_at': datetime.now().isoformat()}, f)
@@ -225,12 +248,10 @@ def save_enrollment_settings(settings):
 
 # ================= PASSWORD FUNCTIONS =================
 def hash_password(password):
-    """Hash password with salt"""
     salt = secrets.token_hex(16)
     return salt + "$" + hashlib.sha256((password + salt).encode()).hexdigest()
 
 def verify_password(stored_hash, password):
-    """Verify password against stored hash"""
     if "$" not in stored_hash:
         return False
     
@@ -239,13 +260,11 @@ def verify_password(stored_hash, password):
     return hash_value == computed_hash
 
 def generate_temp_password(length=8):
-    """Generate temporary password for new users"""
     alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 # ================= DATABASE FUNCTIONS =================
 def get_db_connection():
-    """Get database connection for Render PostgreSQL with retry logic"""
     max_retries = 3
     retry_delay = 2
     
@@ -270,515 +289,12 @@ def get_db_connection():
             else:
                 return None
 
-def drop_all_tables():
-    """Drop all existing tables to start fresh"""
-    print("🗑️  Dropping all existing tables...")
-    conn = get_db_connection()
-    if not conn:
-        print("❌ Failed to connect to database for dropping tables")
-        return False
-    
-    try:
-        cur = conn.cursor()
-        
-        tables = [
-            'notifications',
-            'user_sessions',
-            'records',
-            'programs',
-            'colleges',
-            'users'
-        ]
-        
-        for table in tables:
-            try:
-                cur.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
-                print(f"   ✅ Dropped table: {table}")
-            except Exception as e:
-                print(f"   ⚠️ Could not drop table {table}: {e}")
-        
-        conn.commit()
-        print("✅ All tables dropped successfully")
-        return True
-    except Exception as e:
-        print(f"❌ Error dropping tables: {e}")
-        conn.rollback()
-        return False
-    finally:
-        conn.close()
-
-def init_db():
-    """Initialize database tables"""
-    print("🔧 Initializing database from scratch...")
-    
-    if not drop_all_tables():
-        print("❌ Failed to drop existing tables")
-        return False
-    
-    conn = get_db_connection()
-    if not conn:
-        print("❌ Failed to connect to database for initialization")
-        return False
-    
-    try:
-        cur = conn.cursor()
-        
-        print("📝 Creating users table...")
-        cur.execute('''
-            CREATE TABLE users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                full_name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'STUDENT')),
-                college_id INTEGER,
-                program_id INTEGER,
-                is_active BOOLEAN DEFAULT TRUE,
-                requires_password_reset BOOLEAN DEFAULT TRUE,
-                last_login TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_by INTEGER,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                -- Notification preferences
-                email_notifications BOOLEAN DEFAULT TRUE,
-                sms_notifications BOOLEAN DEFAULT FALSE,
-                mobile_number VARCHAR(20)
-            )
-        ''')
-        print("   ✅ Created users table")
-        
-        print("📝 Creating user_sessions table...")
-        cur.execute('''
-            CREATE TABLE user_sessions (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                session_token VARCHAR(255) UNIQUE NOT NULL,
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                logout_at TIMESTAMP,
-                is_active BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        print("   ✅ Created user_sessions table")
-        
-        print("📝 Creating colleges table...")
-        cur.execute('''
-            CREATE TABLE colleges (
-                id SERIAL PRIMARY KEY,
-                code VARCHAR(20) UNIQUE NOT NULL,
-                name VARCHAR(150) NOT NULL,
-                description TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                display_order INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_by INTEGER REFERENCES users(id)
-            )
-        ''')
-        print("   ✅ Created colleges table")
-        
-        print("📝 Creating programs table...")
-        cur.execute('''
-            CREATE TABLE programs (
-                id SERIAL PRIMARY KEY,
-                college_id INTEGER,
-                code VARCHAR(50),
-                name VARCHAR(150) NOT NULL,
-                is_active BOOLEAN DEFAULT TRUE,
-                display_order INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_by INTEGER REFERENCES users(id),
-                FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
-            )
-        ''')
-        print("   ✅ Created programs table")
-        
-        print("📝 Creating records table with archive support...")
-        cur.execute('''
-            CREATE TABLE records (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER UNIQUE,
-                name VARCHAR(255),
-                sex VARCHAR(50),
-                birthdate DATE,
-                birthplace TEXT,
-                birth_order VARCHAR(50),
-                religion VARCHAR(100),
-                age INTEGER,
-                mother_name VARCHAR(255),
-                mother_citizenship VARCHAR(100),
-                mother_occupation VARCHAR(100),
-                father_name VARCHAR(255),
-                father_citizenship VARCHAR(100),
-                father_occupation VARCHAR(100),
-                lrn VARCHAR(50),
-                school_name TEXT,
-                school_address TEXT,
-                final_general_average VARCHAR(50),
-                image_path TEXT,
-                form137_path TEXT,
-                form138_path TEXT,
-                goodmoral_path TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                email_sent BOOLEAN DEFAULT FALSE,
-                email_sent_at TIMESTAMP,
-                email VARCHAR(100),
-                civil_status VARCHAR(50),
-                nationality VARCHAR(100),
-                mother_contact VARCHAR(50),
-                father_contact VARCHAR(50),
-                guardian_name VARCHAR(255),
-                guardian_relation VARCHAR(100),
-                guardian_contact VARCHAR(50),
-                region VARCHAR(100),
-                province VARCHAR(100),
-                specific_address TEXT,
-                mobile_no VARCHAR(50),
-                school_year VARCHAR(50),
-                student_type VARCHAR(50) DEFAULT 'Regular',
-                college VARCHAR(150),
-                program VARCHAR(150),
-                last_level_attended VARCHAR(100),
-                is_ip VARCHAR(10),
-                is_pwd VARCHAR(10),
-                has_medication VARCHAR(10),
-                is_working VARCHAR(10),
-                residence_type VARCHAR(50),
-                employer_name VARCHAR(255),
-                marital_status VARCHAR(50),
-                is_gifted VARCHAR(10),
-                needs_assistance VARCHAR(10),
-                school_type VARCHAR(50),
-                year_attended VARCHAR(50),
-                special_talents TEXT,
-                is_scholar VARCHAR(10),
-                siblings TEXT,
-                goodmoral_analysis JSONB,
-                disciplinary_status VARCHAR(50),
-                goodmoral_score INTEGER DEFAULT 0,
-                has_disciplinary_record BOOLEAN DEFAULT FALSE,
-                disciplinary_details TEXT,
-                other_documents JSONB,
-                document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
-                rejection_reason TEXT,
-                status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
-                
-                -- Transferee fields
-                is_transferee BOOLEAN DEFAULT FALSE,
-                previous_school VARCHAR(255),
-                previous_school_address TEXT,
-                previous_school_year VARCHAR(50),
-                year_level_to_enroll VARCHAR(50),
-                honorable_dismissal_path TEXT,
-                transfer_credentials_path TEXT,
-                
-                -- ARCHIVE FIELDS
-                is_archived BOOLEAN DEFAULT FALSE,
-                archived_at TIMESTAMP,
-                archived_by INTEGER,
-                archive_reason VARCHAR(50) CHECK (archive_reason IN ('GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER')),
-                archive_notes TEXT,
-                restored_at TIMESTAMP,
-                restored_by INTEGER,
-                
-                -- Notification tracking
-                last_reminder_sent TIMESTAMP,
-                reminder_count INTEGER DEFAULT 0,
-                
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (archived_by) REFERENCES users(id),
-                FOREIGN KEY (restored_by) REFERENCES users(id),
-                CONSTRAINT one_record_per_user UNIQUE (user_id)
-            )
-        ''')
-        print("   ✅ Created records table with archive support")
-        
-        print("📝 Creating notifications table...")
-        cur.execute('''
-            CREATE TABLE notifications (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER')),
-                title VARCHAR(255) NOT NULL,
-                message TEXT NOT NULL,
-                data JSONB,
-                is_read BOOLEAN DEFAULT FALSE,
-                is_emailed BOOLEAN DEFAULT FALSE,
-                emailed_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP,
-                priority INTEGER DEFAULT 0, -- 0: normal, 1: high, 2: urgent
-                
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        print("   ✅ Created notifications table")
-        
-        print("📝 Creating notification_preferences table...")
-        cur.execute('''
-            CREATE TABLE notification_preferences (
-                user_id INTEGER PRIMARY KEY,
-                email_missing_docs BOOLEAN DEFAULT TRUE,
-                email_approvals BOOLEAN DEFAULT TRUE,
-                email_reminders BOOLEAN DEFAULT TRUE,
-                email_rejections BOOLEAN DEFAULT TRUE,
-                sms_missing_docs BOOLEAN DEFAULT FALSE,
-                sms_reminders BOOLEAN DEFAULT FALSE,
-                in_app_all BOOLEAN DEFAULT TRUE,
-                
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        print("   ✅ Created notification_preferences table")
-        
-        conn.commit()
-        print("✅ Database tables created successfully")
-        
-        print("👑 Creating default Super Admin...")
-        cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
-        admin_user = cur.fetchone()
-        
-        if not admin_user:
-            password_hash = hash_password(ADMIN_PASSWORD)
-            
-            cur.execute("""
-                INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                ADMIN_USERNAME,
-                password_hash,
-                'System Administrator',
-                'admin@assiscan.com',
-                'SUPER_ADMIN',
-                True,
-                False
-            ))
-            admin_id = cur.fetchone()[0]
-            
-            # Create notification preferences for admin
-            cur.execute("""
-                INSERT INTO notification_preferences (user_id) VALUES (%s)
-            """, (admin_id,))
-            
-            print(f"✅ Default Super Admin created with ID: {admin_id}")
-            
-            print("📝 Inserting default colleges...")
-            default_colleges = [
-                ("CCJE", "College of Criminal Justice Education", "College of Criminal Justice Education", 1),
-                ("CEAS", "College of Education, Arts and Sciences", "College of Education, Arts and Sciences", 2),
-                ("CITEC", "College of Information Technology, Entertainment and Communication", "College of IT, Entertainment & Communication", 3),
-                ("CENAR", "College of Engineering and Architecture", "College of Engineering and Architecture", 4),
-                ("CBAA", "College of Business, Accountancy and Auditing", "College of Business, Accountancy & Auditing", 5)
-            ]
-            
-            for code, name, desc, order in default_colleges:
-                cur.execute("""
-                    INSERT INTO colleges (code, name, description, display_order, created_by) 
-                    VALUES (%s, %s, %s, %s, %s) 
-                    RETURNING id
-                """, (code, name, desc, order, admin_id))
-                college_id = cur.fetchone()[0]
-                
-                if code == "CCJE":
-                    cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
-                               (college_id, "Bachelor of Science in Criminology", 1, admin_id))
-                elif code == "CEAS":
-                    programs = [
-                        "Bachelor of Elementary Education",
-                        "Bachelor of Secondary Education", 
-                        "Bachelor of Science in Psychology",
-                        "Bachelor of Science in Legal Management",
-                        "Bachelor of Science in Social Work"
-                    ]
-                    for i, program in enumerate(programs):
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
-                                   (college_id, program, i+1, admin_id))
-                elif code == "CITEC":
-                    programs = [
-                        "Bachelor of Science in Information Technology",
-                        "Bachelor of Arts in Multimedia Arts"
-                    ]
-                    for i, program in enumerate(programs):
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
-                                   (college_id, program, i+1, admin_id))
-                elif code == "CENAR":
-                    programs = [
-                        "Bachelor of Science in Industrial Engineering",
-                        "Bachelor of Science in Computer Engineering",
-                        "Bachelor of Science in Architecture"
-                    ]
-                    for i, program in enumerate(programs):
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
-                                   (college_id, program, i+1, admin_id))
-                elif code == "CBAA":
-                    programs = [
-                        "Bachelor of Science in Business Administration",
-                        "Bachelor of Science in Accountancy",
-                        "Bachelor of Science in Internal Auditing"
-                    ]
-                    for i, program in enumerate(programs):
-                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
-                                   (college_id, program, i+1, admin_id))
-            
-            print("✅ Default colleges and programs inserted")
-        else:
-            print("✅ Super Admin already exists")
-        
-        conn.commit()
-        print("🎉 Database initialization COMPLETE!")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Database initialization error: {e}")
-        traceback.print_exc()
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-
-# ================= ENHANCED CHECK TABLES FUNCTION =================
-def check_tables_exist():
-    """Check if all required tables AND columns exist"""
-    print("🔍 Checking if tables exist...")
-    conn = get_db_connection()
-    if not conn:
-        return False
-    
-    try:
-        cur = conn.cursor()
-        
-        tables = ['users', 'user_sessions', 'colleges', 'programs', 'records', 'notifications', 'notification_preferences']
-        missing_tables = []
-        
-        for table in tables:
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = %s
-                )
-            """, (table,))
-            exists = cur.fetchone()[0]
-            
-            if not exists:
-                missing_tables.append(table)
-        
-        if missing_tables:
-            print(f"❌ Missing tables: {missing_tables}")
-            return False
-        
-        print("✅ All tables and columns exist")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error checking tables: {e}")
-        return False
-    finally:
-        conn.close()
-
-# Initialize database on startup
-print("\n" + "="*60)
-print("🔄 DATABASE INITIALIZATION")
-print("="*60)
-
-if not check_tables_exist():
-    print("⚠️ Tables missing, initializing database...")
-    if init_db():
-        print("✅ Database initialized successfully!")
-    else:
-        print("❌ Database initialization failed!")
-else:
-    print("✅ All tables already exist")
-
-# ================= USER MANAGEMENT FUNCTIONS =================
-def create_session(user_id, ip_address=None, user_agent=None):
-    """Create a new session for user"""
-    session_token = secrets.token_urlsafe(32)
-    conn = get_db_connection()
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO user_sessions (user_id, session_token, ip_address, user_agent)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id, session_token
-        """, (user_id, session_token, ip_address, user_agent))
-        
-        session_data = cur.fetchone()
-        conn.commit()
-        
-        return session_token
-    except Exception as e:
-        print(f"❌ Session creation error: {e}")
-        return None
-    finally:
-        conn.close()
-
-def validate_session(session_token):
-    """Validate user session"""
-    conn = get_db_connection()
-    
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT u.*, us.session_token 
-            FROM user_sessions us
-            JOIN users u ON us.user_id = u.id
-            WHERE us.session_token = %s 
-            AND us.is_active = TRUE 
-            AND u.is_active = TRUE
-            AND (us.logout_at IS NULL OR us.logout_at > NOW() - INTERVAL '24 hours')
-        """, (session_token,))
-        
-        user = cur.fetchone()
-        return user
-    except Exception as e:
-        print(f"❌ Session validation error: {e}")
-        return None
-    finally:
-        conn.close()
-
-def logout_session(session_token):
-    """Logout user session"""
-    conn = get_db_connection()
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE user_sessions 
-            SET logout_at = CURRENT_TIMESTAMP, is_active = FALSE 
-            WHERE session_token = %s
-        """, (session_token,))
-        conn.commit()
-        return True
-    except Exception as e:
-        print(f"❌ Session logout error: {e}")
-        return False
-    finally:
-        conn.close()
-
 # ================= NOTIFICATION FUNCTIONS =================
 def create_notification(user_id, notification_type, title, message, data=None, priority=0, expires_at=None):
-    """Create a new notification for a user"""
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         
-        # Check if user has preferences
-        cur.execute("SELECT * FROM notification_preferences WHERE user_id = %s", (user_id,))
-        prefs = cur.fetchone()
-        
-        if not prefs:
-            # Create default preferences
-            cur.execute("INSERT INTO notification_preferences (user_id) VALUES (%s)", (user_id,))
-        
-        # Insert notification
         cur.execute("""
             INSERT INTO notifications (user_id, type, title, message, data, priority, expires_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -787,21 +303,6 @@ def create_notification(user_id, notification_type, title, message, data=None, p
         
         notification_id = cur.fetchone()[0]
         conn.commit()
-        
-        # Check if should send email
-        should_email = False
-        if prefs:
-            if notification_type == 'MISSING_DOCUMENT' and prefs[1]:  # email_missing_docs
-                should_email = True
-            elif notification_type in ['RECORD_APPROVED', 'RECORD_REJECTED'] and prefs[2]:  # email_approvals
-                should_email = True
-            elif notification_type == 'ENROLLMENT_REMINDER' and prefs[3]:  # email_reminders
-                should_email = True
-        
-        if should_email:
-            # Send email asynchronously (you might want to use a queue system)
-            send_notification_email(user_id, title, message)
-        
         return notification_id
     except Exception as e:
         print(f"❌ Error creating notification: {e}")
@@ -810,7 +311,6 @@ def create_notification(user_id, notification_type, title, message, data=None, p
         conn.close()
 
 def send_notification_email(user_id, title, message):
-    """Send email notification to user"""
     conn = get_db_connection()
     try:
         cur = conn.cursor()
@@ -823,7 +323,6 @@ def send_notification_email(user_id, title, message):
         email = user[0]
         name = user[1]
         
-        # Send email using SMTP
         if EMAIL_SENDER and EMAIL_PASSWORD:
             try:
                 msg = MIMEMultipart()
@@ -852,10 +351,6 @@ def send_notification_email(user_id, title, message):
                 server.send_message(msg)
                 server.quit()
                 
-                # Mark as emailed
-                cur.execute("UPDATE notifications SET is_emailed = TRUE, emailed_at = CURRENT_TIMESTAMP WHERE id = %s", (notification_id,))
-                conn.commit()
-                
                 return True
             except Exception as e:
                 print(f"❌ SMTP email error: {e}")
@@ -867,17 +362,14 @@ def send_notification_email(user_id, title, message):
         conn.close()
 
 def check_missing_documents(record_id=None):
-    """Check for missing documents and create notifications"""
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         query = """
-            SELECT r.*, u.id as user_id, u.email, u.full_name, 
-                   np.email_missing_docs
+            SELECT r.*, u.id as user_id, u.email, u.full_name
             FROM records r
             JOIN users u ON r.user_id = u.id
-            LEFT JOIN notification_preferences np ON u.id = np.user_id
             WHERE r.is_archived = FALSE
         """
         
@@ -892,7 +384,6 @@ def check_missing_documents(record_id=None):
         for record in records:
             missing_docs = []
             
-            # Check document status
             doc_status = record.get('document_status', {})
             if isinstance(doc_status, str):
                 try:
@@ -909,7 +400,6 @@ def check_missing_documents(record_id=None):
             if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
                 missing_docs.append("Good Moral Certificate")
             
-            # Check transferee documents
             if record.get('is_transferee'):
                 if not record.get('honorable_dismissal_path'):
                     missing_docs.append("Honorable Dismissal")
@@ -917,7 +407,6 @@ def check_missing_documents(record_id=None):
                     missing_docs.append("Transfer Credentials")
             
             if missing_docs:
-                # Check if already notified recently
                 cur.execute("""
                     SELECT created_at FROM notifications 
                     WHERE user_id = %s AND type = 'MISSING_DOCUMENT' 
@@ -928,7 +417,6 @@ def check_missing_documents(record_id=None):
                 
                 should_notify = True
                 if last_notification:
-                    # Don't notify more than once every 3 days
                     days_since = (datetime.now() - last_notification[0]).days
                     if days_since < 3:
                         should_notify = False
@@ -956,8 +444,493 @@ def check_missing_documents(record_id=None):
     finally:
         conn.close()
 
+# ================= MISSING DOCUMENTS ENDPOINT =================
+@app.route('/api/missing-documents', methods=['GET'])
+@login_required
+@permission_required('view_all_records')
+def get_missing_documents():
+    """Get all students with missing documents (Admin only)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed", "students": [], "total_count": 0}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT r.id, r.user_id, r.name, r.lrn, r.college, r.program, 
+                   r.student_type, r.status, r.updated_at, r.is_transferee,
+                   r.image_path, r.form137_path, r.goodmoral_path,
+                   r.honorable_dismissal_path, r.transfer_credentials_path,
+                   r.document_status, r.email, r.mobile_no,
+                   u.full_name, u.email as user_email
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.is_archived = FALSE 
+              AND u.role = 'STUDENT'
+            ORDER BY r.updated_at DESC
+        """)
+        
+        records = cur.fetchall()
+        conn.close()
+        
+        missing_docs_list = []
+        
+        for record in records:
+            missing_docs = []
+            
+            # Parse document status
+            doc_status = record.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            # Check PSA
+            if not doc_status.get('psa') and not record.get('image_path'):
+                missing_docs.append({
+                    'type': 'psa',
+                    'name': 'PSA Birth Certificate'
+                })
+            
+            # Check Form 137
+            if not doc_status.get('form137') and not record.get('form137_path'):
+                missing_docs.append({
+                    'type': 'form137',
+                    'name': 'Form 137'
+                })
+            
+            # Check Good Moral
+            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
+                missing_docs.append({
+                    'type': 'goodmoral',
+                    'name': 'Good Moral Certificate'
+                })
+            
+            # Check transferee documents
+            if record.get('is_transferee'):
+                if not record.get('honorable_dismissal_path'):
+                    missing_docs.append({
+                        'type': 'honorable_dismissal',
+                        'name': 'Honorable Dismissal'
+                    })
+                if not record.get('transfer_credentials_path'):
+                    missing_docs.append({
+                        'type': 'transfer_credentials',
+                        'name': 'Transfer Credentials'
+                    })
+            
+            # Only include if there are missing documents
+            if missing_docs:
+                record_dict = dict(record)
+                record_dict['missing_documents'] = missing_docs
+                record_dict['missing_count'] = len(missing_docs)
+                missing_docs_list.append(record_dict)
+        
+        # Sort by most missing documents first
+        missing_docs_list.sort(key=lambda x: x['missing_count'], reverse=True)
+        
+        return jsonify({
+            "students": missing_docs_list,
+            "total_count": len(missing_docs_list)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in get_missing_documents: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e), "students": [], "total_count": 0}), 500
+
+# ================= FIXED SEND REMINDERS ENDPOINT =================
+@app.route('/api/missing-documents/remind-all', methods=['POST'])
+@login_required
+@permission_required('send_notifications')
+def remind_all_missing_documents():
+    """Send reminders to all students with missing documents"""
+    try:
+        # Get request data (optional - for single user reminder)
+        data = request.get_json(silent=True) or {}
+        specific_user_id = data.get('user_id')
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Base query
+        query = """
+            SELECT r.*, u.id as user_id, u.email, u.full_name,
+                   u.email_notifications, u.mobile_number
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.is_archived = FALSE 
+              AND u.role = 'STUDENT'
+        """
+        
+        params = []
+        
+        # If specific user_id is provided
+        if specific_user_id:
+            query += " AND u.id = %s"
+            params.append(specific_user_id)
+        
+        cur.execute(query, params)
+        
+        records = cur.fetchall()
+        
+        sent_count = 0
+        errors = []
+        
+        for record in records:
+            try:
+                missing_docs = []
+                
+                # Parse document status
+                doc_status = record.get('document_status', {})
+                if isinstance(doc_status, str):
+                    try:
+                        doc_status = json.loads(doc_status)
+                    except:
+                        doc_status = {}
+                
+                # Check PSA
+                if not doc_status.get('psa') and not record.get('image_path'):
+                    missing_docs.append("PSA Birth Certificate")
+                
+                # Check Form 137
+                if not doc_status.get('form137') and not record.get('form137_path'):
+                    missing_docs.append("Form 137")
+                
+                # Check Good Moral
+                if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
+                    missing_docs.append("Good Moral Certificate")
+                
+                # Check transferee documents
+                if record.get('is_transferee'):
+                    if not record.get('honorable_dismissal_path'):
+                        missing_docs.append("Honorable Dismissal")
+                    if not record.get('transfer_credentials_path'):
+                        missing_docs.append("Transfer Credentials")
+                
+                # Only send notification if there are missing documents
+                if missing_docs:
+                    doc_list = ", ".join(missing_docs)
+                    message = f"Reminder: You are missing the following required documents: {doc_list}. Please upload them to complete your application."
+                    
+                    # Create notification in database
+                    notification_id = create_notification(
+                        user_id=record['user_id'],
+                        notification_type='MISSING_DOCUMENT',
+                        title="Reminder: Missing Documents",
+                        message=message,
+                        data={
+                            'record_id': record['id'],
+                            'missing_docs': missing_docs
+                        },
+                        priority=1
+                    )
+                    
+                    if notification_id:
+                        sent_count += 1
+                        
+                        # Send email if user has email notifications enabled
+                        if record.get('email_notifications') and record.get('email'):
+                            send_notification_email(
+                                user_id=record['user_id'],
+                                title="Reminder: Missing Documents",
+                                message=message
+                            )
+                            
+            except Exception as e:
+                error_msg = f"Error processing user {record.get('user_id')}: {str(e)}"
+                print(f"❌ {error_msg}")
+                errors.append(error_msg)
+                continue
+        
+        conn.close()
+        
+        response_data = {
+            "success": True,
+            "message": f"Sent reminders to {sent_count} students",
+            "sent_count": sent_count
+        }
+        
+        if errors:
+            response_data["errors"] = errors
+            
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        print(f"❌ Error in remind_all_missing_documents: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "message": "Failed to send reminders"
+        }), 500
+
+# ================= FIXED SINGLE REMINDER ENDPOINT =================
+@app.route('/api/missing-documents/remind/<int:user_id>', methods=['POST'])
+@login_required
+@permission_required('send_notifications')
+def remind_single_user(user_id):
+    """Send reminder to a specific student"""
+    try:
+        # Reuse the remind_all function with specific user_id
+        return remind_all_missing_documents()
+        
+    except Exception as e:
+        print(f"❌ Error sending reminder to user {user_id}: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+# ================= NOTIFICATION ENDPOINTS =================
+@app.route('/api/notifications', methods=['GET'])
+@login_required
+def get_notifications():
+    """Get notifications for current user"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        limit = int(request.args.get('limit', 50))
+        
+        query = """
+            SELECT * FROM notifications 
+            WHERE user_id = %s
+        """
+        params = [session['user_id']]
+        
+        if unread_only:
+            query += " AND is_read = FALSE"
+        
+        query += " ORDER BY priority DESC, created_at DESC LIMIT %s"
+        params.append(limit)
+        
+        cur.execute(query, params)
+        notifications = cur.fetchall()
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM notifications 
+            WHERE user_id = %s AND is_read = FALSE
+        """, (session['user_id'],))
+        unread_count = cur.fetchone()['count']
+        
+        conn.close()
+        
+        for n in notifications:
+            n['created_at'] = n['created_at'].isoformat() if n['created_at'] else None
+            n['expires_at'] = n['expires_at'].isoformat() if n['expires_at'] else None
+        
+        return jsonify({
+            "notifications": notifications,
+            "unread_count": unread_count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting notifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE 
+            WHERE id = %s AND user_id = %s
+            RETURNING id
+        """, (notification_id, session['user_id']))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "Notification not found"}), 404
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        print(f"❌ Error marking notification read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE 
+            WHERE user_id = %s AND is_read = FALSE
+        """, (session['user_id'],))
+        
+        updated_count = cur.rowcount
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error marking all notifications read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/preferences', methods=['GET'])
+@login_required
+def get_notification_preferences():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT * FROM notification_preferences 
+            WHERE user_id = %s
+        """, (session['user_id'],))
+        
+        prefs = cur.fetchone()
+        conn.close()
+        
+        if not prefs:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO notification_preferences (user_id) 
+                VALUES (%s) RETURNING user_id
+            """, (session['user_id'],))
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                "email_missing_docs": True,
+                "email_approvals": True,
+                "email_reminders": True,
+                "email_rejections": True,
+                "sms_missing_docs": False,
+                "sms_reminders": False,
+                "in_app_all": True
+            })
+        
+        return jsonify(prefs)
+        
+    except Exception as e:
+        print(f"❌ Error getting notification preferences: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications/preferences', methods=['PUT'])
+@login_required
+def update_notification_preferences():
+    try:
+        data = request.json
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        updates = []
+        values = []
+        
+        pref_fields = [
+            'email_missing_docs', 'email_approvals', 'email_reminders',
+            'email_rejections', 'sms_missing_docs', 'sms_reminders',
+            'in_app_all'
+        ]
+        
+        for field in pref_fields:
+            if field in data:
+                updates.append(f"{field} = %s")
+                values.append(data[field])
+        
+        if not updates:
+            conn.close()
+            return jsonify({"error": "No preferences to update"}), 400
+        
+        values.append(session['user_id'])
+        
+        cur.execute(f"""
+            UPDATE notification_preferences 
+            SET {', '.join(updates)}
+            WHERE user_id = %s
+        """, values)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Preferences updated successfully"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error updating notification preferences: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ================= ENROLLMENT SETTINGS ENDPOINTS =================
+@app.route('/api/enrollment/settings', methods=['GET'])
+@login_required
+def get_enrollment_settings_endpoint():
+    try:
+        settings = get_enrollment_settings()
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enrollment/settings', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def update_enrollment_settings():
+    try:
+        data = request.json
+        if save_enrollment_settings(data):
+            return jsonify({
+                "success": True,
+                "message": "Enrollment settings updated successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to save settings"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enrollment/check-reminders', methods=['POST'])
+@login_required
+@permission_required('manage_settings')
+def trigger_reminder_check():
+    try:
+        send_enrollment_reminders()
+        return jsonify({
+            "success": True,
+            "message": "Reminder check completed"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def send_enrollment_reminders():
-    """Send enrollment reminders to students with incomplete requirements"""
     settings = get_enrollment_settings()
     
     if not settings.get('auto_send_reminders'):
@@ -967,7 +940,6 @@ def send_enrollment_reminders():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get students with incomplete records
         cur.execute("""
             SELECT r.*, u.id as user_id, u.email, u.full_name,
                    np.email_reminders
@@ -984,7 +956,6 @@ def send_enrollment_reminders():
         records = cur.fetchall()
         
         for record in records:
-            # Calculate days until enrollment deadline
             enrollment_end = datetime.strptime(settings['enrollment_end'], '%Y-%m-%d')
             days_until_deadline = (enrollment_end - datetime.now()).days
             
@@ -1015,7 +986,6 @@ def send_enrollment_reminders():
                 expires_at=enrollment_end
             )
             
-            # Update reminder tracking
             cur.execute("""
                 UPDATE records 
                 SET last_reminder_sent = CURRENT_TIMESTAMP,
@@ -1033,7 +1003,6 @@ def send_enrollment_reminders():
 
 # ================= EMAIL FUNCTION =================
 def send_email_notification(recipient_email, student_name, file_paths, student_data=None):
-    """Send email notification using SendGrid or SMTP"""
     print(f"\n📧 Preparing email for: {recipient_email}")
     
     if not recipient_email or not isinstance(recipient_email, str):
@@ -1070,7 +1039,6 @@ def send_email_notification(recipient_email, student_name, file_paths, student_d
             else:
                 goodmoral_status = "📄 Good Moral Status: Pending analysis"
         
-        # Check for missing documents
         missing_docs = []
         doc_status = student_data.get('document_status', {})
         if isinstance(doc_status, str):
@@ -1188,7 +1156,6 @@ Best regards,
 The AssiScan Team
 """
         
-        # Try SendGrid first if available
         if SENDGRID_API_KEY:
             try:
                 url = "https://api.sendgrid.com/v3/mail/send"
@@ -1214,7 +1181,6 @@ The AssiScan Team
                 if response.status_code == 202:
                     print(f"✅ Email sent via SendGrid to {recipient_email}")
                     
-                    # Create notification for email sent
                     if student_data and 'user_id' in student_data:
                         create_notification(
                             user_id=student_data['user_id'],
@@ -1228,7 +1194,6 @@ The AssiScan Team
             except Exception as e:
                 print(f"⚠️ SendGrid failed: {e}")
         
-        # Fallback to SMTP
         if EMAIL_SENDER and EMAIL_PASSWORD:
             try:
                 msg = MIMEMultipart()
@@ -1246,7 +1211,6 @@ The AssiScan Team
                 
                 print(f"✅ Email sent via SMTP to {recipient_email}")
                 
-                # Create notification
                 if student_data and 'user_id' in student_data:
                     create_notification(
                         user_id=student_data['user_id'],
@@ -1268,7 +1232,6 @@ The AssiScan Team
 
 # ================= HELPER FUNCTIONS =================
 def save_multiple_files(files, prefix):
-    """Save uploaded files and return paths and PIL images"""
     saved_paths = []
     pil_images = []
     
@@ -1288,7 +1251,6 @@ def save_multiple_files(files, prefix):
     return saved_paths, pil_images
 
 def move_to_archive(filename):
-    """Move a file from uploads to archives folder"""
     if not filename:
         return filename
     
@@ -1297,13 +1259,11 @@ def move_to_archive(filename):
         if not os.path.exists(source_path):
             return filename
         
-        # Create archive subfolder based on date
         date_folder = datetime.now().strftime('%Y-%m')
         archive_subfolder = os.path.join(app.config['ARCHIVE_FOLDER'], date_folder)
         if not os.path.exists(archive_subfolder):
             os.makedirs(archive_subfolder, exist_ok=True)
         
-        # Move file
         dest_path = os.path.join(archive_subfolder, filename)
         os.rename(source_path, dest_path)
         print(f"📦 Moved file to archive: {filename}")
@@ -1314,12 +1274,10 @@ def move_to_archive(filename):
         return filename
 
 def restore_from_archive(archive_path):
-    """Restore a file from archives back to uploads"""
     if not archive_path:
         return archive_path
     
     try:
-        # If it's just a filename without path, assume it's in uploads
         if '/' not in archive_path:
             return archive_path
         
@@ -1330,7 +1288,6 @@ def restore_from_archive(archive_path):
         filename = os.path.basename(archive_path)
         dest_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        # Move file back
         os.rename(source_path, dest_path)
         print(f"📦 Restored file from archive: {filename}")
         
@@ -1339,24 +1296,22 @@ def restore_from_archive(archive_path):
         print(f"❌ Error restoring file from archive: {e}")
         return archive_path
 
-# ================= FIXED EXTRACT WITH GEMINI (USING GEMINI 3 FLASH) =================
+# ================= FIXED EXTRACT WITH GEMINI =================
 def extract_with_gemini(prompt, images):
-    """Use Gemini for text extraction with REST transport (SSL-safe)"""
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        # UPDATED MODEL NAMES - Gamitin ang Gemini 3 Flash models
         model_names = [
-            "models/gemini-3-flash-preview",  # New Gemini 3 model
-            "gemini-3-flash-preview",         # Fallback
-            "models/gemini-3-pro-preview",    # Pro version
-            "gemini-3-pro-preview",           # Pro fallback
-            "models/gemini-2.5-flash",        # Try 2.5 if available
+            "models/gemini-3-flash-preview",
+            "gemini-3-flash-preview",
+            "models/gemini-3-pro-preview",
+            "gemini-3-pro-preview",
+            "models/gemini-2.5-flash",
             "gemini-2.5-flash",               
             "models/gemini-2.0-flash",
             "gemini-2.0-flash",
-            "models/gemini-1.5-flash",        # Old reliable fallback
+            "models/gemini-1.5-flash",
             "gemini-1.5-flash",
             "models/gemini-1.5-pro",
             "gemini-1.5-pro",
@@ -1364,7 +1319,6 @@ def extract_with_gemini(prompt, images):
             "gemini-pro"
         ]
         
-        # AGGRESSIVE SAFETY SETTINGS - para hindi ma-block ang content
         safety_settings = [
             {
                 "category": "HARM_CATEGORY_HARASSMENT",
@@ -1390,15 +1344,12 @@ def extract_with_gemini(prompt, images):
             try:
                 print(f"🤖 Trying model: {model_name} (REST mode)")
                 
-                # Create model with REST transport
                 model = genai.GenerativeModel(model_name)
                 
-                # Prepare content
                 content_parts = [prompt]
                 for img in images:
                     content_parts.append(img)
                 
-                # Generate with maximum safety settings
                 response = model.generate_content(
                     content_parts,
                     generation_config={
@@ -1410,7 +1361,6 @@ def extract_with_gemini(prompt, images):
                     safety_settings=safety_settings
                 )
                 
-                # Check if response was blocked
                 if response.prompt_feedback and response.prompt_feedback.block_reason:
                     block_reason = response.prompt_feedback.block_reason
                     print(f"⚠️ Content was blocked: {block_reason}")
@@ -1428,7 +1378,6 @@ def extract_with_gemini(prompt, images):
                 last_error = model_error
                 continue
         
-        # If all SDK models fail, use direct REST API with Gemini 3 Flash
         print("⚠️ All SDK models failed, using direct REST API fallback...")
         return extract_direct_rest_api_fixed(prompt, images)
         
@@ -1438,9 +1387,7 @@ def extract_with_gemini(prompt, images):
         raise Exception(f"Extraction failed: {str(e)[:200]}")
 
 def extract_direct_rest_api_fixed(prompt, images):
-    """Fixed direct REST API call with correct model names"""
     try:
-        # Convert images to base64
         image_parts = []
         for img in images:
             img_byte_arr = io.BytesIO()
@@ -1453,7 +1400,6 @@ def extract_direct_rest_api_fixed(prompt, images):
                 }
             })
         
-        # Try multiple model names sa direct REST API
         model_names = [
             "gemini-3-flash-preview",
             "gemini-3-pro-preview",
@@ -1466,7 +1412,6 @@ def extract_direct_rest_api_fixed(prompt, images):
         
         for model_name in model_names:
             try:
-                # Gamitin ang v1 sa halip na v1beta
                 url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
                 
                 print(f"📤 Trying direct REST with model: {model_name}")
@@ -1532,7 +1477,6 @@ def extract_direct_rest_api_fixed(prompt, images):
         raise e
 
 def calculate_goodmoral_score(analysis_data):
-    """Calculate Good Moral score based on analysis"""
     score = 100
     
     if analysis_data.get('has_disciplinary_record'):
@@ -1566,7 +1510,6 @@ def calculate_goodmoral_score(analysis_data):
     return score, status
 
 def update_document_status(record_id, doc_type, has_file):
-    """Update document status in database and check for missing docs"""
     conn = get_db_connection()
     try:
         cur = conn.cursor()
@@ -1588,7 +1531,6 @@ def update_document_status(record_id, doc_type, has_file):
         old_value = status.get(doc_type, False)
         status[doc_type] = has_file
         
-        # If document was just uploaded, send notification
         if not old_value and has_file:
             user_id = result[2] if result and len(result) > 2 else None
             if user_id:
@@ -1617,10 +1559,9 @@ def update_document_status(record_id, doc_type, has_file):
             
             if all_docs:
                 overall_status = 'PENDING'
-                # Notify admin that record is complete and pending review
                 if user_id:
                     create_notification(
-                        user_id=1,  # Admin user ID
+                        user_id=1,
                         notification_type='SYSTEM',
                         title="Record Ready for Review",
                         message=f"Student record #{record_id} has all documents and is ready for review.",
@@ -1643,7 +1584,6 @@ def update_document_status(record_id, doc_type, has_file):
         conn.commit()
         print(f"📄 Document status updated for record {record_id}: {doc_type}={has_file}")
         
-        # Check for missing documents after update
         check_missing_documents(record_id)
         
         return status, overall_status
@@ -1657,7 +1597,6 @@ def update_document_status(record_id, doc_type, has_file):
 # ================= DEBUG MIDDLEWARE =================
 @app.before_request
 def log_request_info():
-    """Log all requests for debugging"""
     if request.path not in ['/static/', '/favicon.ico']:
         print(f"\n{'='*60}")
         print(f"🌐 {request.method} {request.path}")
@@ -1668,19 +1607,17 @@ def log_request_info():
 # ================= TEST GEMINI ENDPOINT =================
 @app.route('/test-gemini', methods=['GET'])
 def test_gemini():
-    """Test Gemini connection"""
     try:
         import google.generativeai as genai
         models = list(genai.list_models())
         
-        # List all available models
         available_models = [m.name for m in models]
         
         return jsonify({
             "status": "success",
             "message": f"Connected to Gemini. Found {len(models)} models.",
             "transport": "REST (SSL errors bypassed)",
-            "models": available_models[:20]  # Show first 20 models
+            "models": available_models[:20]
         })
     except Exception as e:
         return jsonify({
@@ -1689,424 +1626,9 @@ def test_gemini():
             "transport": "REST"
         }), 500
 
-# ================= NOTIFICATION ENDPOINTS =================
-@app.route('/api/notifications', methods=['GET'])
-@login_required
-def get_notifications():
-    """Get notifications for current user"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Get query parameters
-        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
-        limit = int(request.args.get('limit', 50))
-        
-        query = """
-            SELECT * FROM notifications 
-            WHERE user_id = %s
-        """
-        params = [session['user_id']]
-        
-        if unread_only:
-            query += " AND is_read = FALSE"
-        
-        query += " ORDER BY priority DESC, created_at DESC LIMIT %s"
-        params.append(limit)
-        
-        cur.execute(query, params)
-        notifications = cur.fetchall()
-        
-        # Get unread count
-        cur.execute("""
-            SELECT COUNT(*) FROM notifications 
-            WHERE user_id = %s AND is_read = FALSE
-        """, (session['user_id'],))
-        unread_count = cur.fetchone()['count']
-        
-        conn.close()
-        
-        for n in notifications:
-            n['created_at'] = n['created_at'].isoformat() if n['created_at'] else None
-            n['expires_at'] = n['expires_at'].isoformat() if n['expires_at'] else None
-        
-        return jsonify({
-            "notifications": notifications,
-            "unread_count": unread_count
-        })
-        
-    except Exception as e:
-        print(f"❌ Error getting notifications: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
-@login_required
-def mark_notification_read(notification_id):
-    """Mark a notification as read"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor()
-        
-        cur.execute("""
-            UPDATE notifications 
-            SET is_read = TRUE 
-            WHERE id = %s AND user_id = %s
-            RETURNING id
-        """, (notification_id, session['user_id']))
-        
-        if cur.rowcount == 0:
-            conn.close()
-            return jsonify({"error": "Notification not found"}), 404
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({"success": True})
-        
-    except Exception as e:
-        print(f"❌ Error marking notification read: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/notifications/read-all', methods=['POST'])
-@login_required
-def mark_all_notifications_read():
-    """Mark all notifications as read for current user"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor()
-        
-        cur.execute("""
-            UPDATE notifications 
-            SET is_read = TRUE 
-            WHERE user_id = %s AND is_read = FALSE
-        """, (session['user_id'],))
-        
-        updated_count = cur.rowcount
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "success": True,
-            "updated_count": updated_count
-        })
-        
-    except Exception as e:
-        print(f"❌ Error marking all notifications read: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/notifications/preferences', methods=['GET'])
-@login_required
-def get_notification_preferences():
-    """Get notification preferences for current user"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT * FROM notification_preferences 
-            WHERE user_id = %s
-        """, (session['user_id'],))
-        
-        prefs = cur.fetchone()
-        conn.close()
-        
-        if not prefs:
-            # Create default preferences
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO notification_preferences (user_id) 
-                VALUES (%s) RETURNING user_id
-            """, (session['user_id'],))
-            conn.commit()
-            conn.close()
-            
-            return jsonify({
-                "email_missing_docs": True,
-                "email_approvals": True,
-                "email_reminders": True,
-                "email_rejections": True,
-                "sms_missing_docs": False,
-                "sms_reminders": False,
-                "in_app_all": True
-            })
-        
-        return jsonify(prefs)
-        
-    except Exception as e:
-        print(f"❌ Error getting notification preferences: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/notifications/preferences', methods=['PUT'])
-@login_required
-def update_notification_preferences():
-    """Update notification preferences for current user"""
-    try:
-        data = request.json
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor()
-        
-        updates = []
-        values = []
-        
-        pref_fields = [
-            'email_missing_docs', 'email_approvals', 'email_reminders',
-            'email_rejections', 'sms_missing_docs', 'sms_reminders',
-            'in_app_all'
-        ]
-        
-        for field in pref_fields:
-            if field in data:
-                updates.append(f"{field} = %s")
-                values.append(data[field])
-        
-        if not updates:
-            conn.close()
-            return jsonify({"error": "No preferences to update"}), 400
-        
-        values.append(session['user_id'])
-        
-        cur.execute(f"""
-            UPDATE notification_preferences 
-            SET {', '.join(updates)}
-            WHERE user_id = %s
-        """, values)
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "success": True,
-            "message": "Preferences updated successfully"
-        })
-        
-    except Exception as e:
-        print(f"❌ Error updating notification preferences: {e}")
-        return jsonify({"error": str(e)}), 500
-
-# ================= MISSING DOCUMENTS ENDPOINTS =================
-@app.route('/api/missing-documents', methods=['GET'])
-@login_required
-@permission_required('view_all_records')
-def get_missing_documents():
-    """Get all students with missing documents (Admin only)"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT r.*, u.id as user_id, u.email, u.full_name,
-                   u.mobile_number
-            FROM records r
-            JOIN users u ON r.user_id = u.id
-            WHERE r.is_archived = FALSE 
-              AND r.status IN ('INCOMPLETE', 'PENDING')
-            ORDER BY r.updated_at DESC
-        """)
-        
-        records = cur.fetchall()
-        
-        missing_docs_list = []
-        for record in records:
-            missing_docs = []
-            
-            doc_status = record.get('document_status', {})
-            if isinstance(doc_status, str):
-                try:
-                    doc_status = json.loads(doc_status)
-                except:
-                    doc_status = {}
-            
-            if not doc_status.get('psa') and not record.get('image_path'):
-                missing_docs.append({
-                    'type': 'psa',
-                    'name': 'PSA Birth Certificate'
-                })
-            
-            if not doc_status.get('form137') and not record.get('form137_path'):
-                missing_docs.append({
-                    'type': 'form137',
-                    'name': 'Form 137'
-                })
-            
-            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
-                missing_docs.append({
-                    'type': 'goodmoral',
-                    'name': 'Good Moral Certificate'
-                })
-            
-            if record.get('is_transferee'):
-                if not record.get('honorable_dismissal_path'):
-                    missing_docs.append({
-                        'type': 'honorable_dismissal',
-                        'name': 'Honorable Dismissal'
-                    })
-                if not record.get('transfer_credentials_path'):
-                    missing_docs.append({
-                        'type': 'transfer_credentials',
-                        'name': 'Transfer Credentials'
-                    })
-            
-            if missing_docs:
-                record['missing_documents'] = missing_docs
-                record['missing_count'] = len(missing_docs)
-                missing_docs_list.append(record)
-        
-        conn.close()
-        
-        # Sort by most missing documents first
-        missing_docs_list.sort(key=lambda x: x['missing_count'], reverse=True)
-        
-        return jsonify({
-            "students": missing_docs_list,
-            "total_count": len(missing_docs_list)
-        })
-        
-    except Exception as e:
-        print(f"❌ Error getting missing documents: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/missing-documents/remind-all', methods=['POST'])
-@login_required
-@permission_required('send_notifications')
-def remind_all_missing_documents():
-    """Send reminders to all students with missing documents"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT r.*, u.id as user_id, u.email, u.full_name,
-                   np.email_missing_docs
-            FROM records r
-            JOIN users u ON r.user_id = u.id
-            LEFT JOIN notification_preferences np ON u.id = np.user_id
-            WHERE r.is_archived = FALSE 
-              AND r.status IN ('INCOMPLETE', 'PENDING')
-        """)
-        
-        records = cur.fetchall()
-        
-        sent_count = 0
-        for record in records:
-            missing_docs = []
-            
-            doc_status = record.get('document_status', {})
-            if isinstance(doc_status, str):
-                try:
-                    doc_status = json.loads(doc_status)
-                except:
-                    doc_status = {}
-            
-            if not doc_status.get('psa') and not record.get('image_path'):
-                missing_docs.append("PSA Birth Certificate")
-            if not doc_status.get('form137') and not record.get('form137_path'):
-                missing_docs.append("Form 137")
-            if not doc_status.get('goodmoral') and not record.get('goodmoral_path'):
-                missing_docs.append("Good Moral Certificate")
-            
-            if record.get('is_transferee'):
-                if not record.get('honorable_dismissal_path'):
-                    missing_docs.append("Honorable Dismissal")
-                if not record.get('transfer_credentials_path'):
-                    missing_docs.append("Transfer Credentials")
-            
-            if missing_docs:
-                doc_list = ", ".join(missing_docs)
-                message = f"Reminder: You are missing the following required documents: {doc_list}. Please upload them to complete your application."
-                
-                create_notification(
-                    user_id=record['user_id'],
-                    notification_type='MISSING_DOCUMENT',
-                    title="Reminder: Missing Documents",
-                    message=message,
-                    data={
-                        'record_id': record['id'],
-                        'missing_docs': missing_docs
-                    },
-                    priority=1
-                )
-                sent_count += 1
-        
-        conn.close()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Sent reminders to {sent_count} students",
-            "sent_count": sent_count
-        })
-        
-    except Exception as e:
-        print(f"❌ Error sending reminders: {e}")
-        return jsonify({"error": str(e)}), 500
-
-# ================= ENROLLMENT SETTINGS ENDPOINTS =================
-@app.route('/api/enrollment/settings', methods=['GET'])
-@login_required
-def get_enrollment_settings_endpoint():
-    """Get enrollment period settings"""
-    try:
-        settings = get_enrollment_settings()
-        return jsonify(settings)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/enrollment/settings', methods=['POST'])
-@login_required
-@permission_required('manage_settings')
-def update_enrollment_settings():
-    """Update enrollment period settings"""
-    try:
-        data = request.json
-        if save_enrollment_settings(data):
-            return jsonify({
-                "success": True,
-                "message": "Enrollment settings updated successfully"
-            })
-        else:
-            return jsonify({"error": "Failed to save settings"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/enrollment/check-reminders', methods=['POST'])
-@login_required
-@permission_required('manage_settings')
-def trigger_reminder_check():
-    """Manually trigger enrollment reminder check"""
-    try:
-        send_enrollment_reminders()
-        return jsonify({
-            "success": True,
-            "message": "Reminder check completed"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 # ================= DATABASE INITIALIZATION ENDPOINT =================
 @app.route('/api/init-db', methods=['POST'])
 def initialize_database():
-    """Endpoint to manually initialize database"""
     try:
         auth_header = request.headers.get('Authorization')
         if not auth_header or auth_header != f"Bearer {app.secret_key}":
@@ -2130,7 +1652,6 @@ def initialize_database():
 
 @app.route('/api/check-db', methods=['GET'])
 def check_database():
-    """Check database status"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2169,7 +1690,6 @@ def check_database():
 # ================= USER AUTHENTICATION ROUTES =================
 @app.route('/api/login', methods=['POST'])
 def login_user():
-    """User login endpoint"""
     try:
         data = request.json
         username = data.get('username')
@@ -2228,7 +1748,6 @@ def login_user():
         session['session_token'] = session_token
         session['requires_password_reset'] = user['requires_password_reset']
         
-        # Create login notification
         create_notification(
             user_id=user['id'],
             notification_type='SYSTEM',
@@ -2265,7 +1784,6 @@ def login_user():
 @app.route('/api/logout', methods=['POST'])
 @login_required
 def logout_user():
-    """User logout endpoint"""
     try:
         session_token = session.get('session_token')
         if session_token:
@@ -2282,7 +1800,6 @@ def logout_user():
 
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
-    """Simple logout route that redirects to login page"""
     print("🔍 /logout route accessed")
     
     session_token = session.get('session_token')
@@ -2296,7 +1813,6 @@ def logout():
 
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
-    """Check if user session is valid"""
     print(f"🔍 Checking session: {dict(session)}")
     
     if 'user_id' not in session:
@@ -2314,7 +1830,6 @@ def check_session():
     if user:
         print(f"✅ Valid session for user: {user['username']}, role: {user['role']}")
         
-        # Get unread notification count
         conn = get_db_connection()
         if conn:
             cur = conn.cursor()
@@ -2347,7 +1862,6 @@ def check_session():
 @app.route('/api/change-password', methods=['POST'])
 @login_required
 def change_password():
-    """Change user password"""
     try:
         data = request.json
         current_password = data.get('current_password')
@@ -2397,7 +1911,6 @@ def change_password():
         
         session['requires_password_reset'] = False
         
-        # Create notification
         create_notification(
             user_id=session['user_id'],
             notification_type='SYSTEM',
@@ -2418,7 +1931,6 @@ def change_password():
 @app.route('/api/check-password-reset', methods=['GET'])
 @login_required
 def check_password_reset():
-    """Check if user needs to reset password"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2445,7 +1957,6 @@ def check_password_reset():
 # ================= CHANGE PASSWORD PAGE =================
 @app.route('/change-password', methods=['GET'])
 def change_password_page():
-    """Render change password page"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -2460,7 +1971,6 @@ def change_password_page():
 @login_required
 @permission_required('manage_users')
 def get_users():
-    """Get all users (Super Admin only)"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2501,7 +2011,6 @@ def get_users():
 @login_required
 @permission_required('manage_users')
 def create_user():
-    """Create new user (Super Admin only)"""
     conn = None
     try:
         data = request.json
@@ -2557,7 +2066,6 @@ def create_user():
         
         new_user = cur.fetchone()
         
-        # Create notification preferences
         cur.execute("""
             INSERT INTO notification_preferences (user_id) VALUES (%s)
         """, (new_user[0],))
@@ -2593,7 +2101,6 @@ def create_user():
 @login_required
 @permission_required('manage_users')
 def update_user(user_id):
-    """Update user (Super Admin only)"""
     conn = None
     try:
         data = request.json
@@ -2721,7 +2228,6 @@ def update_user(user_id):
 @login_required
 @permission_required('manage_users')
 def delete_user(user_id):
-    """Delete user (Soft delete - Super Admin only)"""
     try:
         if user_id == session['user_id']:
             return jsonify({"error": "Cannot delete your own account"}), 400
@@ -2757,7 +2263,6 @@ def delete_user(user_id):
 @login_required
 @permission_required('manage_users')
 def activate_user(user_id):
-    """Activate user (Super Admin only)"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2790,7 +2295,6 @@ def activate_user(user_id):
 @app.route('/api/profile', methods=['GET'])
 @login_required
 def get_profile():
-    """Get current user profile"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2812,7 +2316,6 @@ def get_profile():
         
         profile = cur.fetchone()
         
-        # Get notification preferences
         cur.execute("SELECT * FROM notification_preferences WHERE user_id = %s", (session['user_id'],))
         prefs = cur.fetchone()
         
@@ -2838,7 +2341,6 @@ def get_profile():
 @app.route('/api/profile', methods=['PUT'])
 @login_required
 def update_profile():
-    """Update current user profile"""
     conn = None
     try:
         data = request.json
@@ -2917,7 +2419,6 @@ def update_profile():
 @app.route('/api/colleges', methods=['GET'])
 @login_required
 def get_colleges():
-    """Get all colleges with their programs"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -2954,7 +2455,6 @@ def get_colleges():
 @login_required
 @permission_required('manage_colleges')
 def get_all_colleges():
-    """Get all colleges (including inactive) for admin management"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -2990,7 +2490,6 @@ def get_all_colleges():
 @login_required
 @permission_required('manage_colleges')
 def create_college():
-    """Create a new college"""
     data = request.json
     if not data or not data.get('code') or not data.get('name'):
         return jsonify({"error": "College code and name are required"}), 400
@@ -3040,7 +2539,6 @@ def create_college():
 @login_required
 @permission_required('manage_colleges')
 def update_college(college_id):
-    """Update a college"""
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -3110,7 +2608,6 @@ def update_college(college_id):
 @login_required
 @permission_required('manage_colleges')
 def delete_college(college_id):
-    """Delete a college (soft delete)"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3142,7 +2639,6 @@ def delete_college(college_id):
 @login_required
 @permission_required('manage_colleges')
 def restore_college(college_id):
-    """Restore a deleted college"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3173,7 +2669,6 @@ def restore_college(college_id):
 @app.route('/api/colleges/<int:college_id>/programs', methods=['GET'])
 @login_required
 def get_college_programs(college_id):
-    """Get all programs for a specific college"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3206,7 +2701,6 @@ def get_college_programs(college_id):
 @login_required
 @permission_required('manage_programs')
 def create_program():
-    """Create a new program"""
     data = request.json
     if not data or not data.get('college_id') or not data.get('name'):
         return jsonify({"error": "College ID and program name are required"}), 400
@@ -3262,7 +2756,6 @@ def create_program():
 @login_required
 @permission_required('manage_programs')
 def update_program(program_id):
-    """Update a program"""
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -3336,7 +2829,6 @@ def update_program(program_id):
 @login_required
 @permission_required('manage_programs')
 def delete_program(program_id):
-    """Delete a program"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3367,7 +2859,6 @@ def delete_program(program_id):
 # ================= COLLEGE API FOR FRONTEND DROPDOWNS =================
 @app.route('/api/colleges-dropdown', methods=['GET'])
 def get_colleges_dropdown():
-    """Get active colleges and their programs for frontend dropdowns"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3420,7 +2911,6 @@ def get_colleges_dropdown():
 @login_required
 @role_required('STUDENT')
 def get_my_records():
-    """Get only ONE record of the currently logged-in student"""
     conn = get_db_connection()
     if not conn: 
         return jsonify({"records": [], "error": "Database connection failed"}), 500
@@ -3502,7 +2992,6 @@ def get_my_records():
 @login_required
 @role_required('STUDENT')
 def get_student_documents(record_id):
-    """Get documents for a specific record"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -3567,7 +3056,6 @@ def get_student_documents(record_id):
                         "download_url": f"{request.host_url}uploads/{path.strip()}"
                     })
         
-        # Transferee documents
         if record.get('honorable_dismissal_path'):
             paths = record['honorable_dismissal_path'].split(',')
             for path in paths:
@@ -3616,7 +3104,6 @@ def get_student_documents(record_id):
 @app.route('/get-records', methods=['GET'])
 @login_required
 def get_records():
-    """Get records - Students see their own, Super Admin sees all active records"""
     conn = get_db_connection()
     if not conn: 
         return jsonify({"records": [], "error": "Database connection failed"})
@@ -3716,7 +3203,6 @@ def get_records():
 @login_required
 @permission_required('view_archived_records')
 def get_archived_records():
-    """Get archived records (Super Admin only)"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"records": [], "error": "Database connection failed"})
@@ -3792,7 +3278,6 @@ def get_archived_records():
 @login_required
 @permission_required('edit_records')
 def update_record_status(record_id):
-    """Update record status (approve/reject)"""
     try:
         data = request.json
         status = data.get('status')
@@ -3807,7 +3292,6 @@ def update_record_status(record_id):
         
         cur = conn.cursor()
         
-        # Get user_id before update
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
         result = cur.fetchone()
         user_id = result[0] if result else None
@@ -3835,7 +3319,6 @@ def update_record_status(record_id):
         conn.commit()
         conn.close()
         
-        # Send notification to student
         if user_id:
             if status == 'APPROVED':
                 create_notification(
@@ -3872,7 +3355,6 @@ def update_record_status(record_id):
 @login_required
 @permission_required('archive_records')
 def archive_record(record_id):
-    """Archive a record (move to archives)"""
     try:
         data = request.json
         reason = data.get('reason')
@@ -3888,12 +3370,10 @@ def archive_record(record_id):
         
         cur = conn.cursor()
         
-        # Get user_id before archive
         cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
         result = cur.fetchone()
         user_id = result[0] if result else None
         
-        # Get document paths to move to archive folder
         cur.execute("""
             SELECT image_path, form137_path, form138_path, goodmoral_path,
                    honorable_dismissal_path, transfer_credentials_path
@@ -3902,7 +3382,6 @@ def archive_record(record_id):
         
         paths = cur.fetchone()
         if paths:
-            # Move files to archive
             for path in paths:
                 if path:
                     file_paths = path.split(',')
@@ -3910,7 +3389,6 @@ def archive_record(record_id):
                         if fp.strip():
                             move_to_archive(fp.strip())
         
-        # Update record as archived
         cur.execute("""
             UPDATE records 
             SET is_archived = TRUE, 
@@ -3931,7 +3409,6 @@ def archive_record(record_id):
         conn.commit()
         conn.close()
         
-        # Notify student
         if user_id:
             reason_text = {
                 'GRADUATED': 'you have graduated',
@@ -3967,7 +3444,6 @@ def archive_record(record_id):
 @login_required
 @permission_required('archive_records')
 def restore_record(record_id):
-    """Restore an archived record"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -3975,12 +3451,10 @@ def restore_record(record_id):
         
         cur = conn.cursor()
         
-        # Get user_id before restore
         cur.execute("SELECT user_id FROM records WHERE id = %s AND is_archived = TRUE", (record_id,))
         result = cur.fetchone()
         user_id = result[0] if result else None
         
-        # Get document paths to restore from archive
         cur.execute("""
             SELECT image_path, form137_path, form138_path, goodmoral_path,
                    honorable_dismissal_path, transfer_credentials_path
@@ -3992,7 +3466,6 @@ def restore_record(record_id):
             conn.close()
             return jsonify({"error": "Archived record not found"}), 404
         
-        # Restore files from archive
         for path in paths:
             if path:
                 file_paths = path.split(',')
@@ -4000,7 +3473,6 @@ def restore_record(record_id):
                     if fp.strip():
                         restore_from_archive(fp.strip())
         
-        # Update record as restored
         cur.execute("""
             UPDATE records 
             SET is_archived = FALSE, 
@@ -4015,7 +3487,6 @@ def restore_record(record_id):
         conn.commit()
         conn.close()
         
-        # Notify student
         if user_id:
             create_notification(
                 user_id=user_id,
@@ -4039,12 +3510,11 @@ def restore_record(record_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= PERMANENT DELETE RECORD (Super Admin only) =================
+# ================= PERMANENT DELETE RECORD =================
 @app.route('/api/record/<int:record_id>/permanent-delete', methods=['DELETE'])
 @login_required
 @permission_required('delete_records')
 def permanent_delete_record(record_id):
-    """Permanently delete a record (Super Admin only)"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -4052,7 +3522,6 @@ def permanent_delete_record(record_id):
         
         cur = conn.cursor()
         
-        # Get document paths to delete
         cur.execute("""
             SELECT image_path, form137_path, form138_path, goodmoral_path,
                    honorable_dismissal_path, transfer_credentials_path
@@ -4061,13 +3530,11 @@ def permanent_delete_record(record_id):
         
         paths = cur.fetchone()
         if paths:
-            # Delete files from archive or uploads
             for path in paths:
                 if path:
                     file_paths = path.split(',')
                     for fp in file_paths:
                         if fp.strip():
-                            # Check if in archive or uploads
                             if '/' in fp:
                                 file_path = os.path.join(app.config['ARCHIVE_FOLDER'], fp)
                             else:
@@ -4077,10 +3544,8 @@ def permanent_delete_record(record_id):
                                 os.remove(file_path)
                                 print(f"🗑️ Deleted file: {fp}")
         
-        # Delete notifications for this record
         cur.execute("DELETE FROM notifications WHERE data->>'record_id' = %s", (str(record_id),))
         
-        # Delete record from database
         cur.execute("DELETE FROM records WHERE id = %s", (record_id,))
         conn.commit()
         conn.close()
@@ -4102,7 +3567,6 @@ def permanent_delete_record(record_id):
 @login_required
 @permission_required('access_scanner')
 def save_record():
-    """Save or UPDATE record - Only ONE record per student"""
     conn = None
     try:
         d = request.json
@@ -4128,7 +3592,6 @@ def save_record():
         college = d.get('college', '')
         program = d.get('program', '')
         
-        # Transferee data
         is_transferee = d.get('is_transferee', False)
         previous_school = d.get('previous_school', '')
         previous_school_address = d.get('previous_school_address', '')
@@ -4227,7 +3690,6 @@ def save_record():
                     other_documents = %s,
                     document_status = %s,
                     status = %s,
-                    -- Transferee fields
                     is_transferee = %s,
                     previous_school = %s,
                     previous_school_address = %s,
@@ -4287,7 +3749,6 @@ def save_record():
             conn.commit()
             conn.close()
             
-            # Check for missing documents after update
             check_missing_documents(updated_id)
             
             return jsonify({
@@ -4345,7 +3806,6 @@ def save_record():
                     other_documents,
                     document_status,
                     status,
-                    -- Transferee fields
                     is_transferee, previous_school, previous_school_address,
                     previous_school_year, year_level_to_enroll,
                     honorable_dismissal_path, transfer_credentials_path
@@ -4412,7 +3872,6 @@ def save_record():
             conn.commit()
             conn.close()
 
-            # Check for missing documents after creation
             check_missing_documents(new_id)
             
             return jsonify({
@@ -4435,7 +3894,6 @@ def save_record():
 # ================= ROUTES WITH ROLE-BASED ACCESS =================
 @app.route('/')
 def index():
-    """Main page - redirect based on role"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4457,7 +3915,6 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login page"""
     if request.method == 'GET':
         if 'user_id' in session and 'role' in session:
             user_role = session['role'].upper()
@@ -4475,7 +3932,6 @@ def login():
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    """Admin dashboard"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4487,7 +3943,6 @@ def admin_dashboard():
 
 @app.route('/admin/users')
 def admin_users():
-    """User management page"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4499,7 +3954,6 @@ def admin_users():
 
 @app.route('/history.html')
 def history_page():
-    """Records history page"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4511,7 +3965,6 @@ def history_page():
 
 @app.route('/admin/colleges')
 def admin_colleges():
-    """Admin page for managing colleges and programs"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4524,7 +3977,6 @@ def admin_colleges():
 @app.route('/my-records')
 @login_required
 def my_records_page():
-    """Page for students to view their own records"""
     user_role = session.get('role', '').upper()
     if user_role != 'STUDENT':
         return redirect('/')
@@ -4534,21 +3986,18 @@ def my_records_page():
 @app.route('/notifications')
 @login_required
 def notifications_page():
-    """Notifications page"""
     return render_template('notifications.html')
 
 @app.route('/admin/missing-documents')
 @login_required
 @permission_required('view_all_records')
 def missing_documents_page():
-    """Missing documents page for admin"""
     return render_template('admin_missing_docs.html')
 
 # ================= DEBUG ENDPOINT FOR GOOD MORAL =================
 @app.route('/debug-goodmoral/<int:record_id>', methods=['GET'])
 @login_required
 def debug_goodmoral(record_id):
-    """Debug endpoint to check raw goodmoral_analysis"""
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "DB Connection failed"}), 500
@@ -4592,7 +4041,6 @@ def debug_goodmoral(record_id):
 @login_required
 @permission_required('access_scanner')
 def scan_goodmoral():
-    """Scan and analyze Good Moral Certificate"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -4650,7 +4098,6 @@ Return ONLY this exact JSON format with no other text:
             try:
                 analysis_data = json.loads(json_str)
                 
-                # Manual extraction fallbacks
                 if analysis_data.get('issuing_school') == 'Not Found' and 'STI College' in response_text:
                     import re
                     sti_match = re.search(r'STI College[^\n]*', response_text)
@@ -4727,7 +4174,6 @@ Return ONLY this exact JSON format with no other text:
 @login_required
 @permission_required('access_scanner')
 def extract_data():
-    """Extract data from PSA Birth Certificate"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -4811,7 +4257,6 @@ def extract_data():
 @login_required
 @permission_required('access_scanner')
 def upload_other_document(record_id):
-    """Upload other documents with title"""
     if 'file' not in request.files or 'title' not in request.form:
         return jsonify({"error": "File and title required"}), 400
     
@@ -4872,7 +4317,6 @@ def upload_other_document(record_id):
         conn.commit()
         conn.close()
         
-        # Send notification
         create_notification(
             user_id=session['user_id'],
             notification_type='DOCUMENT_UPLOADED',
@@ -4897,7 +4341,6 @@ def upload_other_document(record_id):
 @login_required
 @permission_required('access_scanner')
 def delete_other_document(record_id, doc_id):
-    """Delete an other document"""
     user_role = session.get('role', '').upper()
     if user_role == 'STUDENT':
         conn = get_db_connection()
@@ -4962,7 +4405,6 @@ def delete_other_document(record_id, doc_id):
 @login_required
 @permission_required('access_scanner')
 def extract_form137():
-    """Extract data from Form 137"""
     if 'imageFiles' not in request.files: 
         return jsonify({"error": "No files uploaded"}), 400
     
@@ -5033,7 +4475,6 @@ def extract_form137():
 @login_required
 @permission_required('send_emails')
 def send_email_only(record_id):
-    """Send email for a saved record"""
     conn = None
     try:
         conn = get_db_connection()
@@ -5090,7 +4531,6 @@ def send_email_only(record_id):
             conn.commit()
             conn.close()
             
-            # Create notification
             if record.get('user_id'):
                 create_notification(
                     user_id=record['user_id'],
@@ -5124,7 +4564,6 @@ def send_email_only(record_id):
 @login_required
 @permission_required('send_emails')
 def resend_email(record_id):
-    """Resend email even if already sent"""
     conn = None
     try:
         conn = get_db_connection()
@@ -5176,7 +4615,6 @@ def resend_email(record_id):
             conn.commit()
             conn.close()
             
-            # Create notification
             if record.get('user_id'):
                 create_notification(
                     user_id=record['user_id'],
@@ -5210,21 +4648,17 @@ def resend_email(record_id):
 @app.route('/uploads/<path:filename>')
 @login_required
 def uploaded_file(filename):
-    """Serve uploaded files"""
     try:
         if '..' in filename or filename.startswith('/'):
             return "Invalid filename", 400
         
         clean_filename = filename.split('/')[-1] if '/' in filename else filename
         
-        # Try uploads folder first
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
         
-        # If not found, try archives
         if not os.path.exists(file_path):
             file_path = os.path.join(app.config['ARCHIVE_FOLDER'], clean_filename)
             
-            # Try with date subfolder
             if not os.path.exists(file_path) and '/' in filename:
                 file_path = os.path.join(app.config['ARCHIVE_FOLDER'], filename)
         
@@ -5262,7 +4696,6 @@ def uploaded_file(filename):
 @app.route('/view-form/<int:record_id>')
 @login_required
 def view_form(record_id):
-    """View printable form"""
     user_role = session.get('role', '').upper()
     if user_role == 'STUDENT':
         conn = get_db_connection()
@@ -5328,7 +4761,6 @@ def view_form(record_id):
 @login_required
 @permission_required('access_scanner')
 def upload_additional():
-    """Upload additional documents"""
     files = request.files.getlist('files')
     rid, dtype = request.form.get('id'), request.form.get('type')
     
@@ -5395,7 +4827,6 @@ def upload_additional():
         conn.commit()
         conn.close()
         
-        # Send notification
         create_notification(
             user_id=session['user_id'],
             notification_type='DOCUMENT_UPLOADED',
@@ -5416,13 +4847,11 @@ def upload_additional():
 @login_required
 @permission_required('delete_records')
 def delete_record(record_id):
-    """Delete record (Super Admin only) - DEPRECATED, use archive instead"""
     return jsonify({"error": "Direct deletion is not allowed. Use archive function instead."}), 400
 
 @app.route('/check-email-status/<int:record_id>', methods=['GET'])
 @login_required
 def check_email_status(record_id):
-    """Check if email has been sent for a record"""
     user_role = session.get('role', '').upper()
     if user_role == 'STUDENT':
         conn = get_db_connection()
@@ -5457,7 +4886,6 @@ def check_email_status(record_id):
 # ================= HEALTH AND DIAGNOSTIC ENDPOINTS =================
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         "status": "healthy",
         "service": "AssiScan Backend",
@@ -5491,7 +4919,6 @@ def health_check():
 @app.route('/list-uploads', methods=['GET'])
 @login_required
 def list_uploads():
-    """List uploaded files"""
     try:
         if not os.path.exists(UPLOAD_FOLDER):
             return jsonify({"error": "Uploads folder not found"}), 404
@@ -5518,7 +4945,6 @@ def list_uploads():
 @login_required
 @permission_required('view_archived_records')
 def list_archives():
-    """List archived files"""
     try:
         if not os.path.exists(ARCHIVE_FOLDER):
             return jsonify({"error": "Archives folder not found"}), 404
@@ -5546,7 +4972,6 @@ def list_archives():
 # ================= SIMPLE SESSION CHECK =================
 @app.route('/check-login', methods=['GET'])
 def check_login():
-    """Simple endpoint to check if user is logged in"""
     print(f"🔍 /check-login accessed. Session: {dict(session)}")
     
     if 'user_id' in session and 'role' in session:
@@ -5564,7 +4989,6 @@ def check_login():
 @app.route('/api/record/<int:record_id>', methods=['GET'])
 @login_required
 def get_single_record(record_id):
-    """Get a single record by ID"""
     conn = get_db_connection()
     if not conn: 
         return jsonify({"error": "Database connection failed"}), 500
@@ -5646,25 +5070,20 @@ def get_single_record(record_id):
 
 # ================= SCHEDULED TASKS =================
 def run_scheduled_tasks():
-    """Run scheduled tasks like checking missing documents and sending reminders"""
     while True:
         try:
             print("🔄 Running scheduled tasks...")
             
-            # Check for missing documents
             check_missing_documents()
             
-            # Send enrollment reminders
             send_enrollment_reminders()
             
-            # Sleep for 1 hour
             time.sleep(3600)
         except Exception as e:
             print(f"❌ Error in scheduled tasks: {e}")
             time.sleep(3600)
 
 # Start scheduled tasks in background thread
-import threading
 scheduler_thread = threading.Thread(target=run_scheduled_tasks, daemon=True)
 scheduler_thread.start()
 
