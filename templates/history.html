@@ -39,6 +39,7 @@
             --rejected: #f44336;
             --archived: #6c757d;
             --archive: #6f42c1;
+            --missing: #ff9800;
         }
 
         * {
@@ -56,7 +57,6 @@
             padding: 20px;
         }
 
-        /* ===== LAYOUT ===== */
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -113,6 +113,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .nav-links {
@@ -138,7 +139,6 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
             cursor: pointer;
             white-space: nowrap;
-            position: relative;
         }
 
         .nav-link:hover {
@@ -167,25 +167,6 @@
             border-color: var(--archive);
         }
 
-        /* Missing Docs Badge */
-        .missing-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #ff9800;
-            color: black;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            min-width: 20px;
-            height: 20px;
-            text-align: center;
-            border: 1px solid var(--gold);
-            font-weight: bold;
-            line-height: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-
         .user-info {
             display: flex;
             align-items: center;
@@ -207,6 +188,71 @@
             color: black;
             font-weight: 600;
             font-family: 'Cinzel', serif;
+        }
+
+        /* ===== MISSING DOCS BANNER ===== */
+        .missing-docs-banner {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid var(--missing);
+            border-radius: var(--border-radius);
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+        }
+
+        .missing-docs-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--missing);
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .missing-docs-title i {
+            font-size: 24px;
+        }
+
+        .missing-docs-count {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--missing);
+            margin-left: 10px;
+            background: rgba(255, 152, 0, 0.2);
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+
+        .missing-docs-button {
+            background: rgba(255, 152, 0, 0.15);
+            border: 1px solid var(--missing);
+            color: var(--missing);
+            padding: 10px 25px;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .missing-docs-button:hover {
+            background: var(--missing);
+            color: black;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
         }
 
         /* ===== VIEW TOGGLE ===== */
@@ -564,14 +610,14 @@
         }
 
         /* Column widths */
-        th:nth-child(1), td:nth-child(1) { width: 18%; }  /* Student */
-        th:nth-child(2), td:nth-child(2) { width: 10%; }  /* LRN */
-        th:nth-child(3), td:nth-child(3) { width: 12%; }  /* College */
-        th:nth-child(4), td:nth-child(4) { width: 12%; }  /* Program */
-        th:nth-child(5), td:nth-child(5) { width: 15%; }  /* Documents */
-        th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
-        th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Moral */
-        th:nth-child(8), td:nth-child(8) { width: 17%; }  /* Actions */
+        th:nth-child(1), td:nth-child(1) { width: 18%; }
+        th:nth-child(2), td:nth-child(2) { width: 10%; }
+        th:nth-child(3), td:nth-child(3) { width: 12%; }
+        th:nth-child(4), td:nth-child(4) { width: 12%; }
+        th:nth-child(5), td:nth-child(5) { width: 15%; }
+        th:nth-child(6), td:nth-child(6) { width: 8%; }
+        th:nth-child(7), td:nth-child(7) { width: 8%; }
+        th:nth-child(8), td:nth-child(8) { width: 17%; }
 
         /* ===== STUDENT INFO ===== */
         .student-info {
@@ -1644,6 +1690,11 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .missing-docs-banner {
+                flex-direction: column;
+                text-align: center;
+            }
         }
 
         @media (max-width: 576px) {
@@ -1710,32 +1761,19 @@
             <div class="user-nav">
                 <div class="nav-links">
                     <a href="/admin/dashboard" class="nav-link">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>DASHBOARD</span>
+                        <i class="fas fa-tachometer-alt"></i> DASHBOARD
                     </a>
                     <a href="/admin/users" class="nav-link">
-                        <i class="fas fa-users"></i>
-                        <span>USERS</span>
+                        <i class="fas fa-users"></i> USERS
                     </a>
                     <a href="/admin/colleges" class="nav-link">
-                        <i class="fas fa-university"></i>
-                        <span>COLLEGES</span>
+                        <i class="fas fa-university"></i> COLLEGES
                     </a>
-                    
-                    <!-- MISSING DOCUMENTS BUTTON WITH BADGE -->
-                    <a href="/admin/missing-documents" class="nav-link" style="position: relative;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>MISSING DOCS</span>
-                        <span id="missingDocsBadge" class="missing-badge" style="display: none;">0</span>
-                    </a>
-                    
                     <a href="/history.html" class="nav-link active">
-                        <i class="fas fa-database"></i>
-                        <span>RECORDS</span>
+                        <i class="fas fa-database"></i> RECORDS
                     </a>
-                    <a href="#" class="nav-link" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>LOGOUT</span>
+                    <a href="#" onclick="logout()" class="nav-link">
+                        <i class="fas fa-sign-out-alt"></i> LOGOUT
                     </a>
                 </div>
                 <div class="user-info">
@@ -1747,6 +1785,18 @@
                 </div>
             </div>
         </header>
+
+        <!-- MISSING DOCUMENTS BANNER (SEPARATE LINE) -->
+        <div class="missing-docs-banner" id="missingDocsBanner" style="display: none;">
+            <div class="missing-docs-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Students with Missing Documents</span>
+                <span class="missing-docs-count" id="missingDocsCount">0</span>
+            </div>
+            <a href="/admin/missing-documents" class="missing-docs-button">
+                <i class="fas fa-eye"></i> VIEW MISSING DOCUMENTS
+            </a>
+        </div>
 
         <!-- VIEW TOGGLE -->
         <div class="view-toggle">
@@ -1906,7 +1956,7 @@
         <div id="studentModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-user-graduate"></i> Student Details</h3>
+                    <h3><i class="fas fa-user-graduate"></i> Student Complete Record</h3>
                     <button class="close-modal" onclick="closeModal('studentModal')">&times;</button>
                 </div>
                 <div class="modal-body" id="studentModalContent"></div>
@@ -2003,7 +2053,7 @@
             </div>
         </div>
 
-        <!-- PERMANENT DELETE MODAL -->
+        <!-- PERMANENT DELETE MODAL (Super Admin only) -->
         <div id="permanentDeleteModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 500px; border-color: var(--danger);">
                 <div class="modal-header" style="border-bottom-color: var(--danger);">
@@ -2087,9 +2137,9 @@
             loadData();
             setupEventListeners();
             
-            // Start updating missing docs badge
-            updateMissingDocsBadge();
-            setInterval(updateMissingDocsBadge, 30000);
+            // Start updating missing docs banner
+            updateMissingDocsBanner();
+            setInterval(updateMissingDocsBanner, 30000);
         });
 
         function setupEventListeners() {
@@ -2218,22 +2268,24 @@
             });
         }
 
-        // ==================== UPDATE MISSING DOCS BADGE ====================
-        async function updateMissingDocsBadge() {
+        // ==================== UPDATE MISSING DOCS BANNER ====================
+        async function updateMissingDocsBanner() {
             try {
                 const response = await fetch('/api/missing-documents');
                 if (response.ok) {
                     const data = await response.json();
-                    const badge = document.getElementById('missingDocsBadge');
+                    const banner = document.getElementById('missingDocsBanner');
+                    const countEl = document.getElementById('missingDocsCount');
+                    
                     if (data.total_count > 0) {
-                        badge.textContent = data.total_count;
-                        badge.style.display = 'inline';
+                        countEl.textContent = data.total_count;
+                        banner.style.display = 'flex';
                     } else {
-                        badge.style.display = 'none';
+                        banner.style.display = 'none';
                     }
                 }
             } catch (error) {
-                console.error('Error updating missing docs badge:', error);
+                console.error('Error updating missing docs banner:', error);
             }
         }
 
@@ -2724,8 +2776,8 @@
                     showNotification(`Record ${status.toLowerCase()}!`, 'success');
                     loadData(); // Reload data
                     
-                    // Update missing docs badge after status change
-                    updateMissingDocsBadge();
+                    // Update missing docs banner after status change
+                    updateMissingDocsBanner();
                 } else {
                     showNotification('Failed to update status', 'error');
                 }
@@ -2761,8 +2813,8 @@
                     loadData(); // Reload data
                     closeModal('archiveModal');
                     
-                    // Update missing docs badge after archive
-                    updateMissingDocsBadge();
+                    // Update missing docs banner after archive
+                    updateMissingDocsBanner();
                 } else {
                     showNotification('Failed to archive record', 'error');
                 }
@@ -2791,8 +2843,8 @@
                     loadData(); // Reload data
                     closeModal('restoreModal');
                     
-                    // Update missing docs badge after restore
-                    updateMissingDocsBadge();
+                    // Update missing docs banner after restore
+                    updateMissingDocsBanner();
                 } else {
                     showNotification('Failed to restore record', 'error');
                 }
@@ -2823,8 +2875,8 @@
                     loadData(); // Reload data
                     closeModal('permanentDeleteModal');
                     
-                    // Update missing docs badge after permanent delete
-                    updateMissingDocsBadge();
+                    // Update missing docs banner after permanent delete
+                    updateMissingDocsBanner();
                 } else {
                     showNotification('Failed to delete record', 'error');
                 }
@@ -3109,6 +3161,164 @@
                             <div class="detail-label">Year Attended</div>
                             <div class="detail-value">${display(record.year_attended)}</div>
                         </div>
+                    </div>
+                </div>
+            `;
+
+            // Special Groups
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-notes-medical"></i> Special Groups & Health
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">IP Member</div>
+                            <div class="detail-value">${display(record.is_ip)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">PWD</div>
+                            <div class="detail-value">${display(record.is_pwd)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Medication</div>
+                            <div class="detail-value">${display(record.has_medication)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Working Student</div>
+                            <div class="detail-value">${display(record.is_working)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Gifted Child</div>
+                            <div class="detail-value">${display(record.is_gifted)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Needs Assistance</div>
+                            <div class="detail-value">${display(record.needs_assistance)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Scholar</div>
+                            <div class="detail-value">${display(record.is_scholar)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Special Talents</div>
+                            <div class="detail-value">${display(record.special_talents)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Parent Information
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Parent Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Name</div>
+                            <div class="detail-value">${display(record.mother_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Citizenship</div>
+                            <div class="detail-value">${display(record.mother_citizenship)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Occupation</div>
+                            <div class="detail-value">${display(record.mother_occupation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Mother's Contact</div>
+                            <div class="detail-value">${display(record.mother_contact)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Name</div>
+                            <div class="detail-value">${display(record.father_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Citizenship</div>
+                            <div class="detail-value">${display(record.father_citizenship)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Occupation</div>
+                            <div class="detail-value">${display(record.father_occupation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Father's Contact</div>
+                            <div class="detail-value">${display(record.father_contact)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Parents' Marital Status</div>
+                            <div class="detail-value">${display(record.marital_status)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Guardian Information
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-user-shield"></i> Guardian Information
+                    </h4>
+                    <div class="student-details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Guardian Name</div>
+                            <div class="detail-value">${display(record.guardian_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Relationship</div>
+                            <div class="detail-value">${display(record.guardian_relation)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Guardian Contact</div>
+                            <div class="detail-value">${display(record.guardian_contact)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Employer Information
+            if (record.is_working === 'Yes') {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-briefcase"></i> Employer Information
+                        </h4>
+                        <div class="student-details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Employer Name</div>
+                                <div class="detail-value">${display(record.employer_name)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Siblings
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Siblings
+                    </h4>
+                    <div class="student-details-grid">
+                        ${(() => {
+                            try {
+                                const siblings = typeof record.siblings === 'string' ? JSON.parse(record.siblings) : (record.siblings || []);
+                                if (siblings.length > 0) {
+                                    return siblings.map(s => `
+                                        <div class="detail-item">
+                                            <div class="detail-label">${s.name || 'Sibling'}</div>
+                                            <div class="detail-value">Age: ${s.age || 'N/A'} • ${s.occupation || 'N/A'}</div>
+                                        </div>
+                                    `).join('');
+                                } else {
+                                    return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
+                                }
+                            } catch (e) {
+                                return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
+                            }
+                        })()}
                     </div>
                 </div>
             `;
