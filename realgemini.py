@@ -289,6 +289,490 @@ def get_db_connection():
             else:
                 return None
 
+def drop_all_tables():
+    print("🗑️ Dropping all existing tables...")
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database for dropping tables")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        tables = [
+            'notifications',
+            'user_sessions',
+            'records',
+            'programs',
+            'colleges',
+            'users'
+        ]
+        
+        for table in tables:
+            try:
+                cur.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+                print(f"   ✅ Dropped table: {table}")
+            except Exception as e:
+                print(f"   ⚠️ Could not drop table {table}: {e}")
+        
+        conn.commit()
+        print("✅ All tables dropped successfully")
+        return True
+    except Exception as e:
+        print(f"❌ Error dropping tables: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def init_db():
+    print("🔧 Initializing database from scratch...")
+    
+    if not drop_all_tables():
+        print("❌ Failed to drop existing tables")
+        return False
+    
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database for initialization")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        print("📝 Creating users table...")
+        cur.execute('''
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'STUDENT')),
+                college_id INTEGER,
+                program_id INTEGER,
+                is_active BOOLEAN DEFAULT TRUE,
+                requires_password_reset BOOLEAN DEFAULT TRUE,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email_notifications BOOLEAN DEFAULT TRUE,
+                sms_notifications BOOLEAN DEFAULT FALSE,
+                mobile_number VARCHAR(20)
+            )
+        ''')
+        print("   ✅ Created users table")
+        
+        print("📝 Creating user_sessions table...")
+        cur.execute('''
+            CREATE TABLE user_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                session_token VARCHAR(255) UNIQUE NOT NULL,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                logout_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created user_sessions table")
+        
+        print("📝 Creating colleges table...")
+        cur.execute('''
+            CREATE TABLE colleges (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                description TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES users(id)
+            )
+        ''')
+        print("   ✅ Created colleges table")
+        
+        print("📝 Creating programs table...")
+        cur.execute('''
+            CREATE TABLE programs (
+                id SERIAL PRIMARY KEY,
+                college_id INTEGER,
+                code VARCHAR(50),
+                name VARCHAR(150) NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES users(id),
+                FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created programs table")
+        
+        print("📝 Creating records table...")
+        cur.execute('''
+            CREATE TABLE records (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE,
+                name VARCHAR(255),
+                sex VARCHAR(50),
+                birthdate DATE,
+                birthplace TEXT,
+                birth_order VARCHAR(50),
+                religion VARCHAR(100),
+                age INTEGER,
+                mother_name VARCHAR(255),
+                mother_citizenship VARCHAR(100),
+                mother_occupation VARCHAR(100),
+                father_name VARCHAR(255),
+                father_citizenship VARCHAR(100),
+                father_occupation VARCHAR(100),
+                lrn VARCHAR(50),
+                school_name TEXT,
+                school_address TEXT,
+                final_general_average VARCHAR(50),
+                image_path TEXT,
+                form137_path TEXT,
+                form138_path TEXT,
+                goodmoral_path TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email_sent BOOLEAN DEFAULT FALSE,
+                email_sent_at TIMESTAMP,
+                email VARCHAR(100),
+                civil_status VARCHAR(50),
+                nationality VARCHAR(100),
+                mother_contact VARCHAR(50),
+                father_contact VARCHAR(50),
+                guardian_name VARCHAR(255),
+                guardian_relation VARCHAR(100),
+                guardian_contact VARCHAR(50),
+                region VARCHAR(100),
+                province VARCHAR(100),
+                specific_address TEXT,
+                mobile_no VARCHAR(50),
+                school_year VARCHAR(50),
+                student_type VARCHAR(50) DEFAULT 'Regular',
+                college VARCHAR(150),
+                program VARCHAR(150),
+                last_level_attended VARCHAR(100),
+                is_ip VARCHAR(10),
+                is_pwd VARCHAR(10),
+                has_medication VARCHAR(10),
+                is_working VARCHAR(10),
+                residence_type VARCHAR(50),
+                employer_name VARCHAR(255),
+                marital_status VARCHAR(50),
+                is_gifted VARCHAR(10),
+                needs_assistance VARCHAR(10),
+                school_type VARCHAR(50),
+                year_attended VARCHAR(50),
+                special_talents TEXT,
+                is_scholar VARCHAR(10),
+                siblings TEXT,
+                goodmoral_analysis JSONB,
+                disciplinary_status VARCHAR(50),
+                goodmoral_score INTEGER DEFAULT 0,
+                has_disciplinary_record BOOLEAN DEFAULT FALSE,
+                disciplinary_details TEXT,
+                other_documents JSONB,
+                document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
+                rejection_reason TEXT,
+                status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
+                
+                is_transferee BOOLEAN DEFAULT FALSE,
+                previous_school VARCHAR(255),
+                previous_school_address TEXT,
+                previous_school_year VARCHAR(50),
+                year_level_to_enroll VARCHAR(50),
+                honorable_dismissal_path TEXT,
+                transfer_credentials_path TEXT,
+                
+                is_archived BOOLEAN DEFAULT FALSE,
+                archived_at TIMESTAMP,
+                archived_by INTEGER,
+                archive_reason VARCHAR(50) CHECK (archive_reason IN ('GRADUATED', 'TRANSFERRED_OUT', 'COMPLETED', 'OTHER')),
+                archive_notes TEXT,
+                restored_at TIMESTAMP,
+                restored_by INTEGER,
+                
+                last_reminder_sent TIMESTAMP,
+                reminder_count INTEGER DEFAULT 0,
+                
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (archived_by) REFERENCES users(id),
+                FOREIGN KEY (restored_by) REFERENCES users(id),
+                CONSTRAINT one_record_per_user UNIQUE (user_id)
+            )
+        ''')
+        print("   ✅ Created records table")
+        
+        print("📝 Creating notifications table...")
+        cur.execute('''
+            CREATE TABLE notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER')),
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                data JSONB,
+                is_read BOOLEAN DEFAULT FALSE,
+                is_emailed BOOLEAN DEFAULT FALSE,
+                emailed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                priority INTEGER DEFAULT 0,
+                
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created notifications table")
+        
+        print("📝 Creating notification_preferences table...")
+        cur.execute('''
+            CREATE TABLE notification_preferences (
+                user_id INTEGER PRIMARY KEY,
+                email_missing_docs BOOLEAN DEFAULT TRUE,
+                email_approvals BOOLEAN DEFAULT TRUE,
+                email_reminders BOOLEAN DEFAULT TRUE,
+                email_rejections BOOLEAN DEFAULT TRUE,
+                sms_missing_docs BOOLEAN DEFAULT FALSE,
+                sms_reminders BOOLEAN DEFAULT FALSE,
+                in_app_all BOOLEAN DEFAULT TRUE,
+                
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        print("   ✅ Created notification_preferences table")
+        
+        conn.commit()
+        print("✅ Database tables created successfully")
+        
+        print("👑 Creating default Super Admin...")
+        cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
+        admin_user = cur.fetchone()
+        
+        if not admin_user:
+            password_hash = hash_password(ADMIN_PASSWORD)
+            
+            cur.execute("""
+                INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                ADMIN_USERNAME,
+                password_hash,
+                'System Administrator',
+                'admin@assiscan.com',
+                'SUPER_ADMIN',
+                True,
+                False
+            ))
+            admin_id = cur.fetchone()[0]
+            
+            cur.execute("""
+                INSERT INTO notification_preferences (user_id) VALUES (%s)
+            """, (admin_id,))
+            
+            print(f"✅ Default Super Admin created with ID: {admin_id}")
+            
+            print("📝 Inserting default colleges...")
+            default_colleges = [
+                ("CCJE", "College of Criminal Justice Education", "College of Criminal Justice Education", 1),
+                ("CEAS", "College of Education, Arts and Sciences", "College of Education, Arts and Sciences", 2),
+                ("CITEC", "College of Information Technology, Entertainment and Communication", "College of IT, Entertainment & Communication", 3),
+                ("CENAR", "College of Engineering and Architecture", "College of Engineering and Architecture", 4),
+                ("CBAA", "College of Business, Accountancy and Auditing", "College of Business, Accountancy & Auditing", 5)
+            ]
+            
+            for code, name, desc, order in default_colleges:
+                cur.execute("""
+                    INSERT INTO colleges (code, name, description, display_order, created_by) 
+                    VALUES (%s, %s, %s, %s, %s) 
+                    RETURNING id
+                """, (code, name, desc, order, admin_id))
+                college_id = cur.fetchone()[0]
+                
+                if code == "CCJE":
+                    cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                               (college_id, "Bachelor of Science in Criminology", 1, admin_id))
+                elif code == "CEAS":
+                    programs = [
+                        "Bachelor of Elementary Education",
+                        "Bachelor of Secondary Education", 
+                        "Bachelor of Science in Psychology",
+                        "Bachelor of Science in Legal Management",
+                        "Bachelor of Science in Social Work"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CITEC":
+                    programs = [
+                        "Bachelor of Science in Information Technology",
+                        "Bachelor of Arts in Multimedia Arts"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CENAR":
+                    programs = [
+                        "Bachelor of Science in Industrial Engineering",
+                        "Bachelor of Science in Computer Engineering",
+                        "Bachelor of Science in Architecture"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+                elif code == "CBAA":
+                    programs = [
+                        "Bachelor of Science in Business Administration",
+                        "Bachelor of Science in Accountancy",
+                        "Bachelor of Science in Internal Auditing"
+                    ]
+                    for i, program in enumerate(programs):
+                        cur.execute("INSERT INTO programs (college_id, name, display_order, created_by) VALUES (%s, %s, %s, %s)",
+                                   (college_id, program, i+1, admin_id))
+            
+            print("✅ Default colleges and programs inserted")
+        else:
+            print("✅ Super Admin already exists")
+        
+        conn.commit()
+        print("🎉 Database initialization COMPLETE!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        traceback.print_exc()
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+# ================= ENHANCED CHECK TABLES FUNCTION =================
+def check_tables_exist():
+    print("🔍 Checking if tables exist...")
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        tables = ['users', 'user_sessions', 'colleges', 'programs', 'records', 'notifications', 'notification_preferences']
+        missing_tables = []
+        
+        for table in tables:
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s
+                )
+            """, (table,))
+            exists = cur.fetchone()[0]
+            
+            if not exists:
+                missing_tables.append(table)
+        
+        if missing_tables:
+            print(f"❌ Missing tables: {missing_tables}")
+            return False
+        
+        print("✅ All tables and columns exist")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error checking tables: {e}")
+        return False
+    finally:
+        conn.close()
+
+# Initialize database on startup
+print("\n" + "="*60)
+print("🔄 DATABASE INITIALIZATION")
+print("="*60)
+
+if not check_tables_exist():
+    print("⚠️ Tables missing, initializing database...")
+    if init_db():
+        print("✅ Database initialized successfully!")
+    else:
+        print("❌ Database initialization failed!")
+else:
+    print("✅ All tables already exist")
+
+# ================= USER MANAGEMENT FUNCTIONS =================
+def create_session(user_id, ip_address=None, user_agent=None):
+    """Create a new session for user"""
+    session_token = secrets.token_urlsafe(32)
+    conn = get_db_connection()
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO user_sessions (user_id, session_token, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, session_token
+        """, (user_id, session_token, ip_address, user_agent))
+        
+        session_data = cur.fetchone()
+        conn.commit()
+        
+        return session_token
+    except Exception as e:
+        print(f"❌ Session creation error: {e}")
+        return None
+    finally:
+        conn.close()
+
+def validate_session(session_token):
+    """Validate user session"""
+    conn = get_db_connection()
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT u.*, us.session_token 
+            FROM user_sessions us
+            JOIN users u ON us.user_id = u.id
+            WHERE us.session_token = %s 
+            AND us.is_active = TRUE 
+            AND u.is_active = TRUE
+            AND (us.logout_at IS NULL OR us.logout_at > NOW() - INTERVAL '24 hours')
+        """, (session_token,))
+        
+        user = cur.fetchone()
+        return user
+    except Exception as e:
+        print(f"❌ Session validation error: {e}")
+        return None
+    finally:
+        conn.close()
+
+def logout_session(session_token):
+    """Logout user session"""
+    conn = get_db_connection()
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE user_sessions 
+            SET logout_at = CURRENT_TIMESTAMP, is_active = FALSE 
+            WHERE session_token = %s
+        """, (session_token,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Session logout error: {e}")
+        return False
+    finally:
+        conn.close()
+
 # ================= NOTIFICATION FUNCTIONS =================
 def create_notification(user_id, notification_type, title, message, data=None, priority=0, expires_at=None):
     conn = get_db_connection()
@@ -5094,7 +5578,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH NOTIFICATION SYSTEM")
+    print("🚀 ASSISCAN WITH NOTIFICATION SYSTEM - COMPLETE")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🚀 Transport: REST (SSL errors bypassed)")
@@ -5102,26 +5586,11 @@ if __name__ == '__main__':
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("🔧 NEW FEATURES ADDED:")
-    print("   • Notification System - In-app and email notifications")
-    print("   • Missing Document Alerts - Automatic checking")
-    print("   • Enrollment Reminders - Based on deadline")
-    print("   • Notification Preferences - User customizable")
-    print("   • Admin Dashboard for Missing Documents")
-    print("   • Student Notification Center")
-    print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
     print("="*60)
     print(f"🌐 Server binding to {host}:{port}")
     print(f"⚙️ Debug mode: {debug}")
-    print("="*60)
-    print("💡 New Endpoints:")
-    print("   • /api/notifications - Get user notifications")
-    print("   • /api/missing-documents - View missing docs")
-    print("   • /api/enrollment/settings - Manage enrollment")
-    print("   • /notifications - Notification center")
-    print("   • /admin/missing-documents - Admin view")
     print("="*60)
     
     app.run(host=host, port=port, debug=debug)
