@@ -185,6 +185,7 @@
             transition: 0.3s; 
             cursor: pointer;
             width: 100%;
+            position: relative;
         }
         
         .btn-access:hover { 
@@ -202,6 +203,22 @@
         .btn-logout:hover {
             background: #dc3545;
             color: white;
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            min-width: 18px;
+            text-align: center;
+            border: 1px solid var(--gold);
+            font-weight: bold;
         }
 
         /* Student Access Buttons */
@@ -228,6 +245,7 @@
             transition: 0.3s;
             cursor: pointer;
             width: 100%;
+            position: relative;
         }
 
         .student-action-btn:hover {
@@ -1705,20 +1723,35 @@
                     <button onclick="viewMyRecords()" class="student-action-btn">
                         <i class="fas fa-history"></i> MY SCANNED RECORDS
                     </button>
+                    
+                    <!-- NEW NOTIFICATION BUTTON -->
+                    <a href="/notifications" class="student-action-btn" style="position: relative;">
+                        <i class="fas fa-bell"></i> NOTIFICATIONS
+                        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+                    </a>
                 </div>
                 
                 <!-- Admin Actions -->
                 <div id="adminActions" class="admin-actions">
-                    <a href="history.html" class="btn-access">
-                        <i class="fas fa-database"></i> VIEW DATABASE
+                    <a href="/admin/dashboard" class="btn-access">
+                        <i class="fas fa-tachometer-alt"></i> DASHBOARD
                     </a>
                     
-                    <a href="/admin/colleges" class="btn-access" style="margin-top: 10px;">
+                    <a href="/admin/users" class="btn-access">
+                        <i class="fas fa-users-cog"></i> MANAGE USERS
+                    </a>
+                    
+                    <a href="/admin/colleges" class="btn-access">
                         <i class="fas fa-university"></i> MANAGE COLLEGES
                     </a>
                     
-                    <a href="/admin/users" class="btn-access" style="margin-top: 10px;">
-                        <i class="fas fa-users-cog"></i> MANAGE USERS
+                    <a href="/admin/missing-documents" class="btn-access" style="position: relative;">
+                        <i class="fas fa-exclamation-triangle"></i> MISSING DOCS
+                        <span id="adminMissingBadge" class="notification-badge" style="display: none; background: #ff9800;">0</span>
+                    </a>
+                    
+                    <a href="/history.html" class="btn-access">
+                        <i class="fas fa-database"></i> VIEW DATABASE
                     </a>
                 </div>
                 
@@ -2856,6 +2889,40 @@
             }
         }
 
+        // ================= NOTIFICATION BADGE UPDATE =================
+        async function updateNotificationBadge() {
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    // Update student notification badge
+                    if (data.unread_notifications > 0) {
+                        const badge = document.getElementById('notificationBadge');
+                        if (badge) {
+                            badge.textContent = data.unread_notifications;
+                            badge.style.display = 'inline';
+                        }
+                    }
+                    
+                    // Update admin missing docs badge if admin
+                    if (data.user && data.user.role === 'SUPER_ADMIN') {
+                        const missingResponse = await fetch('/api/missing-documents');
+                        if (missingResponse.ok) {
+                            const missingData = await missingResponse.json();
+                            const adminBadge = document.getElementById('adminMissingBadge');
+                            if (adminBadge && missingData.total_count > 0) {
+                                adminBadge.textContent = missingData.total_count;
+                                adminBadge.style.display = 'inline';
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating notification badge:', error);
+            }
+        }
+
         // ================= MOBILE MENU FUNCTIONS =================
         function toggleMobileMenu() {
             const sidebar = document.getElementById('mainSidebar');
@@ -2918,7 +2985,11 @@
                         showScanner(data.user);
                         await loadSchoolYear();
                         await loadDynamicColleges();
-                        await loadExistingRecord(); // Load existing record if any
+                        await loadExistingRecord();
+                        
+                        // Start notification badge updates
+                        updateNotificationBadge();
+                        setInterval(updateNotificationBadge, 30000); // Update every 30 seconds
                     }
                     
                     return true;
