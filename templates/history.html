@@ -138,6 +138,7 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
             cursor: pointer;
             white-space: nowrap;
+            position: relative;
         }
 
         .nav-link:hover {
@@ -164,6 +165,25 @@
             background: rgba(111, 66, 193, 0.2);
             color: #d4bfff;
             border-color: var(--archive);
+        }
+
+        /* Missing Docs Badge */
+        .missing-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff9800;
+            color: black;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            min-width: 20px;
+            height: 20px;
+            text-align: center;
+            border: 1px solid var(--gold);
+            font-weight: bold;
+            line-height: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
         .user-info {
@@ -1636,6 +1656,14 @@
                         <i class="fas fa-university"></i>
                         <span>Colleges</span>
                     </a>
+                    
+                    <!-- NEW MISSING DOCUMENTS BUTTON -->
+                    <a href="/admin/missing-documents" class="nav-link" style="position: relative;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Missing Docs</span>
+                        <span id="missingDocsBadge" class="missing-badge" style="display: none;">0</span>
+                    </a>
+                    
                     <a href="/history.html" class="nav-link active">
                         <i class="fas fa-database"></i>
                         <span>Records</span>
@@ -1991,6 +2019,10 @@
             checkAuth();
             loadData();
             setupEventListeners();
+            
+            // Start updating missing docs badge
+            updateMissingDocsBadge();
+            setInterval(updateMissingDocsBadge, 30000); // Update every 30 seconds
         });
 
         function setupEventListeners() {
@@ -2015,6 +2047,25 @@
                     if (openModal) closeModal(openModal.id);
                 }
             });
+        }
+
+        // Update missing docs badge
+        async function updateMissingDocsBadge() {
+            try {
+                const response = await fetch('/api/missing-documents');
+                if (response.ok) {
+                    const data = await response.json();
+                    const badge = document.getElementById('missingDocsBadge');
+                    if (data.total_count > 0) {
+                        badge.textContent = data.total_count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating missing docs badge:', error);
+            }
         }
 
         async function checkAuth() {
@@ -2611,6 +2662,9 @@
                     if (record) record.status = status;
                     updateStats();
                     renderTable(filteredRecords);
+                    
+                    // Update missing docs badge after status change
+                    updateMissingDocsBadge();
                 } else {
                     showNotification('Failed to update status', 'error');
                 }
@@ -2655,7 +2709,12 @@
                         loadArchiveYearFilter();
                     }
                     updateStats();
+                    updateArchivedStats();
                     renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    
+                    // Update missing docs badge after archive
+                    updateMissingDocsBadge();
+                    
                     closeModal('archiveModal');
                 } else {
                     showNotification('Failed to archive record', 'error');
@@ -2696,6 +2755,10 @@
                     updateArchivedStats();
                     loadArchiveYearFilter();
                     renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    
+                    // Update missing docs badge after restore
+                    updateMissingDocsBadge();
+                    
                     closeModal('restoreModal');
                 } else {
                     showNotification('Failed to restore record', 'error');
@@ -3372,4 +3435,4 @@
         }
     </script>
 </body>
-                                                        </html>
+</html>
