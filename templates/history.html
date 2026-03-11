@@ -37,6 +37,8 @@
             --pending: #2196F3;
             --approved: #4CAF50;
             --rejected: #f44336;
+            --archived: #6c757d;
+            --archive: #6f42c1;
         }
 
         * {
@@ -151,6 +153,19 @@
             border-color: var(--gold);
         }
 
+        .nav-link.archive-tab {
+            background: rgba(111, 66, 193, 0.1);
+            border-color: var(--archive);
+            color: #b5a0ff;
+        }
+
+        .nav-link.archive-tab:hover,
+        .nav-link.archive-tab.active {
+            background: rgba(111, 66, 193, 0.2);
+            color: #d4bfff;
+            border-color: var(--archive);
+        }
+
         .user-info {
             display: flex;
             align-items: center;
@@ -174,10 +189,53 @@
             font-family: 'Cinzel', serif;
         }
 
+        /* ===== VIEW TOGGLE ===== */
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            padding: 12px 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .toggle-btn.active {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .toggle-btn.archive-btn.active {
+            background: rgba(111, 66, 193, 0.2);
+            color: #b5a0ff;
+            border-color: var(--archive);
+        }
+
         /* ===== STATS BAR ===== */
         .stats-bar {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -361,6 +419,12 @@
             border: 1px solid #9e9e9e;
         }
 
+        .doc-status-archived {
+            background: rgba(108, 117, 125, 0.15);
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+
         /* ===== RECORD STATUS BADGES ===== */
         .status-badge {
             display: inline-block;
@@ -396,6 +460,12 @@
             background: rgba(244, 67, 54, 0.15);
             color: #f44336;
             border: 1px solid #f44336;
+        }
+
+        .status-archived {
+            background: rgba(108, 117, 125, 0.15);
+            color: #6c757d;
+            border: 1px solid #6c757d;
         }
 
         /* ===== TABLE - FIXED LAYOUT ===== */
@@ -446,6 +516,14 @@
 
         tr:hover {
             background-color: rgba(212, 175, 55, 0.05);
+        }
+
+        tr.archived-row {
+            background-color: rgba(108, 117, 125, 0.05);
+        }
+
+        tr.archived-row:hover {
+            background-color: rgba(108, 117, 125, 0.1);
         }
 
         /* Column widths */
@@ -687,6 +765,30 @@
             background: rgba(255, 152, 0, 0.3);
         }
 
+        .doc-icon.hd-uploaded {
+            background: rgba(111, 66, 193, 0.15);
+            color: #b5a0ff;
+            border: 1px solid #b5a0ff;
+        }
+
+        .doc-icon.hd-missing {
+            background: rgba(111, 66, 193, 0.15);
+            color: #6f42c1;
+            border: 1px solid #6f42c1;
+        }
+
+        .doc-icon.tc-uploaded {
+            background: rgba(111, 66, 193, 0.15);
+            color: #b5a0ff;
+            border: 1px solid #b5a0ff;
+        }
+
+        .doc-icon.tc-missing {
+            background: rgba(111, 66, 193, 0.15);
+            color: #6f42c1;
+            border: 1px solid #6f42c1;
+        }
+
         /* Document links */
         .doc-links {
             display: flex;
@@ -731,6 +833,16 @@
         .doc-link.other {
             border-color: #FF9800;
             color: #FFCC80;
+        }
+
+        .doc-link.hd {
+            border-color: #6f42c1;
+            color: #b5a0ff;
+        }
+
+        .doc-link.tc {
+            border-color: #6f42c1;
+            color: #b5a0ff;
         }
 
         /* ===== MORAL BADGES ===== */
@@ -832,6 +944,18 @@
             background: var(--info);
             color: white;
             border-color: var(--info);
+        }
+
+        .btn-archive:hover {
+            background: var(--archive);
+            color: white;
+            border-color: var(--archive);
+        }
+
+        .btn-restore:hover {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
         }
 
         .btn-delete:hover {
@@ -1128,6 +1252,54 @@
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
 
+        .btn-archive {
+            background: rgba(111, 66, 193, 0.15);
+            color: #b5a0ff;
+            border: 1px solid #b5a0ff;
+        }
+
+        .btn-archive:hover {
+            background: #6f42c1;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+        }
+
+        .btn-restore {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .btn-restore:hover {
+            background: #28a745;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Archive reason modal */
+        .archive-reason-select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--archive);
+            color: var(--text-light);
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .archive-notes-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--archive);
+            color: var(--text-light);
+            border-radius: 4px;
+            margin-top: 10px;
+            resize: vertical;
+            min-height: 60px;
+        }
+
         /* Rejection reason modal */
         .rejection-reason-input {
             width: 100%;
@@ -1182,6 +1354,13 @@
             color: white;
             border-left: 4px solid #17a2b8;
             border: 1px solid #17a2b8;
+        }
+
+        .notification.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: black;
+            border-left: 4px solid #ffc107;
+            border: 1px solid #ffc107;
         }
 
         /* ===== STUDENT DETAILS IN MODAL ===== */
@@ -1261,6 +1440,39 @@
             font-size: 16px;
         }
 
+        /* Archive info */
+        .archive-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(111, 66, 193, 0.1);
+            border: 1px solid var(--archive);
+            border-radius: var(--border-radius);
+        }
+
+        .archive-info h4 {
+            color: #b5a0ff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .archive-detail {
+            display: flex;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .archive-label {
+            width: 120px;
+            color: var(--text-muted);
+        }
+
+        .archive-value {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
         /* Download counter */
         .download-counter {
             font-size: 11px;
@@ -1317,12 +1529,16 @@
                 justify-content: center;
             }
             
+            .view-toggle {
+                justify-content: center;
+            }
+            
             .table-wrapper {
                 overflow-x: auto;
             }
             
             table {
-                min-width: 1000px;
+                min-width: 1200px;
             }
             
             .student-info {
@@ -1361,6 +1577,16 @@
             .document-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .action-buttons-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .download-btn, .clear-filters-btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         .touch-target {
@@ -1371,7 +1597,8 @@
         .action-btn,
         .nav-link,
         .doc-link,
-        .status-btn {
+        .status-btn,
+        .toggle-btn {
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -1428,8 +1655,18 @@
             </div>
         </header>
 
-        <!-- STATS BAR -->
-        <div class="stats-bar">
+        <!-- VIEW TOGGLE -->
+        <div class="view-toggle">
+            <button class="toggle-btn active" onclick="toggleView('active')" id="activeViewBtn">
+                <i class="fas fa-folder-open"></i> Active Records
+            </button>
+            <button class="toggle-btn archive-btn" onclick="toggleView('archived')" id="archivedViewBtn">
+                <i class="fas fa-archive"></i> Archived Records
+            </button>
+        </div>
+
+        <!-- STATS BAR (Active Records) -->
+        <div class="stats-bar" id="activeStats">
             <div class="stat-item">
                 <div class="stat-number" id="totalRecords">0</div>
                 <div class="stat-label">Total</div>
@@ -1456,8 +1693,32 @@
             </div>
         </div>
 
-        <!-- SEARCH AND FILTER -->
-        <div class="search-filter-container">
+        <!-- STATS BAR (Archived Records) -->
+        <div class="stats-bar" id="archivedStats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-number" id="archivedTotal">0</div>
+                <div class="stat-label">Archived</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="archivedGraduated">0</div>
+                <div class="stat-label">Graduated</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="archivedTransferred">0</div>
+                <div class="stat-label">Transferred</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="archivedCompleted">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="archivedOther">0</div>
+                <div class="stat-label">Other</div>
+            </div>
+        </div>
+
+        <!-- SEARCH AND FILTER (Active Records) -->
+        <div class="search-filter-container" id="activeFilters">
             <div class="search-box">
                 <i class="fas fa-search"></i>
                 <input type="text" id="searchInput" placeholder="Search name, LRN, college...">
@@ -1489,6 +1750,32 @@
                 </button>
                 
                 <button class="clear-filters-btn" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- SEARCH AND FILTER (Archived Records) -->
+        <div class="search-filter-container" id="archivedFilters" style="display: none;">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="archiveSearchInput" placeholder="Search archived records...">
+            </div>
+
+            <select id="archiveReasonFilter" class="filter-select">
+                <option value="">All Reasons</option>
+                <option value="GRADUATED">Graduated</option>
+                <option value="TRANSFERRED_OUT">Transferred Out</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="OTHER">Other</option>
+            </select>
+
+            <select id="archiveYearFilter" class="filter-select">
+                <option value="">All Years</option>
+            </select>
+
+            <div class="action-buttons-group">
+                <button class="clear-filters-btn" onclick="clearArchiveFilters()">
                     <i class="fas fa-times"></i> Clear
                 </button>
             </div>
@@ -1572,6 +1859,83 @@
             </div>
         </div>
 
+        <!-- ARCHIVE MODAL -->
+        <div id="archiveModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-archive"></i> Archive Record</h3>
+                    <button class="close-modal" onclick="closeModal('archiveModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Select reason for archiving this record:</p>
+                    <select id="archiveReason" class="archive-reason-select">
+                        <option value="GRADUATED">Student Graduated</option>
+                        <option value="TRANSFERRED_OUT">Student Transferred Out</option>
+                        <option value="COMPLETED">Document Process Completed</option>
+                        <option value="OTHER">Other Reason</option>
+                    </select>
+                    
+                    <textarea id="archiveNotes" class="archive-notes-input" placeholder="Additional notes (optional)"></textarea>
+                    
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
+                        <p><strong>Student:</strong> <span id="archiveStudentName"></span></p>
+                        <p><strong>Note:</strong> Archived records can be restored later if needed.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('archiveModal')">Cancel</button>
+                    <button class="btn btn-archive" onclick="confirmArchive()">Archive Record</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESTORE CONFIRM MODAL -->
+        <div id="restoreModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-trash-restore"></i> Restore Record</h3>
+                    <button class="close-modal" onclick="closeModal('restoreModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Restore this archived record?</p>
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
+                        <p><strong>Student:</strong> <span id="restoreStudentName"></span></p>
+                        <p><strong>Note:</strong> The record will be moved back to active records.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('restoreModal')">Cancel</button>
+                    <button class="btn btn-success" onclick="confirmRestore()">Restore Record</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERMANENT DELETE MODAL (Super Admin only) -->
+        <div id="permanentDeleteModal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 500px; border-color: var(--danger);">
+                <div class="modal-header" style="border-bottom-color: var(--danger);">
+                    <h3 style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Permanent Delete</h3>
+                    <button class="close-modal" onclick="closeModal('permanentDeleteModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="background: rgba(220, 53, 69, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <p style="color: #ff6b6b;"><strong>WARNING:</strong> This action cannot be undone!</p>
+                        <p style="color: #ff9f9f; font-size: 12px;">All files will be permanently deleted from the server.</p>
+                    </div>
+                    
+                    <p>Are you sure you want to permanently delete this record?</p>
+                    
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 6px;">
+                        <p><strong>Student:</strong> <span id="permanentDeleteStudentName"></span></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('permanentDeleteModal')">Cancel</button>
+                    <button class="btn btn-danger" onclick="confirmPermanentDelete()">Permanently Delete</button>
+                </div>
+            </div>
+        </div>
+
         <!-- REJECT MODAL -->
         <div id="rejectModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 500px;">
@@ -1602,12 +1966,17 @@
 
     <script>
         let allRecords = [];
+        let archivedRecords = [];
         let filteredRecords = [];
         let serverBaseUrl = window.location.origin;
         let currentEmailRecordId = null;
         let currentRejectRecordId = null;
+        let currentArchiveRecordId = null;
+        let currentRestoreRecordId = null;
+        let currentPermanentDeleteRecordId = null;
         let collegesData = [];
         let userData = {};
+        let currentView = 'active'; // 'active' or 'archived'
 
         // College mapping for badges
         const collegeBadgeMap = {
@@ -1629,6 +1998,10 @@
             document.getElementById('collegeFilter')?.addEventListener('change', applyFilters);
             document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
             document.getElementById('moralFilter')?.addEventListener('change', applyFilters);
+            
+            document.getElementById('archiveSearchInput')?.addEventListener('input', applyArchiveFilters);
+            document.getElementById('archiveReasonFilter')?.addEventListener('change', applyArchiveFilters);
+            document.getElementById('archiveYearFilter')?.addEventListener('change', applyArchiveFilters);
             
             window.onclick = function(event) {
                 if (event.target.classList.contains('modal-overlay')) {
@@ -1676,30 +2049,63 @@
 
         async function loadData() {
             try {
-                const [recordsResponse, collegesResponse] = await Promise.all([
+                // Load active records
+                const [recordsResponse, collegesResponse, archivedResponse] = await Promise.all([
                     fetch('/get-records'),
-                    fetch('/api/colleges-dropdown')
+                    fetch('/api/colleges-dropdown'),
+                    fetch('/get-archived-records')
                 ]);
 
                 if (recordsResponse.ok) {
                     const data = await recordsResponse.json();
                     allRecords = data.records || [];
-                    filteredRecords = [...allRecords];
-                    console.log('📊 Records loaded:', allRecords);
+                    console.log('📊 Active records loaded:', allRecords.length);
+                }
+
+                if (archivedResponse.ok) {
+                    const data = await archivedResponse.json();
+                    archivedRecords = data.records || [];
+                    console.log('📊 Archived records loaded:', archivedRecords.length);
                 }
 
                 if (collegesResponse.ok) {
                     collegesData = await collegesResponse.json();
                     loadCollegesForFilter();
+                    loadArchiveYearFilter();
                 }
 
                 updateStats();
-                renderTable(filteredRecords);
+                renderTable(currentView === 'active' ? allRecords : archivedRecords);
                 updateDownloadCount();
 
             } catch (error) {
                 console.error('Error loading data:', error);
                 showNotification('Error loading data', 'error');
+            }
+        }
+
+        function toggleView(view) {
+            currentView = view;
+            
+            // Update toggle buttons
+            document.getElementById('activeViewBtn').classList.toggle('active', view === 'active');
+            document.getElementById('archivedViewBtn').classList.toggle('active', view === 'archived');
+            
+            // Show/hide stats
+            document.getElementById('activeStats').style.display = view === 'active' ? 'grid' : 'none';
+            document.getElementById('archivedStats').style.display = view === 'archived' ? 'grid' : 'none';
+            
+            // Show/hide filters
+            document.getElementById('activeFilters').style.display = view === 'active' ? 'flex' : 'none';
+            document.getElementById('archivedFilters').style.display = view === 'archived' ? 'flex' : 'none';
+            
+            // Render appropriate records
+            if (view === 'active') {
+                renderTable(allRecords);
+                updateStats();
+            } else {
+                renderTable(archivedRecords);
+                updateArchivedStats();
             }
         }
 
@@ -1716,11 +2122,34 @@
             });
         }
 
+        function loadArchiveYearFilter() {
+            const yearFilter = document.getElementById('archiveYearFilter');
+            if (!yearFilter) return;
+            
+            const years = new Set();
+            archivedRecords.forEach(record => {
+                if (record.archived_at) {
+                    const year = new Date(record.archived_at).getFullYear();
+                    years.add(year);
+                }
+            });
+            
+            yearFilter.innerHTML = '<option value="">All Years</option>';
+            Array.from(years).sort().reverse().forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+        }
+
         function getDocumentIcons(r) {
             const docStatus = r.document_status || { psa: false, form137: false, goodmoral: false };
             const psaUploaded = docStatus.psa || r.image_path || r.psa_image_path;
             const f137Uploaded = docStatus.form137 || r.form137_path || r.f137_image_path;
             const gmUploaded = docStatus.goodmoral || r.goodmoral_path;
+            const hdUploaded = r.honorable_dismissal_path;
+            const tcUploaded = r.transfer_credentials_path;
             const otherDocs = r.other_documents || [];
             
             let otherDocsHtml = '';
@@ -1730,6 +2159,19 @@
                         <i class="fas fa-folder-open"></i>
                     </span>
                     <span style="font-size: 8px; color: #FF9800; margin-left: 2px;">+${otherDocs.length}</span>
+                `;
+            }
+            
+            // Transferee document icons
+            let hdIcon = '';
+            if (r.is_transferee) {
+                hdIcon = `
+                    <span class="doc-icon ${hdUploaded ? 'hd-uploaded' : 'hd-missing'}" title="Honorable Dismissal: ${hdUploaded ? 'Uploaded' : 'Missing'}">
+                        <i class="fas fa-file-signature"></i>
+                    </span>
+                    <span class="doc-icon ${tcUploaded ? 'tc-uploaded' : 'tc-missing'}" title="Transfer Credentials: ${tcUploaded ? 'Uploaded' : 'Missing'}">
+                        <i class="fas fa-file-export"></i>
+                    </span>
                 `;
             }
             
@@ -1744,13 +2186,14 @@
                     <span class="doc-icon ${gmUploaded ? 'gm-uploaded' : 'gm-missing'}" title="Good Moral: ${gmUploaded ? 'Uploaded' : 'Missing'}">
                         <i class="fas fa-certificate"></i>
                     </span>
+                    ${hdIcon}
                     ${otherDocsHtml}
                 </div>
             `;
         }
 
         function showOtherDocuments(recordId) {
-            const record = allRecords.find(r => r.id === recordId);
+            const record = allRecords.find(r => r.id === recordId) || archivedRecords.find(r => r.id === recordId);
             if (!record || !record.other_documents || record.other_documents.length === 0) {
                 showNotification('No other documents found', 'info');
                 return;
@@ -1842,7 +2285,7 @@
                             <div class="empty-state">
                                 <i class="fas fa-database"></i>
                                 <h3>No Records Found</h3>
-                                <p>No records match your search criteria.</p>
+                                <p>No ${currentView} records match your search criteria.</p>
                             </div>
                         </td>
                     </tr>
@@ -1857,47 +2300,21 @@
                 const age = r.age ? `${r.age}y` : '';
                 const lrn = r.lrn ? r.lrn.slice(-4) : 'N/A';
                 
-                const statusActions = (recordStatus === 'INCOMPLETE' || recordStatus === 'PENDING') ? `
-                    <div class="status-action-buttons">
-                        <button onclick="openApproveModal(${r.id})" class="status-btn approve" title="Approve">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button onclick="openRejectModal(${r.id})" class="status-btn reject" title="Reject">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                ` : '';
-
-                // Get college badge class
-                let collegeBadgeClass = 'badge-default';
-                if (r.college) {
-                    for (const [code, badgeClass] of Object.entries(collegeBadgeMap)) {
-                        if (r.college.includes(code)) {
-                            collegeBadgeClass = badgeClass;
-                            break;
-                        }
-                    }
-                }
-
-                return `
-                <tr id="row-${r.id}">
-                    <td>
-                        <div class="student-info">
-                            <div class="student-avatar">${initials}</div>
-                            <div class="student-details">
-                                <h4 title="${r.name || ''}">${r.name || 'Unknown'}</h4>
-                                <p>${age}</p>
-                                ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i></span>' : ''}
-                            </div>
+                // Action buttons based on view
+                let actionButtons = '';
+                if (currentView === 'active') {
+                    const statusActions = (recordStatus === 'INCOMPLETE' || recordStatus === 'PENDING') ? `
+                        <div class="status-action-buttons">
+                            <button onclick="openApproveModal(${r.id})" class="status-btn approve" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button onclick="openRejectModal(${r.id})" class="status-btn reject" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                    </td>
-                    <td>${lrn}</td>
-                    <td>${r.college ? r.college.substring(0, 15) + (r.college.length > 15 ? '...' : '') : '-'}</td>
-                    <td>${r.program ? r.program.substring(0, 15) + (r.program.length > 15 ? '...' : '') : '-'}</td>
-                    <td>${getDocumentIcons(r)}</td>
-                    <td>${getStatusBadge(recordStatus)}</td>
-                    <td>${getMoralBadge(r)}</td>
-                    <td>
+                    ` : '';
+
+                    actionButtons = `
                         <div class="action-buttons">
                             <button onclick="viewStudentDetails(${r.id})" class="action-btn btn-view" title="View">
                                 <i class="fas fa-eye"></i>
@@ -1910,12 +2327,64 @@
                                     <i class="fas fa-envelope"></i>
                                 </button>
                             ` : ''}
-                            <button onclick="deleteRecord(${r.id})" class="action-btn btn-delete" title="Delete">
-                                <i class="fas fa-trash"></i>
+                            <button onclick="openArchiveModal(${r.id})" class="action-btn btn-archive" title="Archive">
+                                <i class="fas fa-archive"></i>
                             </button>
                         </div>
                         ${statusActions}
+                    `;
+                } else {
+                    actionButtons = `
+                        <div class="action-buttons">
+                            <button onclick="viewStudentDetails(${r.id})" class="action-btn btn-view" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <a href="/view-form/${r.id}" target="_blank" class="action-btn btn-print" title="Print">
+                                <i class="fas fa-print"></i>
+                            </a>
+                            <button onclick="openRestoreModal(${r.id})" class="action-btn btn-restore" title="Restore">
+                                <i class="fas fa-trash-restore"></i>
+                            </button>
+                            <button onclick="openPermanentDeleteModal(${r.id})" class="action-btn btn-delete" title="Permanently Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                // Get college badge class
+                let collegeBadgeClass = 'badge-default';
+                if (r.college) {
+                    for (const [code, badgeClass] of Object.entries(collegeBadgeMap)) {
+                        if (r.college.includes(code)) {
+                            collegeBadgeClass = badgeClass;
+                            break;
+                        }
+                    }
+                }
+
+                const rowClass = currentView === 'archived' ? 'archived-row' : '';
+
+                return `
+                <tr id="row-${r.id}" class="${rowClass}">
+                    <td>
+                        <div class="student-info">
+                            <div class="student-avatar">${initials}</div>
+                            <div class="student-details">
+                                <h4 title="${r.name || ''}">${r.name || 'Unknown'}</h4>
+                                <p>${age}</p>
+                                ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i></span>' : ''}
+                                ${r.is_transferee ? '<span class="doc-status-badge" style="background:rgba(111,66,193,0.15);color:#b5a0ff;border-color:#b5a0ff;"><i class="fas fa-exchange-alt"></i> Transferee</span>' : ''}
+                            </div>
+                        </div>
                     </td>
+                    <td>${lrn}</td>
+                    <td><span class="college-badge ${collegeBadgeClass}">${r.college ? r.college.substring(0, 10) : '-'}</span></td>
+                    <td>${r.program ? r.program.substring(0, 10) + (r.program.length > 10 ? '...' : '') : '-'}</td>
+                    <td>${getDocumentIcons(r)}</td>
+                    <td>${getStatusBadge(recordStatus)}</td>
+                    <td>${getMoralBadge(r)}</td>
+                    <td>${actionButtons}</td>
                 </tr>
             `}).join('');
         }
@@ -1943,6 +2412,20 @@
             document.getElementById('emailSent').textContent = emails;
         }
 
+        function updateArchivedStats() {
+            const total = archivedRecords.length;
+            const graduated = archivedRecords.filter(r => r.archive_reason === 'GRADUATED').length;
+            const transferred = archivedRecords.filter(r => r.archive_reason === 'TRANSFERRED_OUT').length;
+            const completed = archivedRecords.filter(r => r.archive_reason === 'COMPLETED').length;
+            const other = archivedRecords.filter(r => r.archive_reason === 'OTHER' || !r.archive_reason).length;
+            
+            document.getElementById('archivedTotal').textContent = total;
+            document.getElementById('archivedGraduated').textContent = graduated;
+            document.getElementById('archivedTransferred').textContent = transferred;
+            document.getElementById('archivedCompleted').textContent = completed;
+            document.getElementById('archivedOther').textContent = other;
+        }
+
         function getImageUrl(filename) {
             if (!filename) return '#';
             if (typeof filename === 'object') filename = filename.filename || '';
@@ -1951,6 +2434,8 @@
         }
 
         function applyFilters() {
+            if (currentView !== 'active') return;
+            
             const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
             const collegeFilter = document.getElementById('collegeFilter')?.value || '';
             const statusFilter = document.getElementById('statusFilter')?.value || '';
@@ -1992,14 +2477,60 @@
             }
             
             renderTable(filtered);
+            updateDownloadCount();
+        }
+
+        function applyArchiveFilters() {
+            if (currentView !== 'archived') return;
+            
+            const searchTerm = document.getElementById('archiveSearchInput')?.value.toLowerCase() || '';
+            const reasonFilter = document.getElementById('archiveReasonFilter')?.value || '';
+            const yearFilter = document.getElementById('archiveYearFilter')?.value || '';
+            
+            let filtered = archivedRecords;
+            
+            if (searchTerm) {
+                filtered = filtered.filter(r => 
+                    (r.name || '').toLowerCase().includes(searchTerm) ||
+                    (r.lrn || '').toLowerCase().includes(searchTerm) ||
+                    (r.college || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (reasonFilter) {
+                filtered = filtered.filter(r => r.archive_reason === reasonFilter);
+            }
+            
+            if (yearFilter) {
+                filtered = filtered.filter(r => {
+                    if (r.archived_at) {
+                        const year = new Date(r.archived_at).getFullYear();
+                        return year.toString() === yearFilter;
+                    }
+                    return false;
+                });
+            }
+            
+            renderTable(filtered);
         }
 
         function clearFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('collegeFilter').value = '';
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('moralFilter').value = '';
-            renderTable(allRecords);
+            if (currentView === 'active') {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('collegeFilter').value = '';
+                document.getElementById('statusFilter').value = '';
+                document.getElementById('moralFilter').value = '';
+                renderTable(allRecords);
+            }
+        }
+
+        function clearArchiveFilters() {
+            if (currentView === 'archived') {
+                document.getElementById('archiveSearchInput').value = '';
+                document.getElementById('archiveReasonFilter').value = '';
+                document.getElementById('archiveYearFilter').value = '';
+                renderTable(archivedRecords);
+            }
         }
 
         function updateDownloadCount() {
@@ -2019,7 +2550,10 @@
                     'COLLEGE': r.college || 'N/A',
                     'PROGRAM': r.program || 'N/A',
                     'STATUS': r.status || 'INCOMPLETE',
-                    'MORAL': r.disciplinary_status || 'N/A'
+                    'MORAL': r.disciplinary_status || 'N/A',
+                    'TYPE': r.is_transferee ? 'Transferee' : 'Regular',
+                    'ARCHIVED': r.is_archived ? 'Yes' : 'No',
+                    'ARCHIVE_REASON': r.archive_reason || 'N/A'
                 }));
 
                 const ws = XLSX.utils.json_to_sheet(excelData);
@@ -2027,7 +2561,7 @@
                 XLSX.utils.book_append_sheet(wb, ws, 'Records');
                 
                 const date = new Date();
-                const filename = `records_${date.toISOString().split('T')[0]}.xlsx`;
+                const filename = `${currentView}_records_${date.toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(wb, filename);
                 showNotification(`Downloaded ${filteredRecords.length} records`, 'success');
             } catch (error) {
@@ -2085,9 +2619,129 @@
             }
         }
 
-        // ========== FIXED: COMPLETE STUDENT DETAILS VIEW ==========
-        function viewStudentDetails(id) {
+        function openArchiveModal(id) {
             const record = allRecords.find(r => r.id === id);
+            if (!record) return;
+            currentArchiveRecordId = id;
+            document.getElementById('archiveStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('archiveReason').value = 'GRADUATED';
+            document.getElementById('archiveNotes').value = '';
+            openModal('archiveModal');
+        }
+
+        async function confirmArchive() {
+            const reason = document.getElementById('archiveReason').value;
+            const notes = document.getElementById('archiveNotes').value;
+            
+            try {
+                const response = await fetch(`/api/record/${currentArchiveRecordId}/archive`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify({ reason, notes })
+                });
+                
+                if (response.ok) {
+                    showNotification('Record archived successfully!', 'success');
+                    // Remove from active records
+                    allRecords = allRecords.filter(r => r.id !== currentArchiveRecordId);
+                    // Reload archived records
+                    const archivedResponse = await fetch('/get-archived-records');
+                    if (archivedResponse.ok) {
+                        const data = await archivedResponse.json();
+                        archivedRecords = data.records || [];
+                        loadArchiveYearFilter();
+                    }
+                    updateStats();
+                    renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    closeModal('archiveModal');
+                } else {
+                    showNotification('Failed to archive record', 'error');
+                }
+            } catch (error) {
+                showNotification('Error archiving record', 'error');
+            }
+        }
+
+        function openRestoreModal(id) {
+            const record = archivedRecords.find(r => r.id === id);
+            if (!record) return;
+            currentRestoreRecordId = id;
+            document.getElementById('restoreStudentName').textContent = record.name || 'Unknown';
+            openModal('restoreModal');
+        }
+
+        async function confirmRestore() {
+            try {
+                const response = await fetch(`/api/record/${currentRestoreRecordId}/restore`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('Record restored successfully!', 'success');
+                    // Remove from archived records
+                    archivedRecords = archivedRecords.filter(r => r.id !== currentRestoreRecordId);
+                    // Reload active records
+                    const recordsResponse = await fetch('/get-records');
+                    if (recordsResponse.ok) {
+                        const data = await recordsResponse.json();
+                        allRecords = data.records || [];
+                    }
+                    updateStats();
+                    updateArchivedStats();
+                    loadArchiveYearFilter();
+                    renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    closeModal('restoreModal');
+                } else {
+                    showNotification('Failed to restore record', 'error');
+                }
+            } catch (error) {
+                showNotification('Error restoring record', 'error');
+            }
+        }
+
+        function openPermanentDeleteModal(id) {
+            const record = archivedRecords.find(r => r.id === id);
+            if (!record) return;
+            currentPermanentDeleteRecordId = id;
+            document.getElementById('permanentDeleteStudentName').textContent = record.name || 'Unknown';
+            openModal('permanentDeleteModal');
+        }
+
+        async function confirmPermanentDelete() {
+            if (!confirm("This action CANNOT be undone! Are you absolutely sure?")) return;
+            
+            try {
+                const response = await fetch(`/api/record/${currentPermanentDeleteRecordId}/permanent-delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': localStorage.getItem('session_token')
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('Record permanently deleted', 'success');
+                    // Remove from archived records
+                    archivedRecords = archivedRecords.filter(r => r.id !== currentPermanentDeleteRecordId);
+                    updateArchivedStats();
+                    loadArchiveYearFilter();
+                    renderTable(archivedRecords);
+                    closeModal('permanentDeleteModal');
+                } else {
+                    showNotification('Failed to delete record', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting record', 'error');
+            }
+        }
+
+        function viewStudentDetails(id) {
+            const record = allRecords.find(r => r.id === id) || archivedRecords.find(r => r.id === id);
             if (!record) return;
 
             // Helper function para i-display ang value o N/A
@@ -2104,11 +2758,46 @@
                                 <span>${display(record.school_name)}</span>
                             </div>
                         </div>
-                        <div>${getStatusBadge(record.status || 'INCOMPLETE')}</div>
+                        <div>
+                            ${record.is_archived ? 
+                                '<span class="status-badge status-archived">ARCHIVED</span>' : 
+                                getStatusBadge(record.status || 'INCOMPLETE')
+                            }
+                        </div>
                     </div>
                 </div>
+            `;
 
-                <!-- College Section -->
+            // Archive info if archived
+            if (record.is_archived) {
+                const archivedDate = record.archived_at ? new Date(record.archived_at).toLocaleString() : 'Unknown';
+                html += `
+                    <div class="archive-info">
+                        <h4><i class="fas fa-archive"></i> Archive Information</h4>
+                        <div class="archive-detail">
+                            <span class="archive-label">Archived Date:</span>
+                            <span class="archive-value">${archivedDate}</span>
+                        </div>
+                        <div class="archive-detail">
+                            <span class="archive-label">Reason:</span>
+                            <span class="archive-value">${display(record.archive_reason)}</span>
+                        </div>
+                        ${record.archive_notes ? `
+                            <div class="archive-detail">
+                                <span class="archive-label">Notes:</span>
+                                <span class="archive-value">${record.archive_notes}</span>
+                            </div>
+                        ` : ''}
+                        <div class="archive-detail">
+                            <span class="archive-label">Archived By:</span>
+                            <span class="archive-value">${display(record.archived_by_name)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // College Section
+            html += `
                 <div class="college-section">
                     <div class="college-header">
                         <i class="fas fa-university" style="color: var(--gold);"></i>
@@ -2125,7 +2814,7 @@
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Student Type</div>
-                            <div class="detail-value">${display(record.student_type)}</div>
+                            <div class="detail-value">${display(record.student_type)} ${record.is_transferee ? '(Transferee)' : ''}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">School Year</div>
@@ -2133,8 +2822,37 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Document Status Section -->
+            // Transferee info if applicable
+            if (record.is_transferee) {
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(111,66,193,0.1); border: 1px solid #6f42c1; border-radius: 6px;">
+                        <h4 style="color: #b5a0ff; margin-bottom: 10px;"><i class="fas fa-exchange-alt"></i> Transferee Information</h4>
+                        <div class="student-details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Previous School</div>
+                                <div class="detail-value">${display(record.previous_school)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Previous School Address</div>
+                                <div class="detail-value">${display(record.previous_school_address)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Previous School Year</div>
+                                <div class="detail-value">${display(record.previous_school_year)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Year Level to Enroll</div>
+                                <div class="detail-value">${display(record.year_level_to_enroll)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Document Status Section
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-file-alt"></i> Document Status
@@ -2152,10 +2870,20 @@
                         <span class="doc-status-badge ${record.form138_path ? 'doc-status-uploaded' : 'doc-status-optional'}">
                             <i class="fas ${record.form138_path ? 'fa-check' : 'fa-minus'}"></i> Form 138
                         </span>
+                        ${record.is_transferee ? `
+                            <span class="doc-status-badge ${record.honorable_dismissal_path ? 'doc-status-uploaded' : 'doc-status-missing'}" style="border-color: #6f42c1; color: #b5a0ff;">
+                                <i class="fas ${record.honorable_dismissal_path ? 'fa-check' : 'fa-times'}"></i> Honorable Dismissal
+                            </span>
+                            <span class="doc-status-badge ${record.transfer_credentials_path ? 'doc-status-uploaded' : 'doc-status-missing'}" style="border-color: #6f42c1; color: #b5a0ff;">
+                                <i class="fas ${record.transfer_credentials_path ? 'fa-check' : 'fa-times'}"></i> Transfer Credentials
+                            </span>
+                        ` : ''}
                     </div>
                 </div>
+            `;
 
-                <!-- Personal Information -->
+            // Personal Information
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-user-circle"></i> Personal Information
@@ -2195,8 +2923,10 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Contact Information -->
+            // Contact Information
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-address-book"></i> Contact Information
@@ -2224,8 +2954,10 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Academic Information -->
+            // Academic Information
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-graduation-cap"></i> Academic Information
@@ -2257,8 +2989,10 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Special Groups -->
+            // Special Groups
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-notes-medical"></i> Special Groups & Health
@@ -2298,8 +3032,10 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Parent Information -->
+            // Parent Information
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-users"></i> Parent Information
@@ -2343,8 +3079,10 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Guardian Information -->
+            // Guardian Information
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-user-shield"></i> Guardian Information
@@ -2364,21 +3102,27 @@
                         </div>
                     </div>
                 </div>
+            `;
 
-                <!-- Employer Information -->
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-briefcase"></i> Employer Information
-                    </h4>
-                    <div class="student-details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Employer Name</div>
-                            <div class="detail-value">${display(record.employer_name)}</div>
+            // Employer Information
+            if (record.is_working === 'Yes') {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-briefcase"></i> Employer Information
+                        </h4>
+                        <div class="student-details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Employer Name</div>
+                                <div class="detail-value">${display(record.employer_name)}</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                `;
+            }
 
-                <!-- Siblings -->
+            // Siblings
+            html += `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
                         <i class="fas fa-users"></i> Siblings
@@ -2403,55 +3147,56 @@
                         })()}
                     </div>
                 </div>
+            `;
 
-                <!-- Good Moral Analysis -->
-                ${(() => {
-                    if (record.goodmoral_analysis || record.goodmoral_score) {
-                        let analysis = {};
-                        try {
-                            analysis = typeof record.goodmoral_analysis === 'string' 
-                                ? JSON.parse(record.goodmoral_analysis) 
-                                : (record.goodmoral_analysis || {});
-                        } catch (e) {
-                            analysis = {};
-                        }
-                        
-                        return `
-                            <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${record.goodmoral_score >= 80 ? '#28a745' : record.goodmoral_score >= 60 ? '#ffc107' : '#dc3545'}">
-                                <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                                    <i class="fas fa-shield-alt"></i> Good Moral Analysis
-                                </h4>
-                                <div style="font-size: 13px; line-height: 1.5;">
-                                    ${analysis.issuing_school ? `<div style="margin-bottom: 8px;"><strong>Issuing School:</strong> ${analysis.issuing_school}</div>` : ''}
-                                    ${analysis.issuing_officer ? `<div style="margin-bottom: 8px;"><strong>Issuing Officer:</strong> ${analysis.issuing_officer}</div>` : ''}
-                                    ${analysis.issued_date ? `<div style="margin-bottom: 8px;"><strong>Issued Date:</strong> ${analysis.issued_date}</div>` : ''}
-                                    ${record.goodmoral_score ? `<div style="margin-bottom: 8px;"><strong>Score:</strong> ${record.goodmoral_score}/100</div>` : ''}
-                                    ${record.disciplinary_status ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ${record.disciplinary_status}</div>` : ''}
-                                    ${record.disciplinary_details ? `<div style="margin-bottom: 8px;"><strong>Details:</strong><br>${record.disciplinary_details}</div>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }
-                    return '';
-                })()}
+            // Good Moral Analysis
+            if (record.goodmoral_analysis || record.goodmoral_score) {
+                let analysis = {};
+                try {
+                    analysis = typeof record.goodmoral_analysis === 'string' 
+                        ? JSON.parse(record.goodmoral_analysis) 
+                        : (record.goodmoral_analysis || {});
+                } catch (e) {
+                    analysis = {};
+                }
+                
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid ${record.goodmoral_score >= 80 ? '#28a745' : record.goodmoral_score >= 60 ? '#ffc107' : '#dc3545'}">
+                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-shield-alt"></i> Good Moral Analysis
+                        </h4>
+                        <div style="font-size: 13px; line-height: 1.5;">
+                            ${analysis.issuing_school ? `<div style="margin-bottom: 8px;"><strong>Issuing School:</strong> ${analysis.issuing_school}</div>` : ''}
+                            ${analysis.issuing_officer ? `<div style="margin-bottom: 8px;"><strong>Issuing Officer:</strong> ${analysis.issuing_officer}</div>` : ''}
+                            ${analysis.issued_date ? `<div style="margin-bottom: 8px;"><strong>Issued Date:</strong> ${analysis.issued_date}</div>` : ''}
+                            ${record.goodmoral_score ? `<div style="margin-bottom: 8px;"><strong>Score:</strong> ${record.goodmoral_score}/100</div>` : ''}
+                            ${record.disciplinary_status ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ${record.disciplinary_status}</div>` : ''}
+                            ${record.disciplinary_details ? `<div style="margin-bottom: 8px;"><strong>Details:</strong><br>${record.disciplinary_details}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
 
-                <!-- Rejection Reason -->
-                ${record.rejection_reason ? `
+            // Rejection Reason
+            if (record.rejection_reason) {
+                html += `
                     <div style="margin-top: 20px; padding: 12px; background: rgba(244,67,54,0.1); border: 1px solid #f44336; border-radius: 4px;">
                         <strong style="color: #f44336;">Rejection Reason:</strong>
                         <p style="margin-top: 5px; color: #fff;">${record.rejection_reason}</p>
                     </div>
-                ` : ''}
-            `;
+                `;
+            }
 
             // Add Documents Section
             const psaPath = record.image_path || record.psa_image_path;
             const f137Path = record.form137_path || record.f137_image_path;
             const f138Path = record.form138_path;
             const goodmoralPath = record.goodmoral_path;
+            const hdPath = record.honorable_dismissal_path;
+            const tcPath = record.transfer_credentials_path;
             const otherDocs = record.other_documents || [];
 
-            if (psaPath || f137Path || f138Path || goodmoralPath || otherDocs.length > 0) {
+            if (psaPath || f137Path || f138Path || goodmoralPath || hdPath || tcPath || otherDocs.length > 0) {
                 html += `
                     <div style="margin-bottom: 20px;">
                         <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
@@ -2502,6 +3247,30 @@
                             <i class="fas fa-certificate" style="color: #80b918; font-size: 24px; margin-bottom: 8px;"></i>
                             <div style="font-size: 12px; font-weight: bold;">Good Moral</div>
                             <a href="${getImageUrl(goodmoralPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (hdPath) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-file-signature" style="color: #b5a0ff; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">Honorable Dismissal</div>
+                            <a href="${getImageUrl(hdPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (tcPath) {
+                    html += `
+                        <div class="document-item">
+                            <i class="fas fa-file-export" style="color: #b5a0ff; font-size: 24px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: bold;">Transfer Credentials</div>
+                            <a href="${getImageUrl(tcPath)}" target="_blank" style="color: var(--gold); font-size: 11px; text-decoration: none;">
                                 <i class="fas fa-external-link-alt"></i> View
                             </a>
                         </div>
@@ -2561,26 +3330,6 @@
             }
         }
 
-        async function deleteRecord(id) {
-            if (!confirm("Delete this record?")) return;
-            try {
-                const response = await fetch(`/delete-record/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
-                });
-                if (response.ok) {
-                    allRecords = allRecords.filter(r => r.id !== id);
-                    filteredRecords = filteredRecords.filter(r => r.id !== id);
-                    updateStats();
-                    renderTable(filteredRecords);
-                    updateDownloadCount();
-                    showNotification('Record deleted', 'success');
-                }
-            } catch (error) {
-                showNotification('Delete failed', 'error');
-            }
-        }
-
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
             document.body.style.overflow = 'hidden';
@@ -2591,6 +3340,9 @@
             document.body.style.overflow = 'auto';
             if (id === 'emailModal') currentEmailRecordId = null;
             if (id === 'rejectModal') currentRejectRecordId = null;
+            if (id === 'archiveModal') currentArchiveRecordId = null;
+            if (id === 'restoreModal') currentRestoreRecordId = null;
+            if (id === 'permanentDeleteModal') currentPermanentDeleteRecordId = null;
         }
 
         function showNotification(msg, type = 'info') {
@@ -2601,7 +3353,8 @@
             icon.className = {
                 success: 'fas fa-check-circle',
                 error: 'fas fa-exclamation-circle',
-                info: 'fas fa-info-circle'
+                info: 'fas fa-info-circle',
+                warning: 'fas fa-exclamation-triangle'
             }[type] || 'fas fa-info-circle';
             
             notif.className = `notification ${type}`;
