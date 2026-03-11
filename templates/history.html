@@ -300,6 +300,7 @@
             gap: 15px;
             margin-bottom: 25px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .search-box {
@@ -312,7 +313,7 @@
             width: 100%;
             padding: 12px 15px;
             padding-right: 40px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(212, 175, 55, 0.5);
             color: var(--text-light);
             border-radius: var(--border-radius);
@@ -338,15 +339,19 @@
 
         .filter-select {
             padding: 12px 15px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(212, 175, 55, 0.5);
             color: var(--text-light);
             border-radius: var(--border-radius);
             font-size: 13px;
-            flex: 1;
             min-width: 140px;
             cursor: pointer;
             outline: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            padding-right: 35px;
         }
 
         .filter-select:focus {
@@ -363,6 +368,7 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            margin-left: auto;
         }
 
         .download-btn {
@@ -405,6 +411,15 @@
             background: rgba(212, 175, 55, 0.1);
             border-color: var(--gold);
             color: var(--gold);
+        }
+
+        .download-counter {
+            font-size: 11px;
+            color: var(--gold);
+            margin-left: 5px;
+            background: rgba(212, 175, 55, 0.2);
+            padding: 2px 6px;
+            border-radius: 12px;
         }
 
         /* ===== DOCUMENT STATUS BADGES ===== */
@@ -504,6 +519,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
+            min-width: 1200px;
         }
 
         thead {
@@ -519,6 +535,7 @@
             border-bottom: 2px solid var(--dark-red);
             text-transform: uppercase;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         td {
@@ -1000,10 +1017,11 @@
         .status-action-buttons {
             display: flex;
             gap: 5px;
+            margin-top: 5px;
         }
 
         .status-btn {
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 10px;
             font-weight: 600;
@@ -1013,7 +1031,7 @@
             background: rgba(0, 0, 0, 0.3);
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             white-space: nowrap;
         }
 
@@ -1095,6 +1113,7 @@
         }
 
         .empty-state {
+            grid-column: 1 / -1;
             text-align: center;
             padding: 60px 20px;
             color: var(--text-muted);
@@ -1107,6 +1126,19 @@
             font-size: 48px;
             margin-bottom: 20px;
             color: rgba(212, 175, 55, 0.5);
+        }
+
+        .empty-state h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            max-width: 400px;
+            margin: 0 auto 20px;
+            line-height: 1.6;
+            font-size: 14px;
         }
 
         /* ===== MODALS ===== */
@@ -1333,56 +1365,6 @@
             min-height: 80px;
         }
 
-        /* ===== NOTIFICATION ===== */
-        .notification {
-            position: fixed;
-            top: 30px;
-            right: 30px;
-            padding: 15px 20px;
-            border-radius: var(--border-radius);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: var(--shadow-lg);
-            z-index: 1100;
-            transform: translateX(400px);
-            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            max-width: 400px;
-            backdrop-filter: blur(5px);
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            background: rgba(40, 167, 69, 0.9);
-            color: white;
-            border-left: 4px solid #28a745;
-            border: 1px solid #28a745;
-        }
-
-        .notification.error {
-            background: rgba(220, 53, 69, 0.9);
-            color: white;
-            border-left: 4px solid #dc3545;
-            border: 1px solid #dc3545;
-        }
-
-        .notification.info {
-            background: rgba(23, 162, 184, 0.9);
-            color: white;
-            border-left: 4px solid #17a2b8;
-            border: 1px solid #17a2b8;
-        }
-
-        .notification.warning {
-            background: rgba(255, 193, 7, 0.9);
-            color: black;
-            border-left: 4px solid #ffc107;
-            border: 1px solid #ffc107;
-        }
-
         /* ===== STUDENT DETAILS IN MODAL ===== */
         .student-details-grid {
             display: grid;
@@ -1503,10 +1485,70 @@
             border-radius: 12px;
         }
 
+        /* ===== NOTIFICATION ===== */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1100;
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            max-width: 400px;
+            backdrop-filter: blur(5px);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+            border-left: 4px solid #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .notification.error {
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border-left: 4px solid #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .notification.info {
+            background: rgba(23, 162, 184, 0.9);
+            color: white;
+            border-left: 4px solid #17a2b8;
+            border: 1px solid #17a2b8;
+        }
+
+        .notification.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: black;
+            border-left: 4px solid #ffc107;
+            border: 1px solid #ffc107;
+        }
+
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 1200px) {
             .stats-bar {
                 grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .search-filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .action-buttons-group {
+                margin-left: 0;
+                justify-content: flex-end;
             }
             
             th:nth-child(8), td:nth-child(8) { width: 20%; }
@@ -1579,6 +1621,29 @@
                 width: 100%;
                 justify-content: center;
             }
+            
+            .search-filter-container {
+                flex-direction: column;
+            }
+
+            .search-box {
+                min-width: auto;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .action-buttons-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .download-btn,
+            .clear-filters-btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         @media (max-width: 576px) {
@@ -1638,7 +1703,7 @@
                     <i class="fas fa-database"></i>
                 </div>
                 <div class="logo-text">
-                    <h1>Student Records</h1>
+                    <h1>STUDENT RECORDS</h1>
                     <p>AssiScan Database Management</p>
                 </div>
             </div>
@@ -1646,37 +1711,37 @@
                 <div class="nav-links">
                     <a href="/admin/dashboard" class="nav-link">
                         <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
+                        <span>DASHBOARD</span>
                     </a>
                     <a href="/admin/users" class="nav-link">
                         <i class="fas fa-users"></i>
-                        <span>Users</span>
+                        <span>USERS</span>
                     </a>
                     <a href="/admin/colleges" class="nav-link">
                         <i class="fas fa-university"></i>
-                        <span>Colleges</span>
+                        <span>COLLEGES</span>
                     </a>
                     
-                    <!-- NEW MISSING DOCUMENTS BUTTON -->
+                    <!-- MISSING DOCUMENTS BUTTON WITH BADGE -->
                     <a href="/admin/missing-documents" class="nav-link" style="position: relative;">
                         <i class="fas fa-exclamation-triangle"></i>
-                        <span>Missing Docs</span>
+                        <span>MISSING DOCS</span>
                         <span id="missingDocsBadge" class="missing-badge" style="display: none;">0</span>
                     </a>
                     
                     <a href="/history.html" class="nav-link active">
                         <i class="fas fa-database"></i>
-                        <span>Records</span>
+                        <span>RECORDS</span>
                     </a>
                     <a href="#" class="nav-link" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
+                        <span>LOGOUT</span>
                     </a>
                 </div>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">A</div>
                     <div>
-                        <div id="userName">Super Admin</div>
+                        <div id="userName">System Administrator</div>
                         <div style="font-size: 11px; color: var(--text-muted);">Super Admin</div>
                     </div>
                 </div>
@@ -1686,10 +1751,10 @@
         <!-- VIEW TOGGLE -->
         <div class="view-toggle">
             <button class="toggle-btn active" onclick="toggleView('active')" id="activeViewBtn">
-                <i class="fas fa-folder-open"></i> Active Records
+                <i class="fas fa-folder-open"></i> ACTIVE RECORDS
             </button>
             <button class="toggle-btn archive-btn" onclick="toggleView('archived')" id="archivedViewBtn">
-                <i class="fas fa-archive"></i> Archived Records
+                <i class="fas fa-archive"></i> ARCHIVED RECORDS
             </button>
         </div>
 
@@ -1697,27 +1762,27 @@
         <div class="stats-bar" id="activeStats">
             <div class="stat-item">
                 <div class="stat-number" id="totalRecords">0</div>
-                <div class="stat-label">Total</div>
+                <div class="stat-label">TOTAL</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="goodRecords">0</div>
-                <div class="stat-label">Good Moral</div>
+                <div class="stat-label">GOOD MORAL</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="incompleteRecords">0</div>
-                <div class="stat-label">Incomplete</div>
+                <div class="stat-label">INCOMPLETE</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="pendingRecords">0</div>
-                <div class="stat-label">Pending</div>
+                <div class="stat-label">PENDING</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="approvedRecords">0</div>
-                <div class="stat-label">Approved</div>
+                <div class="stat-label">APPROVED</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="emailSent">0</div>
-                <div class="stat-label">Emails</div>
+                <div class="stat-label">EMAILS</div>
             </div>
         </div>
 
@@ -1725,23 +1790,23 @@
         <div class="stats-bar" id="archivedStats" style="display: none;">
             <div class="stat-item">
                 <div class="stat-number" id="archivedTotal">0</div>
-                <div class="stat-label">Archived</div>
+                <div class="stat-label">ARCHIVED</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="archivedGraduated">0</div>
-                <div class="stat-label">Graduated</div>
+                <div class="stat-label">GRADUATED</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="archivedTransferred">0</div>
-                <div class="stat-label">Transferred</div>
+                <div class="stat-label">TRANSFERRED</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="archivedCompleted">0</div>
-                <div class="stat-label">Completed</div>
+                <div class="stat-label">COMPLETED</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number" id="archivedOther">0</div>
-                <div class="stat-label">Other</div>
+                <div class="stat-label">OTHER</div>
             </div>
         </div>
 
@@ -1773,8 +1838,8 @@
 
             <div class="action-buttons-group">
                 <button class="download-btn" onclick="downloadFilteredData()">
-                    <i class="fas fa-download"></i> 
-                    Excel <span class="download-counter" id="downloadCount">0</span>
+                    <i class="fas fa-download"></i> Excel
+                    <span class="download-counter" id="downloadCount">0</span>
                 </button>
                 
                 <button class="clear-filters-btn" onclick="clearFilters()">
@@ -1814,14 +1879,14 @@
             <table id="recordsTable">
                 <thead>
                     <tr>
-                        <th>Student</th>
+                        <th>STUDENT</th>
                         <th>LRN</th>
-                        <th>College</th>
-                        <th>Program</th>
-                        <th>Documents</th>
-                        <th>Status</th>
-                        <th>Moral</th>
-                        <th>Actions</th>
+                        <th>COLLEGE</th>
+                        <th>PROGRAM</th>
+                        <th>DOCUMENTS</th>
+                        <th>STATUS</th>
+                        <th>MORAL</th>
+                        <th>ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -1841,7 +1906,7 @@
         <div id="studentModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
-                    <h3><i class="fas fa-user-graduate"></i> Student Complete Record</h3>
+                    <h3><i class="fas fa-user-graduate"></i> Student Details</h3>
                     <button class="close-modal" onclick="closeModal('studentModal')">&times;</button>
                 </div>
                 <div class="modal-body" id="studentModalContent"></div>
@@ -1938,7 +2003,7 @@
             </div>
         </div>
 
-        <!-- PERMANENT DELETE MODAL (Super Admin only) -->
+        <!-- PERMANENT DELETE MODAL -->
         <div id="permanentDeleteModal" class="modal-overlay">
             <div class="modal-container" style="max-width: 500px; border-color: var(--danger);">
                 <div class="modal-header" style="border-bottom-color: var(--danger);">
@@ -1993,6 +2058,7 @@
     </div>
 
     <script>
+        // ==================== GLOBAL VARIABLES ====================
         let allRecords = [];
         let archivedRecords = [];
         let filteredRecords = [];
@@ -2015,6 +2081,7 @@
             'CBAA': 'badge-cbaa'
         };
 
+        // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadData();
@@ -2022,7 +2089,7 @@
             
             // Start updating missing docs badge
             updateMissingDocsBadge();
-            setInterval(updateMissingDocsBadge, 30000); // Update every 30 seconds
+            setInterval(updateMissingDocsBadge, 30000);
         });
 
         function setupEventListeners() {
@@ -2049,25 +2116,7 @@
             });
         }
 
-        // Update missing docs badge
-        async function updateMissingDocsBadge() {
-            try {
-                const response = await fetch('/api/missing-documents');
-                if (response.ok) {
-                    const data = await response.json();
-                    const badge = document.getElementById('missingDocsBadge');
-                    if (data.total_count > 0) {
-                        badge.textContent = data.total_count;
-                        badge.style.display = 'inline';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating missing docs badge:', error);
-            }
-        }
-
+        // ==================== AUTHENTICATION ====================
         async function checkAuth() {
             const sessionToken = localStorage.getItem('session_token');
             if (!sessionToken) {
@@ -2098,9 +2147,9 @@
             }
         }
 
+        // ==================== LOAD DATA ====================
         async function loadData() {
             try {
-                // Load active records
                 const [recordsResponse, collegesResponse, archivedResponse] = await Promise.all([
                     fetch('/get-records'),
                     fetch('/api/colleges-dropdown'),
@@ -2132,31 +2181,6 @@
             } catch (error) {
                 console.error('Error loading data:', error);
                 showNotification('Error loading data', 'error');
-            }
-        }
-
-        function toggleView(view) {
-            currentView = view;
-            
-            // Update toggle buttons
-            document.getElementById('activeViewBtn').classList.toggle('active', view === 'active');
-            document.getElementById('archivedViewBtn').classList.toggle('active', view === 'archived');
-            
-            // Show/hide stats
-            document.getElementById('activeStats').style.display = view === 'active' ? 'grid' : 'none';
-            document.getElementById('archivedStats').style.display = view === 'archived' ? 'grid' : 'none';
-            
-            // Show/hide filters
-            document.getElementById('activeFilters').style.display = view === 'active' ? 'flex' : 'none';
-            document.getElementById('archivedFilters').style.display = view === 'archived' ? 'flex' : 'none';
-            
-            // Render appropriate records
-            if (view === 'active') {
-                renderTable(allRecords);
-                updateStats();
-            } else {
-                renderTable(archivedRecords);
-                updateArchivedStats();
             }
         }
 
@@ -2194,6 +2218,90 @@
             });
         }
 
+        // ==================== UPDATE MISSING DOCS BADGE ====================
+        async function updateMissingDocsBadge() {
+            try {
+                const response = await fetch('/api/missing-documents');
+                if (response.ok) {
+                    const data = await response.json();
+                    const badge = document.getElementById('missingDocsBadge');
+                    if (data.total_count > 0) {
+                        badge.textContent = data.total_count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating missing docs badge:', error);
+            }
+        }
+
+        // ==================== VIEW TOGGLE ====================
+        function toggleView(view) {
+            currentView = view;
+            
+            // Update toggle buttons
+            document.getElementById('activeViewBtn').classList.toggle('active', view === 'active');
+            document.getElementById('archivedViewBtn').classList.toggle('active', view === 'archived');
+            
+            // Show/hide stats
+            document.getElementById('activeStats').style.display = view === 'active' ? 'grid' : 'none';
+            document.getElementById('archivedStats').style.display = view === 'archived' ? 'grid' : 'none';
+            
+            // Show/hide filters
+            document.getElementById('activeFilters').style.display = view === 'active' ? 'flex' : 'none';
+            document.getElementById('archivedFilters').style.display = view === 'archived' ? 'flex' : 'none';
+            
+            // Render appropriate records
+            if (view === 'active') {
+                renderTable(allRecords);
+                updateStats();
+            } else {
+                renderTable(archivedRecords);
+                updateArchivedStats();
+            }
+        }
+
+        // ==================== UPDATE STATS ====================
+        function updateStats() {
+            const total = allRecords.length;
+            const good = allRecords.filter(r => {
+                if (r.disciplinary_status) {
+                    const s = r.disciplinary_status.toUpperCase();
+                    return s === 'EXCELLENT' || s === 'GOOD';
+                }
+                return r.goodmoral_score >= 80;
+            }).length;
+            
+            const incomplete = allRecords.filter(r => r.status === 'INCOMPLETE').length;
+            const pending = allRecords.filter(r => r.status === 'PENDING').length;
+            const approved = allRecords.filter(r => r.status === 'APPROVED').length;
+            const emails = allRecords.filter(r => r.email_sent).length;
+            
+            document.getElementById('totalRecords').textContent = total;
+            document.getElementById('goodRecords').textContent = good;
+            document.getElementById('incompleteRecords').textContent = incomplete;
+            document.getElementById('pendingRecords').textContent = pending;
+            document.getElementById('approvedRecords').textContent = approved;
+            document.getElementById('emailSent').textContent = emails;
+        }
+
+        function updateArchivedStats() {
+            const total = archivedRecords.length;
+            const graduated = archivedRecords.filter(r => r.archive_reason === 'GRADUATED').length;
+            const transferred = archivedRecords.filter(r => r.archive_reason === 'TRANSFERRED_OUT').length;
+            const completed = archivedRecords.filter(r => r.archive_reason === 'COMPLETED').length;
+            const other = archivedRecords.filter(r => r.archive_reason === 'OTHER' || !r.archive_reason).length;
+            
+            document.getElementById('archivedTotal').textContent = total;
+            document.getElementById('archivedGraduated').textContent = graduated;
+            document.getElementById('archivedTransferred').textContent = transferred;
+            document.getElementById('archivedCompleted').textContent = completed;
+            document.getElementById('archivedOther').textContent = other;
+        }
+
+        // ==================== RENDER TABLE ====================
         function getDocumentIcons(r) {
             const docStatus = r.document_status || { psa: false, form137: false, goodmoral: false };
             const psaUploaded = docStatus.psa || r.image_path || r.psa_image_path;
@@ -2327,7 +2435,6 @@
         function renderTable(records) {
             filteredRecords = records;
             const tbody = document.getElementById('tableBody');
-            if (!tbody) return;
             
             if (records.length === 0) {
                 tbody.innerHTML = `
@@ -2359,7 +2466,7 @@
                             <button onclick="openApproveModal(${r.id})" class="status-btn approve" title="Approve">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button onclick="openRejectModal(${r.id})" class="status-btn reject" title="Reject">
+                            <button onclick="openRejectModal(${r.id}, '${r.name}')" class="status-btn reject" title="Reject">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -2374,11 +2481,11 @@
                                 <i class="fas fa-print"></i>
                             </a>
                             ${r.email && !r.email_sent ? `
-                                <button onclick="openEmailModal(${r.id})" class="action-btn btn-email" title="Email">
+                                <button onclick="openEmailModal(${r.id}, '${r.name}', '${r.email}')" class="action-btn btn-email" title="Email">
                                     <i class="fas fa-envelope"></i>
                                 </button>
                             ` : ''}
-                            <button onclick="openArchiveModal(${r.id})" class="action-btn btn-archive" title="Archive">
+                            <button onclick="openArchiveModal(${r.id}, '${r.name}')" class="action-btn btn-archive" title="Archive">
                                 <i class="fas fa-archive"></i>
                             </button>
                         </div>
@@ -2393,10 +2500,10 @@
                             <a href="/view-form/${r.id}" target="_blank" class="action-btn btn-print" title="Print">
                                 <i class="fas fa-print"></i>
                             </a>
-                            <button onclick="openRestoreModal(${r.id})" class="action-btn btn-restore" title="Restore">
+                            <button onclick="openRestoreModal(${r.id}, '${r.name}')" class="action-btn btn-restore" title="Restore">
                                 <i class="fas fa-trash-restore"></i>
                             </button>
-                            <button onclick="openPermanentDeleteModal(${r.id})" class="action-btn btn-delete" title="Permanently Delete">
+                            <button onclick="openPermanentDeleteModal(${r.id}, '${r.name}')" class="action-btn btn-delete" title="Permanently Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -2440,50 +2547,7 @@
             `}).join('');
         }
 
-        function updateStats() {
-            const total = allRecords.length;
-            const good = allRecords.filter(r => {
-                if (r.disciplinary_status) {
-                    const s = r.disciplinary_status.toUpperCase();
-                    return s === 'EXCELLENT' || s === 'GOOD';
-                }
-                return r.goodmoral_score >= 80;
-            }).length;
-            
-            const incomplete = allRecords.filter(r => r.status === 'INCOMPLETE').length;
-            const pending = allRecords.filter(r => r.status === 'PENDING').length;
-            const approved = allRecords.filter(r => r.status === 'APPROVED').length;
-            const emails = allRecords.filter(r => r.email_sent).length;
-            
-            document.getElementById('totalRecords').textContent = total;
-            document.getElementById('goodRecords').textContent = good;
-            document.getElementById('incompleteRecords').textContent = incomplete;
-            document.getElementById('pendingRecords').textContent = pending;
-            document.getElementById('approvedRecords').textContent = approved;
-            document.getElementById('emailSent').textContent = emails;
-        }
-
-        function updateArchivedStats() {
-            const total = archivedRecords.length;
-            const graduated = archivedRecords.filter(r => r.archive_reason === 'GRADUATED').length;
-            const transferred = archivedRecords.filter(r => r.archive_reason === 'TRANSFERRED_OUT').length;
-            const completed = archivedRecords.filter(r => r.archive_reason === 'COMPLETED').length;
-            const other = archivedRecords.filter(r => r.archive_reason === 'OTHER' || !r.archive_reason).length;
-            
-            document.getElementById('archivedTotal').textContent = total;
-            document.getElementById('archivedGraduated').textContent = graduated;
-            document.getElementById('archivedTransferred').textContent = transferred;
-            document.getElementById('archivedCompleted').textContent = completed;
-            document.getElementById('archivedOther').textContent = other;
-        }
-
-        function getImageUrl(filename) {
-            if (!filename) return '#';
-            if (typeof filename === 'object') filename = filename.filename || '';
-            const first = filename.split(',')[0].trim();
-            return `${serverBaseUrl}/uploads/${first.split('/').pop()}`;
-        }
-
+        // ==================== FILTERS ====================
         function applyFilters() {
             if (currentView !== 'active') return;
             
@@ -2588,9 +2652,10 @@
             document.getElementById('downloadCount').textContent = filteredRecords.length;
         }
 
+        // ==================== EXPORT ====================
         function downloadFilteredData() {
             if (filteredRecords.length === 0) {
-                showNotification('No records to download', 'info');
+                showNotification('No records to download', 'warning');
                 return;
             }
 
@@ -2620,17 +2685,16 @@
             }
         }
 
+        // ==================== ACTIONS ====================
         function openApproveModal(id) {
             if (confirm('Approve this record?')) {
                 updateRecordStatus(id, 'APPROVED');
             }
         }
 
-        function openRejectModal(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
+        function openRejectModal(id, name) {
             currentRejectRecordId = id;
-            document.getElementById('rejectStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('rejectStudentName').textContent = name || 'Unknown';
             document.getElementById('rejectionReason').value = '';
             openModal('rejectModal');
         }
@@ -2658,10 +2722,7 @@
                 
                 if (response.ok) {
                     showNotification(`Record ${status.toLowerCase()}!`, 'success');
-                    const record = allRecords.find(r => r.id === id);
-                    if (record) record.status = status;
-                    updateStats();
-                    renderTable(filteredRecords);
+                    loadData(); // Reload data
                     
                     // Update missing docs badge after status change
                     updateMissingDocsBadge();
@@ -2673,11 +2734,9 @@
             }
         }
 
-        function openArchiveModal(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
+        function openArchiveModal(id, name) {
             currentArchiveRecordId = id;
-            document.getElementById('archiveStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('archiveStudentName').textContent = name || 'Unknown';
             document.getElementById('archiveReason').value = 'GRADUATED';
             document.getElementById('archiveNotes').value = '';
             openModal('archiveModal');
@@ -2699,23 +2758,11 @@
                 
                 if (response.ok) {
                     showNotification('Record archived successfully!', 'success');
-                    // Remove from active records
-                    allRecords = allRecords.filter(r => r.id !== currentArchiveRecordId);
-                    // Reload archived records
-                    const archivedResponse = await fetch('/get-archived-records');
-                    if (archivedResponse.ok) {
-                        const data = await archivedResponse.json();
-                        archivedRecords = data.records || [];
-                        loadArchiveYearFilter();
-                    }
-                    updateStats();
-                    updateArchivedStats();
-                    renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    loadData(); // Reload data
+                    closeModal('archiveModal');
                     
                     // Update missing docs badge after archive
                     updateMissingDocsBadge();
-                    
-                    closeModal('archiveModal');
                 } else {
                     showNotification('Failed to archive record', 'error');
                 }
@@ -2724,11 +2771,9 @@
             }
         }
 
-        function openRestoreModal(id) {
-            const record = archivedRecords.find(r => r.id === id);
-            if (!record) return;
+        function openRestoreModal(id, name) {
             currentRestoreRecordId = id;
-            document.getElementById('restoreStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('restoreStudentName').textContent = name || 'Unknown';
             openModal('restoreModal');
         }
 
@@ -2743,23 +2788,11 @@
                 
                 if (response.ok) {
                     showNotification('Record restored successfully!', 'success');
-                    // Remove from archived records
-                    archivedRecords = archivedRecords.filter(r => r.id !== currentRestoreRecordId);
-                    // Reload active records
-                    const recordsResponse = await fetch('/get-records');
-                    if (recordsResponse.ok) {
-                        const data = await recordsResponse.json();
-                        allRecords = data.records || [];
-                    }
-                    updateStats();
-                    updateArchivedStats();
-                    loadArchiveYearFilter();
-                    renderTable(currentView === 'active' ? allRecords : archivedRecords);
+                    loadData(); // Reload data
+                    closeModal('restoreModal');
                     
                     // Update missing docs badge after restore
                     updateMissingDocsBadge();
-                    
-                    closeModal('restoreModal');
                 } else {
                     showNotification('Failed to restore record', 'error');
                 }
@@ -2768,11 +2801,9 @@
             }
         }
 
-        function openPermanentDeleteModal(id) {
-            const record = archivedRecords.find(r => r.id === id);
-            if (!record) return;
+        function openPermanentDeleteModal(id, name) {
             currentPermanentDeleteRecordId = id;
-            document.getElementById('permanentDeleteStudentName').textContent = record.name || 'Unknown';
+            document.getElementById('permanentDeleteStudentName').textContent = name || 'Unknown';
             openModal('permanentDeleteModal');
         }
 
@@ -2789,17 +2820,45 @@
                 
                 if (response.ok) {
                     showNotification('Record permanently deleted', 'success');
-                    // Remove from archived records
-                    archivedRecords = archivedRecords.filter(r => r.id !== currentPermanentDeleteRecordId);
-                    updateArchivedStats();
-                    loadArchiveYearFilter();
-                    renderTable(archivedRecords);
+                    loadData(); // Reload data
                     closeModal('permanentDeleteModal');
+                    
+                    // Update missing docs badge after permanent delete
+                    updateMissingDocsBadge();
                 } else {
                     showNotification('Failed to delete record', 'error');
                 }
             } catch (error) {
                 showNotification('Error deleting record', 'error');
+            }
+        }
+
+        function openEmailModal(id, name, email) {
+            currentEmailRecordId = id;
+            document.getElementById('emailStudentName').textContent = name || 'Unknown';
+            document.getElementById('emailAddress').textContent = email || 'No email';
+            document.getElementById('emailStatus').textContent = 'Pending';
+            openModal('emailModal');
+        }
+
+        async function confirmSendEmail() {
+            if (!currentEmailRecordId) return;
+            
+            try {
+                const response = await fetch(`/send-email/${currentEmailRecordId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                if (response.ok) {
+                    showNotification('Email sent!', 'success');
+                    loadData(); // Reload data
+                    closeModal('emailModal');
+                } else {
+                    showNotification('Failed to send email', 'error');
+                }
+            } catch (error) {
+                showNotification('Error sending email', 'error');
             }
         }
 
@@ -3054,164 +3113,6 @@
                 </div>
             `;
 
-            // Special Groups
-            html += `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-notes-medical"></i> Special Groups & Health
-                    </h4>
-                    <div class="student-details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">IP Member</div>
-                            <div class="detail-value">${display(record.is_ip)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">PWD</div>
-                            <div class="detail-value">${display(record.is_pwd)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Medication</div>
-                            <div class="detail-value">${display(record.has_medication)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Working Student</div>
-                            <div class="detail-value">${display(record.is_working)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Gifted Child</div>
-                            <div class="detail-value">${display(record.is_gifted)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Needs Assistance</div>
-                            <div class="detail-value">${display(record.needs_assistance)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Scholar</div>
-                            <div class="detail-value">${display(record.is_scholar)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Special Talents</div>
-                            <div class="detail-value">${display(record.special_talents)}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Parent Information
-            html += `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-users"></i> Parent Information
-                    </h4>
-                    <div class="student-details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Mother's Name</div>
-                            <div class="detail-value">${display(record.mother_name)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Mother's Citizenship</div>
-                            <div class="detail-value">${display(record.mother_citizenship)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Mother's Occupation</div>
-                            <div class="detail-value">${display(record.mother_occupation)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Mother's Contact</div>
-                            <div class="detail-value">${display(record.mother_contact)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Father's Name</div>
-                            <div class="detail-value">${display(record.father_name)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Father's Citizenship</div>
-                            <div class="detail-value">${display(record.father_citizenship)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Father's Occupation</div>
-                            <div class="detail-value">${display(record.father_occupation)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Father's Contact</div>
-                            <div class="detail-value">${display(record.father_contact)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Parents' Marital Status</div>
-                            <div class="detail-value">${display(record.marital_status)}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Guardian Information
-            html += `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-user-shield"></i> Guardian Information
-                    </h4>
-                    <div class="student-details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Guardian Name</div>
-                            <div class="detail-value">${display(record.guardian_name)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Relationship</div>
-                            <div class="detail-value">${display(record.guardian_relation)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Guardian Contact</div>
-                            <div class="detail-value">${display(record.guardian_contact)}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Employer Information
-            if (record.is_working === 'Yes') {
-                html += `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                            <i class="fas fa-briefcase"></i> Employer Information
-                        </h4>
-                        <div class="student-details-grid">
-                            <div class="detail-item">
-                                <div class="detail-label">Employer Name</div>
-                                <div class="detail-value">${display(record.employer_name)}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Siblings
-            html += `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">
-                        <i class="fas fa-users"></i> Siblings
-                    </h4>
-                    <div class="student-details-grid">
-                        ${(() => {
-                            try {
-                                const siblings = typeof record.siblings === 'string' ? JSON.parse(record.siblings) : (record.siblings || []);
-                                if (siblings.length > 0) {
-                                    return siblings.map(s => `
-                                        <div class="detail-item">
-                                            <div class="detail-label">${s.name || 'Sibling'}</div>
-                                            <div class="detail-value">Age: ${s.age || 'N/A'} • ${s.occupation || 'N/A'}</div>
-                                        </div>
-                                    `).join('');
-                                } else {
-                                    return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
-                                }
-                            } catch (e) {
-                                return '<div class="detail-item"><div class="detail-value">No siblings listed</div></div>';
-                            }
-                        })()}
-                    </div>
-                </div>
-            `;
-
             // Good Moral Analysis
             if (record.goodmoral_analysis || record.goodmoral_score) {
                 let analysis = {};
@@ -3361,38 +3262,14 @@
             openModal('studentModal');
         }
 
-        function openEmailModal(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
-            currentEmailRecordId = id;
-            document.getElementById('emailStudentName').textContent = record.name || 'Unknown';
-            document.getElementById('emailAddress').textContent = record.email || 'No email';
-            document.getElementById('emailStatus').textContent = record.status || 'INCOMPLETE';
-            openModal('emailModal');
+        function getImageUrl(filename) {
+            if (!filename) return '#';
+            if (typeof filename === 'object') filename = filename.filename || '';
+            const first = filename.split(',')[0].trim();
+            return `${serverBaseUrl}/uploads/${first.split('/').pop()}`;
         }
 
-        async function confirmSendEmail() {
-            if (!currentEmailRecordId) return;
-            try {
-                const response = await fetch(`/send-email/${currentEmailRecordId}`, {
-                    method: 'POST',
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
-                });
-                if (response.ok) {
-                    showNotification('Email sent!', 'success');
-                    const record = allRecords.find(r => r.id === currentEmailRecordId);
-                    if (record) record.email_sent = true;
-                    updateStats();
-                    renderTable(filteredRecords);
-                    closeModal('emailModal');
-                } else {
-                    showNotification('Failed to send email', 'error');
-                }
-            } catch (error) {
-                showNotification('Error sending email', 'error');
-            }
-        }
-
+        // ==================== MODALS ====================
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
             document.body.style.overflow = 'hidden';
@@ -3408,7 +3285,8 @@
             if (id === 'permanentDeleteModal') currentPermanentDeleteRecordId = null;
         }
 
-        function showNotification(msg, type = 'info') {
+        // ==================== NOTIFICATION ====================
+        function showNotification(msg, type = 'success') {
             const notif = document.getElementById('notification');
             const msgEl = document.getElementById('notificationMessage');
             const icon = notif.querySelector('i');
@@ -3416,8 +3294,8 @@
             icon.className = {
                 success: 'fas fa-check-circle',
                 error: 'fas fa-exclamation-circle',
-                info: 'fas fa-info-circle',
-                warning: 'fas fa-exclamation-triangle'
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
             }[type] || 'fas fa-info-circle';
             
             notif.className = `notification ${type}`;
@@ -3426,6 +3304,7 @@
             setTimeout(() => notif.classList.remove('show'), 3000);
         }
 
+        // ==================== LOGOUT ====================
         async function logout() {
             try {
                 await fetch('/api/logout', { method: 'POST' });
@@ -3435,4 +3314,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
