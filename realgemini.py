@@ -21,6 +21,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
+import gc
 
 # --- FIX SSL/TLS ISSUES - FORCE REST TRANSPORT ---
 import certifi
@@ -100,7 +101,7 @@ PERMISSIONS = {
         'view_all_records', 'edit_records', 'archive_records',
         'view_archived_records', 'send_emails', 'view_dashboard', 
         'access_admin_panel', 'manage_settings', 'send_notifications',
-        'view_all_notifications'
+        'view_all_notifications', 'generate_reports'
     ],
     'STUDENT': [
         'access_scanner', 'submit_documents', 'view_own_records',
@@ -1025,14 +1026,14 @@ def get_missing_documents():
         traceback.print_exc()
         return jsonify({"error": str(e), "students": [], "total_count": 0}), 500
 
-# ================= FIXED SEND REMINDERS ENDPOINT =================
+# ================= OPTIMIZED SEND REMINDERS ENDPOINT =================
 @app.route('/api/missing-documents/remind-all', methods=['POST'])
 @login_required
 @permission_required('send_notifications')
 def remind_all_missing_documents():
-    """Send reminders to all students with missing documents"""
+    """Send reminders to all students with missing documents (OPTIMIZED)"""
     try:
-        # Get request data (optional - for single user reminder)
+        # Get request data
         data = request.get_json(silent=True) or {}
         specific_user_id = data.get('user_id')
         
@@ -1042,10 +1043,13 @@ def remind_all_missing_documents():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Base query
+        # OPTIMIZED: Kunin lang ang basic info, hindi lahat ng malalaking columns
         query = """
-            SELECT r.*, u.id as user_id, u.email, u.full_name,
-                   u.email_notifications, u.mobile_number
+            SELECT r.id, r.user_id, r.is_transferee,
+                   r.image_path, r.form137_path, r.goodmoral_path,
+                   r.honorable_dismissal_path, r.transfer_credentials_path,
+                   r.document_status,
+                   u.email, u.full_name, u.email_notifications
             FROM records r
             JOIN users u ON r.user_id = u.id
             WHERE r.is_archived = FALSE 
@@ -1053,19 +1057,26 @@ def remind_all_missing_documents():
         """
         
         params = []
-        
-        # If specific user_id is provided
         if specific_user_id:
             query += " AND u.id = %s"
             params.append(specific_user_id)
         
-        cur.execute(query, params)
+        # LIMIT para hindi ma-overload ang memory
+        query += " LIMIT 100"
         
+        cur.execute(query, params)
         records = cur.fetchall()
+        
+        # Isara agad ang connection para hindi ma-occupy ang memory
+        conn.close()
+        
+        # Force garbage collection
+        gc.collect()
         
         sent_count = 0
         errors = []
         
+        # Process one by one para hindi mag-accumulate sa memory
         for record in records:
             try:
                 missing_docs = []
@@ -1125,6 +1136,10 @@ def remind_all_missing_documents():
                                 title="Reminder: Missing Documents",
                                 message=message
                             )
+                    
+                    # Force garbage collection per 10 records
+                    if sent_count % 10 == 0:
+                        gc.collect()
                             
             except Exception as e:
                 error_msg = f"Error processing user {record.get('user_id')}: {str(e)}"
@@ -1132,7 +1147,8 @@ def remind_all_missing_documents():
                 errors.append(error_msg)
                 continue
         
-        conn.close()
+        # Final garbage collection
+        gc.collect()
         
         response_data = {
             "success": True,
@@ -1148,6 +1164,8 @@ def remind_all_missing_documents():
     except Exception as e:
         print(f"❌ Error in remind_all_missing_documents: {e}")
         traceback.print_exc()
+        # Force garbage collection on error
+        gc.collect()
         return jsonify({
             "success": False,
             "error": str(e),
@@ -1713,6 +1731,191 @@ The AssiScan Team
     except Exception as e:
         print(f"❌ Email error: {e}")
         return False
+
+# ================= REPORT GENERATION ENDPOINT =================
+@app.route('/api/report/enrollment', methods=['GET'])
+@login_required
+@permission_required('view_all_records')
+def get_enrollment_report():
+    """Get enrollment report data"""
+    try:
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Base query with optional date filter
+        query = """
+            SELECT r.*, u.email as user_email, u.full_name
+            FROM records r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.is_archived = FALSE
+        """
+        params = []
+        
+        if start_date and end_date:
+            query += " AND DATE(r.created_at) BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        
+        cur.execute(query, params)
+        records = cur.fetchall()
+        
+        # Get colleges and programs
+        cur.execute("SELECT * FROM colleges WHERE is_active = TRUE")
+        colleges = cur.fetchall()
+        
+        cur.execute("SELECT * FROM programs WHERE is_active = TRUE")
+        programs = cur.fetchall()
+        
+        conn.close()
+        
+        # Initialize report data structure
+        report_data = {
+            "summary": {
+                "total": len(records),
+                "complete": 0,
+                "incomplete": 0,
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "transferees": 0,
+                "regular": 0
+            },
+            "by_college": {},
+            "by_program": {},
+            "documents": {
+                "psa": {"uploaded": 0, "total": len(records)},
+                "form137": {"uploaded": 0, "total": len(records)},
+                "goodmoral": {"uploaded": 0, "total": len(records)},
+                "form138": {"uploaded": 0, "total": len(records)},
+                "honorable_dismissal": {"uploaded": 0, "total": 0},
+                "transfer_credentials": {"uploaded": 0, "total": 0}
+            }
+        }
+        
+        # Count transferees for document totals
+        transferee_count = 0
+        
+        for record in records:
+            # Status counts
+            status = record.get('status', 'INCOMPLETE')
+            if status == 'INCOMPLETE':
+                report_data['summary']['incomplete'] += 1
+            elif status == 'PENDING':
+                report_data['summary']['pending'] += 1
+            elif status == 'APPROVED':
+                report_data['summary']['approved'] += 1
+            elif status == 'REJECTED':
+                report_data['summary']['rejected'] += 1
+            
+            # Check if complete (all required documents)
+            doc_status = record.get('document_status', {})
+            if isinstance(doc_status, str):
+                try:
+                    doc_status = json.loads(doc_status)
+                except:
+                    doc_status = {}
+            
+            psa_ok = doc_status.get('psa') or record.get('image_path')
+            f137_ok = doc_status.get('form137') or record.get('form137_path')
+            gm_ok = doc_status.get('goodmoral') or record.get('goodmoral_path')
+            
+            if psa_ok and f137_ok and gm_ok:
+                report_data['summary']['complete'] += 1
+            
+            # Transferee counts
+            if record.get('is_transferee'):
+                report_data['summary']['transferees'] += 1
+                transferee_count += 1
+            else:
+                report_data['summary']['regular'] += 1
+            
+            # Document counts
+            if psa_ok:
+                report_data['documents']['psa']['uploaded'] += 1
+            if f137_ok:
+                report_data['documents']['form137']['uploaded'] += 1
+            if gm_ok:
+                report_data['documents']['goodmoral']['uploaded'] += 1
+            if record.get('form138_path'):
+                report_data['documents']['form138']['uploaded'] += 1
+            
+            # College breakdown
+            college = record.get('college', 'Unassigned')
+            if college not in report_data['by_college']:
+                report_data['by_college'][college] = {
+                    "total": 0,
+                    "regular": 0,
+                    "transferee": 0,
+                    "complete": 0,
+                    "incomplete": 0,
+                    "pending": 0,
+                    "approved": 0,
+                    "rejected": 0
+                }
+            
+            report_data['by_college'][college]['total'] += 1
+            if record.get('is_transferee'):
+                report_data['by_college'][college]['transferee'] += 1
+            else:
+                report_data['by_college'][college]['regular'] += 1
+            
+            if psa_ok and f137_ok and gm_ok:
+                report_data['by_college'][college]['complete'] += 1
+            
+            if status == 'INCOMPLETE':
+                report_data['by_college'][college]['incomplete'] += 1
+            elif status == 'PENDING':
+                report_data['by_college'][college]['pending'] += 1
+            elif status == 'APPROVED':
+                report_data['by_college'][college]['approved'] += 1
+            elif status == 'REJECTED':
+                report_data['by_college'][college]['rejected'] += 1
+            
+            # Program breakdown
+            program = record.get('program', 'Unassigned')
+            if program not in report_data['by_program']:
+                report_data['by_program'][program] = {
+                    "total": 0,
+                    "college": college,
+                    "transferee": 0,
+                    "regular": 0
+                }
+            
+            report_data['by_program'][program]['total'] += 1
+            if record.get('is_transferee'):
+                report_data['by_program'][program]['transferee'] += 1
+            else:
+                report_data['by_program'][program]['regular'] += 1
+        
+        # Update transferee document totals
+        report_data['documents']['honorable_dismissal']['total'] = transferee_count
+        report_data['documents']['transfer_credentials']['total'] = transferee_count
+        
+        # Count uploaded transferee documents
+        for record in records:
+            if record.get('is_transferee'):
+                if record.get('honorable_dismissal_path'):
+                    report_data['documents']['honorable_dismissal']['uploaded'] += 1
+                if record.get('transfer_credentials_path'):
+                    report_data['documents']['transfer_credentials']['uploaded'] += 1
+        
+        return jsonify({
+            "success": True,
+            "report": report_data,
+            "colleges": colleges,
+            "programs": programs
+        })
+        
+    except Exception as e:
+        print(f"❌ Error generating report: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 # ================= HELPER FUNCTIONS =================
 def save_multiple_files(files, prefix):
@@ -5396,7 +5599,8 @@ def health_check():
             "archive_system": "ENABLED",
             "notification_system": "ENABLED",
             "missing_document_alerts": "ENABLED",
-            "enrollment_reminders": "ENABLED"
+            "enrollment_reminders": "ENABLED",
+            "report_generation": "ENABLED"
         }
     })
 
@@ -5578,13 +5782,19 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH NOTIFICATION SYSTEM - COMPLETE")
+    print("🚀 ASSISCAN WITH REPORT GENERATION")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🚀 Transport: REST (SSL errors bypassed)")
     print(f"🤖 Models: Gemini 3 Flash, Gemini 1.5 Flash")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
+    print("="*60)
+    print("📊 NEW FEATURE: Report Generation")
+    print("   • /api/report/enrollment - Get enrollment report data")
+    print("   • Summary statistics")
+    print("   • College/Program breakdown")
+    print("   • Document completion rates")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
