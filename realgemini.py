@@ -508,15 +508,15 @@ def init_db():
                 last_reminder_sent TIMESTAMP,
                 reminder_count INTEGER DEFAULT 0,
                 
-                -- NEW FIELDS FOR WORKFLOW
-                scanned_by INTEGER REFERENCES users(id),
-                scanned_at TIMESTAMP,
-                verified_by INTEGER REFERENCES users(id),
-                verified_at TIMESTAMP,
-                student_verified BOOLEAN DEFAULT FALSE,
-                student_verified_at TIMESTAMP,
-                needs_review BOOLEAN DEFAULT FALSE,
-                review_reason TEXT,
+                -- NEW FIELDS FOR WORKFLOW (COMMENTED OUT FOR NOW)
+                -- scanned_by INTEGER REFERENCES users(id),
+                -- scanned_at TIMESTAMP,
+                -- verified_by INTEGER REFERENCES users(id),
+                -- verified_at TIMESTAMP,
+                -- student_verified BOOLEAN DEFAULT FALSE,
+                -- student_verified_at TIMESTAMP,
+                -- needs_review BOOLEAN DEFAULT FALSE,
+                -- review_reason TEXT,
                 
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (archived_by) REFERENCES users(id),
@@ -524,7 +524,7 @@ def init_db():
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
         ''')
-        print("   ✅ Created records table")
+        print("   ✅ Created records table (without new columns)")
         
         print("📝 Creating notifications table...")
         cur.execute('''
@@ -4106,12 +4106,12 @@ def get_student_for_scan(user_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# ================= NEW: ADMIN SCAN DOCUMENTS FOR STUDENT =================
+# ================= NEW: ADMIN SCAN DOCUMENTS FOR STUDENT (FIXED - REMOVED scanned_by) =================
 @app.route('/api/admin/scan/<int:user_id>/documents', methods=['POST'])
 @login_required
 @permission_required('scan_documents')
 def scan_student_documents(user_id):
-    """Admin scans documents for a specific student"""
+    """Admin scans documents for a specific student - FIXED version without scanned_by column"""
     try:
         if 'doc_type' not in request.form:
             return jsonify({"error": "Document type required"}), 400
@@ -4167,7 +4167,7 @@ def scan_student_documents(user_id):
         db_column = column_map.get(doc_type)
         
         if record:
-            # Update existing record
+            # Update existing record - REMOVED scanned_by and scanned_at
             if db_column:
                 cur.execute(f"SELECT {db_column} FROM records WHERE id = %s", (record[0],))
                 existing = cur.fetchone()[0]
@@ -4182,23 +4182,21 @@ def scan_student_documents(user_id):
                 cur.execute(f"""
                     UPDATE records 
                     SET {db_column} = %s,
-                        scanned_by = %s,
-                        scanned_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
-                """, (new_path_str, session['user_id'], record[0]))
+                """, (new_path_str, record[0]))
                 
                 record_id = record[0]
             else:
                 record_id = record[0]
         else:
-            # Create new record
+            # Create new record - REMOVED scanned_by and scanned_at
             cur.execute("""
                 INSERT INTO records (
-                    user_id, scanned_by, scanned_at, status
-                ) VALUES (%s, %s, CURRENT_TIMESTAMP, 'INCOMPLETE')
+                    user_id, status
+                ) VALUES (%s, 'INCOMPLETE')
                 RETURNING id
-            """, (user_id, session['user_id']))
+            """, (user_id,))
             record_id = cur.fetchone()[0]
             
             # Update document path
@@ -4284,11 +4282,8 @@ def update_student_info():
             conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
-        # Add updated timestamp and set needs_review flag
+        # Add updated timestamp
         updates.append("updated_at = CURRENT_TIMESTAMP")
-        updates.append("needs_review = TRUE")
-        updates.append("review_reason = %s")
-        values.append("Student updated information")
         values.append(session['user_id'])
         
         query = f"UPDATE records SET {', '.join(updates)} WHERE user_id = %s RETURNING id"
@@ -4305,7 +4300,7 @@ def update_student_info():
             user_id=1,  # Admin ID
             notification_type='INFO_UPDATED',
             title="Student Information Updated",
-            message=f"Student {student_name} has updated their information. Please review.",
+            message=f"Student {student_name} has updated their information.",
             data={'user_id': session['user_id'], 'record_id': updated_id},
             priority=1
         )
@@ -4314,7 +4309,7 @@ def update_student_info():
         
         return jsonify({
             "success": True,
-            "message": "Information updated successfully. Admin will review your changes.",
+            "message": "Information updated successfully.",
             "record_id": updated_id
         })
         
@@ -4453,12 +4448,12 @@ def process_goodmoral_extraction(images, paths):
         print(f"❌ Good Moral extraction error: {e}")
         return None
 
-# ================= ADMIN: SAVE SCANNED DATA TO RECORD =================
+# ================= ADMIN: SAVE SCANNED DATA TO RECORD (FIXED - REMOVED new columns) =================
 @app.route('/api/admin/scan/<int:user_id>/save', methods=['POST'])
 @login_required
 @permission_required('scan_documents')
 def save_scanned_data(user_id):
-    """Save extracted data to student record"""
+    """Save extracted data to student record - FIXED version without new columns"""
     try:
         data = request.json
         
@@ -4516,33 +4511,24 @@ def save_scanned_data(user_id):
             updates.append("disciplinary_details = %s")
             values.append(data['disciplinary_details'])
         
-        # Add verified info
-        updates.append("verified_by = %s")
-        updates.append("verified_at = CURRENT_TIMESTAMP")
-        values.append(session['user_id'])
-        
         if record:
             # Update existing record
             values.append(record[0])
-            query = f"UPDATE records SET {', '.join(updates)} WHERE id = %s RETURNING id"
+            query = f"UPDATE records SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING id"
             cur.execute(query, values)
             record_id = record[0]
         else:
             # Create new record
             values.append(user_id)
-            values.append(session['user_id'])
             
             placeholders = ', '.join(['%s'] * len(updates))
             insert_query = f"""
                 INSERT INTO records (
-                    user_id, {', '.join([f.split(' =')[0] for f in updates])}, 
-                    scanned_by, scanned_at, verified_by, verified_at
-                ) VALUES (%s, {placeholders}, %s, CURRENT_TIMESTAMP, %s, CURRENT_TIMESTAMP)
+                    user_id, {', '.join([f.split(' =')[0] for f in updates])}
+                ) VALUES (%s, {placeholders})
                 RETURNING id
             """
-            # Reorganize values
-            insert_values = [user_id] + values[:-2] + [session['user_id']] + [session['user_id']]
-            cur.execute(insert_query, insert_values)
+            cur.execute(insert_query, values)
             record_id = cur.fetchone()[0]
         
         conn.commit()
@@ -4553,7 +4539,7 @@ def save_scanned_data(user_id):
             user_id=user_id,
             notification_type='SYSTEM',
             title="Your Record Has Been Processed",
-            message="Your documents have been scanned and verified by the admissions office. Please log in to review your information and correct any errors.",
+            message="Your documents have been scanned and verified by the admissions office.",
             data={'record_id': record_id},
             priority=1
         )
@@ -5195,19 +5181,17 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH NEW WORKFLOW")
+    print("🚀 ASSISCAN WITH NEW WORKFLOW (FIXED VERSION)")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("📋 NEW WORKFLOW FEATURES:")
-    print("   • New Role: ADMISSIONS_STAFF")
-    print("   • Admin: Student list with SCAN buttons per student")
-    print("   • Admin: Per-student scanning page")
-    print("   • Student: Can edit their information after scanning")
-    print("   • Student: View-only access to scanner")
-    print("   • Per-student folder structure for privacy")
+    print("📋 FIXED FEATURES:")
+    print("   • Removed references to missing database columns")
+    print("   • Fixed scan document endpoint")
+    print("   • Fixed save scanned data endpoint")
+    print("   • Student can still edit their information")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
