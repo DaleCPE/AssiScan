@@ -47,7 +47,6 @@
             --archived: #6c757d;
             --archive: #6f42c1;
             --report: #9c27b0;
-            --scan: #9c27b0;
         }
 
         * {
@@ -592,7 +591,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1300px;
+            min-width: 1200px; /* BINABAWASAN dahil tinanggal ang SCAN column */
         }
 
         thead {
@@ -637,15 +636,14 @@
         }
 
         /* Column widths */
-        th:nth-child(1), td:nth-child(1) { width: 15%; }  /* Student */
+        th:nth-child(1), td:nth-child(1) { width: 18%; }  /* Student */
         th:nth-child(2), td:nth-child(2) { width: 10%; }  /* LRN */
-        th:nth-child(3), td:nth-child(3) { width: 10%; }  /* College */
-        th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Program */
-        th:nth-child(5), td:nth-child(5) { width: 12%; }  /* Documents */
+        th:nth-child(3), td:nth-child(3) { width: 12%; }  /* College */
+        th:nth-child(4), td:nth-child(4) { width: 12%; }  /* Program */
+        th:nth-child(5), td:nth-child(5) { width: 15%; }  /* Documents */
         th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
         th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Moral */
-        th:nth-child(8), td:nth-child(8) { width: 12%; }  /* Actions */
-        th:nth-child(9), td:nth-child(9) { width: 15%; }  /* SCAN BUTTON */
+        th:nth-child(8), td:nth-child(8) { width: 17%; }  /* Actions */
 
         /* ===== STUDENT INFO ===== */
         .student-info {
@@ -1087,47 +1085,6 @@
             border-color: var(--danger);
         }
 
-        /* ===== SCAN BUTTON (FIXED) ===== */
-        .scan-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: rgba(156, 39, 176, 0.15);
-            border: 1px solid #9c27b0;
-            color: #e1a7ff;
-            border-radius: var(--border-radius);
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        .scan-btn:hover {
-            background: #9c27b0;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
-        }
-
-        .scan-btn i {
-            font-size: 14px;
-        }
-
-        .needs-review-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            background: rgba(255, 152, 0, 0.2);
-            border: 1px solid #ff9800;
-            color: #ff9800;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
         /* Status action buttons */
         .status-action-buttons {
             display: flex;
@@ -1444,19 +1401,6 @@
             transform: translateY(-2px);
         }
 
-        .btn-scan {
-            background: rgba(156, 39, 176, 0.15);
-            color: #e1a7ff;
-            border: 1px solid #9c27b0;
-        }
-
-        .btn-scan:hover {
-            background: #9c27b0;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
-        }
-
         .report-section {
             margin-bottom: 30px;
             padding: 20px;
@@ -1635,7 +1579,6 @@
             }
             
             th:nth-child(8), td:nth-child(8) { width: 20%; }
-            th:nth-child(9), td:nth-child(9) { width: 20%; }
         }
 
         @media (max-width: 992px) {
@@ -1694,7 +1637,7 @@
             }
             
             table {
-                min-width: 1300px;
+                min-width: 1200px;
             }
             
             .student-info {
@@ -1795,8 +1738,7 @@
         .doc-link,
         .status-btn,
         .toggle-btn,
-        .report-btn,
-        .scan-btn {
+        .report-btn {
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -2006,12 +1948,12 @@
                         <th>STATUS</th>
                         <th>MORAL</th>
                         <th>ACTIONS</th>
-                        <th>SCAN</th>
+                        <!-- TINANGGAL ANG SCAN COLUMN -->
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="9">
+                        <td colspan="8"> <!-- Naging 8 columns instead of 9 -->
                             <div class="loading">
                                 <div class="loading-spinner"></div>
                                 <p>Loading records...</p>
@@ -2689,7 +2631,7 @@
             if (records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9">
+                        <td colspan="8">
                             <div class="empty-state">
                                 <i class="fas fa-database"></i>
                                 <h3>No Records Found</h3>
@@ -2772,14 +2714,7 @@
 
                 const rowClass = currentView === 'archived' ? 'archived-row' : '';
 
-                // SCAN BUTTON (FIXED - DIRECT TO /admin/scan/)
-                const scanButton = `
-                    <a href="/admin/scan/${r.user_id}" class="scan-btn">
-                        <i class="fas fa-qrcode"></i> SCAN
-                    </a>
-                    ${needsReview}
-                `;
-
+                // TINANGGAL ANG SCAN BUTTON - Records viewing lang ito
                 return `
                 <tr id="row-${r.id}" class="${rowClass}">
                     <td>
@@ -2790,6 +2725,7 @@
                                 <p>${age}</p>
                                 ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i></span>' : ''}
                                 ${r.is_transferee ? '<span class="doc-status-badge" style="background:rgba(111,66,193,0.15);color:#b5a0ff;border-color:#b5a0ff;"><i class="fas fa-exchange-alt"></i> Transferee</span>' : ''}
+                                ${needsReview}
                             </div>
                         </div>
                     </td>
@@ -2800,7 +2736,7 @@
                     <td>${getStatusBadge(recordStatus)}</td>
                     <td>${getMoralBadge(r)}</td>
                     <td>${actionButtons}</td>
-                    <td>${scanButton}</td>
+                    <!-- TINANGGAL ANG SCAN COLUMN -->
                 </tr>
             `}).join('');
         }
