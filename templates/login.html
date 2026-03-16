@@ -335,7 +335,7 @@
                     // Redirect based on role
                     setTimeout(() => {
                         if (data.user.role === 'STUDENT') {
-                            window.location.href = '/';
+                            window.location.href = '/my-records';
                         } else {
                             window.location.href = '/admin/dashboard';
                         }
@@ -369,7 +369,7 @@
                     if (data.authenticated) {
                         // Already logged in, redirect based on role
                         if (data.user.role === 'STUDENT') {
-                            window.location.href = '/';
+                            window.location.href = '/my-records';
                         } else {
                             window.location.href = '/admin/dashboard';
                         }
