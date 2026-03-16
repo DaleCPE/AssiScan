@@ -365,7 +365,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1300px; /* Nadagdagan dahil sa SCAN column */
+            min-width: 1300px;
         }
 
         thead {
@@ -1009,7 +1009,7 @@
                         <th>Last Login</th>
                         <th>Created</th>
                         <th>Actions</th>
-                        <th>SCAN</th> <!-- BAGONG COLUMN -->
+                        <th>SCAN</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
@@ -1324,7 +1324,7 @@
                 if (user.role === 'SUPER_ADMIN') roleName = 'Super Admin';
                 if (user.role === 'ADMISSIONS_STAFF') roleName = 'Staff';
                 
-                // SCAN button - only for students
+                // SCAN button - only for students - FIXED LINK TO INDEX.HTML
                 const scanButton = user.role === 'STUDENT' ? 
                     `<a href="/index.html?user_id=${user.id}" class="scan-btn" title="Scan Documents for this Student">
                         <i class="fas fa-qrcode"></i> SCAN
