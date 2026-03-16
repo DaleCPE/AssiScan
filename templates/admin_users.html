@@ -30,6 +30,7 @@
             --warning: #ffc107;
             --danger: #dc3545;
             --info: #17a2b8;
+            --scan: #9c27b0;
         }
 
         * {
@@ -264,6 +265,19 @@
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
 
+        .btn-scan {
+            background: rgba(156, 39, 176, 0.15);
+            color: #e1a7ff;
+            border: 1px solid #9c27b0;
+        }
+
+        .btn-scan:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+
         /* ===== SEARCH AND FILTER ===== */
         .search-filter-container {
             display: flex;
@@ -351,7 +365,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1200px;
+            min-width: 1300px; /* Nadagdagan dahil sa SCAN column */
         }
 
         thead {
@@ -464,6 +478,12 @@
             border: 1px solid #007bff;
         }
 
+        .role-staff {
+            background: rgba(156, 39, 176, 0.2);
+            color: #e1a7ff;
+            border: 1px solid #9c27b0;
+        }
+
         /* Action buttons */
         .action-buttons-cell {
             display: flex;
@@ -507,6 +527,34 @@
             background: var(--info);
             color: white;
             border-color: var(--info);
+        }
+
+        /* Scan Button */
+        .scan-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: rgba(156, 39, 176, 0.15);
+            border: 1px solid #9c27b0;
+            color: #e1a7ff;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .scan-btn:hover {
+            background: #9c27b0;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .scan-btn i {
+            font-size: 12px;
         }
 
         /* Last login */
@@ -785,6 +833,11 @@
                 font-size: 9px;
                 padding: 3px 8px;
             }
+
+            .scan-btn {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -939,6 +992,7 @@
                 <button class="filter-btn" onclick="filterUsers('active')">Active</button>
                 <button class="filter-btn" onclick="filterUsers('inactive')">Inactive</button>
                 <button class="filter-btn" onclick="filterUsers('super_admin')">Super Admin</button>
+                <button class="filter-btn" onclick="filterUsers('admissions_staff')">Staff</button>
                 <button class="filter-btn" onclick="filterUsers('student')">Student</button>
             </div>
         </div>
@@ -955,11 +1009,12 @@
                         <th>Last Login</th>
                         <th>Created</th>
                         <th>Actions</th>
+                        <th>SCAN</th> <!-- BAGONG COLUMN -->
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="loading">
                                 <div class="loading-spinner"></div>
                                 <p>Loading users...</p>
@@ -995,6 +1050,7 @@
                             <label for="newRole"><i class="fas fa-user-tag"></i> Role *</label>
                             <select id="newRole" required>
                                 <option value="STUDENT">Student</option>
+                                <option value="ADMISSIONS_STAFF">Admissions Staff</option>
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
                         </div>
@@ -1050,6 +1106,7 @@
                             <label for="editRole"><i class="fas fa-user-tag"></i> Role *</label>
                             <select id="editRole" required>
                                 <option value="STUDENT">Student</option>
+                                <option value="ADMISSIONS_STAFF">Admissions Staff</option>
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
                         </div>
@@ -1234,7 +1291,7 @@
             if (users.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             <div style="text-align: center; padding: 40px; color: var(--text-muted);">
                                 <i class="fas fa-users-slash" style="font-size: 48px; margin-bottom: 15px;"></i>
                                 <h3>No Users Found</h3>
@@ -1257,6 +1314,23 @@
                 // Don't show delete button for current user
                 const showDelete = user.id !== userData.id;
                 
+                // Determine role badge class
+                let roleClass = 'role-student';
+                if (user.role === 'SUPER_ADMIN') roleClass = 'role-superadmin';
+                if (user.role === 'ADMISSIONS_STAFF') roleClass = 'role-staff';
+                
+                // Role display name
+                let roleName = 'Student';
+                if (user.role === 'SUPER_ADMIN') roleName = 'Super Admin';
+                if (user.role === 'ADMISSIONS_STAFF') roleName = 'Staff';
+                
+                // SCAN button - only for students
+                const scanButton = user.role === 'STUDENT' ? 
+                    `<a href="/index.html?user_id=${user.id}" class="scan-btn" title="Scan Documents for this Student">
+                        <i class="fas fa-qrcode"></i> SCAN
+                    </a>` : 
+                    '<span style="color: #666; font-size: 11px;">—</span>';
+                
                 return `
                     <tr id="user-${user.id}">
                         <td>
@@ -1270,8 +1344,8 @@
                             </div>
                         </td>
                         <td>
-                            <span class="role-badge ${user.role === 'SUPER_ADMIN' ? 'role-superadmin' : 'role-student'}">
-                                ${user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Student'}
+                            <span class="role-badge ${roleClass}">
+                                ${roleName}
                             </span>
                         </td>
                         <td>
@@ -1308,6 +1382,9 @@
                                     </button>
                                 ` : ''}
                             </div>
+                        </td>
+                        <td>
+                            ${scanButton}
                         </td>
                     </tr>
                 `;
@@ -1417,6 +1494,9 @@
                     break;
                 case 'super_admin':
                     filteredUsers = usersData.filter(u => u.role === 'SUPER_ADMIN');
+                    break;
+                case 'admissions_staff':
+                    filteredUsers = usersData.filter(u => u.role === 'ADMISSIONS_STAFF');
                     break;
                 case 'student':
                     filteredUsers = usersData.filter(u => u.role === 'STUDENT');
