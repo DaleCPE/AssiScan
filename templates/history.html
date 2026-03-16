@@ -645,7 +645,7 @@
         th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
         th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Moral */
         th:nth-child(8), td:nth-child(8) { width: 12%; }  /* Actions */
-        th:nth-child(9), td:nth-child(9) { width: 15%; }  /* SCAN BUTTON (NEW) */
+        th:nth-child(9), td:nth-child(9) { width: 15%; }  /* SCAN BUTTON */
 
         /* ===== STUDENT INFO ===== */
         .student-info {
@@ -1087,7 +1087,7 @@
             border-color: var(--danger);
         }
 
-        /* ===== SCAN BUTTON (NEW) ===== */
+        /* ===== SCAN BUTTON (FIXED) ===== */
         .scan-btn {
             display: inline-flex;
             align-items: center;
@@ -2772,7 +2772,7 @@
 
                 const rowClass = currentView === 'archived' ? 'archived-row' : '';
 
-                // SCAN BUTTON (NEW)
+                // SCAN BUTTON (FIXED - DIRECT TO /admin/scan/)
                 const scanButton = `
                     <a href="/admin/scan/${r.user_id}" class="scan-btn">
                         <i class="fas fa-qrcode"></i> SCAN
@@ -3717,4 +3717,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
