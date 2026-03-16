@@ -393,10 +393,10 @@
             font-size: 16px;
         }
 
-        .activity-icon.user-add {
-            background: rgba(40, 167, 69, 0.2);
-            color: var(--success);
-            border: 1px solid var(--success);
+        .activity-icon.scan {
+            background: rgba(156, 39, 176, 0.2);
+            color: #e1a7ff;
+            border: 1px solid #9c27b0;
         }
 
         .activity-icon.document {
@@ -405,16 +405,10 @@
             border: 1px solid var(--info);
         }
 
-        .activity-icon.college {
-            background: rgba(255, 193, 7, 0.2);
-            color: var(--warning);
-            border: 1px solid var(--warning);
-        }
-
-        .activity-icon.email {
-            background: rgba(0, 123, 255, 0.2);
-            color: #007bff;
-            border: 1px solid #007bff;
+        .activity-icon.approved {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
         }
 
         .activity-details {
@@ -503,50 +497,6 @@
         .modal-body {
             padding: 20px;
             color: #ddd;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            color: var(--text-light);
-            font-weight: 500;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(212, 175, 55, 0.5);
-            border-radius: 4px;
-            color: var(--text-light);
-            font-size: 13px;
-            transition: var(--transition);
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--gold);
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .modal-footer {
-            padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
         }
 
         .btn {
@@ -765,31 +715,26 @@
             <div class="user-nav">
                 <div class="nav-links">
                     <a href="/admin/dashboard" class="nav-link active">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
+                        <i class="fas fa-tachometer-alt"></i> DASHBOARD
                     </a>
-                    <a href="/admin/users" class="nav-link">
-                        <i class="fas fa-users"></i>
-                        <span>Users</span>
+                    <a href="/admin/users" class="nav-link" id="usersLink">
+                        <i class="fas fa-users"></i> USERS
                     </a>
-                    <a href="/admin/colleges" class="nav-link">
-                        <i class="fas fa-university"></i>
-                        <span>Colleges</span>
+                    <a href="/admin/colleges" class="nav-link" id="collegesLink">
+                        <i class="fas fa-university"></i> COLLEGES
                     </a>
                     <a href="/history.html" class="nav-link">
-                        <i class="fas fa-database"></i>
-                        <span>Records</span>
+                        <i class="fas fa-database"></i> RECORDS
                     </a>
-                    <a href="#" class="nav-link" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
+                    <a href="#" onclick="logout()" class="nav-link">
+                        <i class="fas fa-sign-out-alt"></i> LOGOUT
                     </a>
                 </div>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">SA</div>
                     <div>
-                        <div id="userName">Super Admin</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Super Admin</div>
+                        <div id="userName">Loading...</div>
+                        <div style="font-size: 11px; color: var(--text-muted);" id="userRole">Loading...</div>
                     </div>
                 </div>
             </div>
@@ -797,35 +742,35 @@
 
         <!-- DASHBOARD CARDS -->
         <div class="dashboard-cards">
-            <div class="dashboard-card" onclick="window.location.href='/admin/users'">
+            <div class="dashboard-card" onclick="window.location.href='/history.html'">
                 <div class="card-header">
                     <div class="card-icon">
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="card-title">
-                        <h3>User Management</h3>
-                        <p>Manage user accounts</p>
+                        <h3>Student Records</h3>
+                        <p>Manage student applications</p>
                     </div>
                 </div>
-                <div class="card-stats" id="totalUsers">0</div>
+                <div class="card-stats" id="totalStudents">0</div>
                 <div class="card-description">
-                    Create and manage student accounts, reset passwords, and monitor user activity.
+                    View and manage all student records, scan documents, and track application status.
                 </div>
             </div>
 
-            <div class="dashboard-card" onclick="window.location.href='/history.html'">
+            <div class="dashboard-card" onclick="window.location.href='/admin/missing-documents'">
                 <div class="card-header">
                     <div class="card-icon">
-                        <i class="fas fa-database"></i>
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <div class="card-title">
-                        <h3>Student Records</h3>
-                        <p>View all submissions</p>
+                        <h3>Missing Documents</h3>
+                        <p>Track incomplete requirements</p>
                     </div>
                 </div>
-                <div class="card-stats" id="totalRecords">0</div>
+                <div class="card-stats" id="missingDocs">0</div>
                 <div class="card-description">
-                    Access complete database of student records, filter by college, and manage submissions.
+                    Students with missing documents. Send reminders and track progress.
                 </div>
             </div>
 
@@ -835,36 +780,36 @@
                         <i class="fas fa-university"></i>
                     </div>
                     <div class="card-title">
-                        <h3>College Management</h3>
-                        <p>Manage colleges & programs</p>
+                        <h3>Colleges & Programs</h3>
+                        <p>Manage academic offerings</p>
                     </div>
                 </div>
                 <div class="card-stats" id="totalColleges">0</div>
                 <div class="card-description">
-                    Add, edit, or remove colleges and academic programs available for student selection.
+                    Add, edit, or remove colleges and academic programs.
                 </div>
             </div>
         </div>
 
         <!-- QUICK ACTIONS -->
         <div class="quick-actions">
-            <div class="action-btn" onclick="openCreateUserModal()">
+            <div class="action-btn" onclick="window.location.href='/history.html'">
                 <div class="action-icon">
-                    <i class="fas fa-user-plus"></i>
+                    <i class="fas fa-qrcode"></i>
                 </div>
-                <div class="action-text">Create User Account</div>
+                <div class="action-text">Scan Documents</div>
             </div>
-            <div class="action-btn" onclick="window.location.href='/admin/colleges'">
+            <div class="action-btn" onclick="window.location.href='/admin/missing-documents'">
                 <div class="action-icon">
-                    <i class="fas fa-plus-circle"></i>
+                    <i class="fas fa-bell"></i>
                 </div>
-                <div class="action-text">Add College/Program</div>
+                <div class="action-text">Send Reminders</div>
             </div>
-            <div class="action-btn" onclick="window.open('/history.html', '_blank')">
+            <div class="action-btn" onclick="window.open('/history.html?report=true', '_blank')">
                 <div class="action-icon">
                     <i class="fas fa-chart-bar"></i>
                 </div>
-                <div class="action-text">View Reports</div>
+                <div class="action-text">Generate Report</div>
             </div>
             <div class="action-btn" onclick="checkSystemHealth()">
                 <div class="action-icon">
@@ -874,42 +819,42 @@
             </div>
         </div>
 
-        <!-- STATS OVERVIEW (Simplified - No Graphs) -->
+        <!-- STATS OVERVIEW -->
         <div class="stats-overview">
             <div class="stat-box">
                 <div class="stat-icon">
-                    <i class="fas fa-user-check"></i>
+                    <i class="fas fa-clock"></i>
                 </div>
-                <div class="stat-title">Active Users</div>
-                <div class="stat-value" id="activeUsers">0</div>
-                <div class="stat-subtitle">out of <span id="totalUsersSmall">0</span> total</div>
+                <div class="stat-title">Pending Review</div>
+                <div class="stat-value" id="pendingRecords">0</div>
+                <div class="stat-subtitle">awaiting approval</div>
             </div>
 
             <div class="stat-box">
                 <div class="stat-icon">
-                    <i class="fas fa-calendar-day"></i>
+                    <i class="fas fa-check-circle"></i>
                 </div>
-                <div class="stat-title">Today's Submissions</div>
-                <div class="stat-value" id="todaySubmissions">0</div>
-                <div class="stat-subtitle">new records today</div>
+                <div class="stat-title">Approved</div>
+                <div class="stat-value" id="approvedRecords">0</div>
+                <div class="stat-subtitle">completed applications</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="stat-title">Transferees</div>
+                <div class="stat-value" id="transfereeCount">0</div>
+                <div class="stat-subtitle">transfer students</div>
             </div>
 
             <div class="stat-box">
                 <div class="stat-icon">
                     <i class="fas fa-envelope"></i>
                 </div>
-                <div class="stat-title">Email Notifications</div>
-                <div class="stat-value" id="emailSent">0</div>
-                <div class="stat-subtitle">emails sent</div>
-            </div>
-
-            <div class="stat-box">
-                <div class="stat-icon">
-                    <i class="fas fa-university"></i>
-                </div>
-                <div class="stat-title">Programs</div>
-                <div class="stat-value" id="totalPrograms">0</div>
-                <div class="stat-subtitle">across all colleges</div>
+                <div class="stat-title">Emails Sent</div>
+                <div class="stat-value" id="emailCount">0</div>
+                <div class="stat-subtitle">notifications sent</div>
             </div>
         </div>
 
@@ -921,8 +866,7 @@
                     Recent Activity
                 </div>
                 <button class="btn btn-secondary" onclick="refreshActivity()">
-                    <i class="fas fa-sync-alt"></i>
-                    Refresh
+                    <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
             <div class="activity-list" id="activityList">
@@ -930,64 +874,6 @@
                     <div class="loading-spinner"></div>
                     <p>Loading activity...</p>
                 </div>
-            </div>
-        </div>
-
-        <!-- CREATE USER MODAL -->
-        <div id="createUserModal" class="modal-overlay">
-            <div class="modal-container">
-                <div class="modal-header">
-                    <h3><i class="fas fa-user-plus"></i> Create User Account</h3>
-                    <button class="close-modal" onclick="closeModal('createUserModal')">&times;</button>
-                </div>
-                <form id="createUserForm">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="newUsername"><i class="fas fa-user"></i> Username *</label>
-                            <input type="text" id="newUsername" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newFullName"><i class="fas fa-id-card"></i> Full Name *</label>
-                            <input type="text" id="newFullName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newEmail"><i class="fas fa-envelope"></i> Email *</label>
-                            <input type="email" id="newEmail" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newRole"><i class="fas fa-user-tag"></i> Role *</label>
-                            <select id="newRole" required>
-                                <option value="STUDENT">Student</option>
-                                <option value="SUPER_ADMIN">Super Admin</option>
-                            </select>
-                        </div>
-                        <div class="row" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                            <div class="form-group" style="flex: 1; min-width: 200px;">
-                                <label for="newCollegeId">College (Optional)</label>
-                                <select id="newCollegeId">
-                                    <option value="">-- Select College --</option>
-                                </select>
-                            </div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;">
-                                <label for="newProgramId">Program (Optional)</label>
-                                <select id="newProgramId" disabled>
-                                    <option value="">-- Select College First --</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-toggle-on"></i> Status</label>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <input type="checkbox" id="newIsActive" checked>
-                                <label for="newIsActive" style="margin: 0;">Active Account</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Account</button>
-                    </div>
-                </form>
             </div>
         </div>
 
@@ -1000,26 +886,16 @@
 
     <script>
         let userData = {};
-        let collegesData = [];
+        let isAdmin = false;
 
         // Initialize on page load
         window.addEventListener('load', function() {
             checkAuth();
             loadDashboardData();
-            loadCollegesForModal();
             setupEventListeners();
         });
 
         function setupEventListeners() {
-            // Modal close on outside click
-            window.onclick = function(event) {
-                if (event.target.classList.contains('modal-overlay')) {
-                    const modal = event.target;
-                    modal.style.display = "none";
-                    document.body.style.overflow = 'auto';
-                }
-            };
-            
             // Close modals with Escape key
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape') {
@@ -1028,12 +904,6 @@
                         closeModal(openModal.id);
                     }
                 }
-            });
-            
-            // Create user form
-            document.getElementById('createUserForm')?.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await createUser();
             });
         }
 
@@ -1059,12 +929,18 @@
                     return;
                 }
                 
-                if (data.user.role !== 'SUPER_ADMIN') {
+                if (data.user.role !== 'SUPER_ADMIN' && data.user.role !== 'ADMISSIONS_STAFF') {
                     window.location.href = '/';
                     return;
                 }
                 
                 userData = data.user;
+                isAdmin = userData.role === 'SUPER_ADMIN';
+                
+                // Show/hide user management link based on role
+                document.getElementById('usersLink').style.display = isAdmin ? 'inline-flex' : 'none';
+                document.getElementById('collegesLink').style.display = isAdmin ? 'inline-flex' : 'none';
+                
                 updateUserInfo();
                 
             } catch (error) {
@@ -1076,6 +952,7 @@
 
         function updateUserInfo() {
             document.getElementById('userName').textContent = userData.full_name;
+            document.getElementById('userRole').textContent = userData.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admissions Staff';
             const initials = userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
             document.getElementById('userAvatar').textContent = initials;
         }
@@ -1083,40 +960,31 @@
         // Load dashboard data
         async function loadDashboardData() {
             try {
-                const [users, records, colleges] = await Promise.all([
-                    fetch('/api/users', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : []),
+                const [records, missing, colleges] = await Promise.all([
                     fetch('/get-records', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : { records: [] }),
+                    fetch('/api/missing-documents', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : { total_count: 0 }),
                     fetch('/api/colleges', { headers: { 'Authorization': localStorage.getItem('session_token') } }).then(r => r.ok ? r.json() : [])
                 ]);
 
                 // Update counts
-                document.getElementById('totalUsers').textContent = users.length || 0;
-                document.getElementById('totalRecords').textContent = records.records?.length || 0;
+                const students = records.records || [];
+                document.getElementById('totalStudents').textContent = students.length;
+                document.getElementById('missingDocs').textContent = missing.total_count || 0;
                 document.getElementById('totalColleges').textContent = colleges.length || 0;
 
-                // Calculate active users
-                const activeUsers = users.filter(u => u.is_active).length || 0;
-                document.getElementById('activeUsers').textContent = activeUsers;
-                document.getElementById('totalUsersSmall').textContent = users.length || 0;
+                // Calculate stats
+                const pending = students.filter(r => r.status === 'PENDING').length;
+                const approved = students.filter(r => r.status === 'APPROVED').length;
+                const transferees = students.filter(r => r.is_transferee).length;
+                const emails = students.filter(r => r.email_sent).length;
 
-                // Calculate today's submissions
-                const today = new Date().toISOString().split('T')[0];
-                const todaySubmissions = records.records?.filter(r => r.created_at && r.created_at.startsWith(today)).length || 0;
-                document.getElementById('todaySubmissions').textContent = todaySubmissions;
-
-                // Email stats
-                const emailSent = records.records?.filter(r => r.email_sent).length || 0;
-                document.getElementById('emailSent').textContent = emailSent;
-
-                // Calculate total programs
-                let totalPrograms = 0;
-                colleges.forEach(college => {
-                    totalPrograms += college.programs?.length || 0;
-                });
-                document.getElementById('totalPrograms').textContent = totalPrograms;
+                document.getElementById('pendingRecords').textContent = pending;
+                document.getElementById('approvedRecords').textContent = approved;
+                document.getElementById('transfereeCount').textContent = transferees;
+                document.getElementById('emailCount').textContent = emails;
 
                 // Load recent activity
-                loadRecentActivity();
+                loadRecentActivity(students);
 
             } catch (error) {
                 console.error('Dashboard data error:', error);
@@ -1124,109 +992,42 @@
             }
         }
 
-        // Load colleges for modal
-        async function loadCollegesForModal() {
-            try {
-                const response = await fetch('/api/colleges-dropdown');
-                if (response.ok) {
-                    collegesData = await response.json();
-                    
-                    const collegeSelect = document.getElementById('newCollegeId');
-                    if (collegeSelect) {
-                        collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
-                        
-                        collegesData.forEach(college => {
-                            const option = document.createElement('option');
-                            option.value = college.id;
-                            option.textContent = `${college.code} - ${college.name}`;
-                            collegeSelect.appendChild(option);
-                        });
-                        
-                        collegeSelect.addEventListener('change', function() {
-                            const selectedCollege = collegesData.find(c => c.id === parseInt(this.value));
-                            updateProgramSelect(selectedCollege);
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading colleges:', error);
-            }
-        }
-
-        function updateProgramSelect(college) {
-            const programSelect = document.getElementById('newProgramId');
-            if (!programSelect) return;
-            
-            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
-            programSelect.disabled = !college;
-            
-            if (college && college.programs) {
-                college.programs.forEach(program => {
-                    const option = document.createElement('option');
-                    option.value = program.id;
-                    option.textContent = program.name;
-                    programSelect.appendChild(option);
-                });
-            }
-        }
-
         // Load recent activity
-        async function loadRecentActivity() {
+        function loadRecentActivity(records) {
             const activityList = document.getElementById('activityList');
-            if (!activityList) return;
             
             try {
-                const [recordsResponse, usersResponse] = await Promise.all([
-                    fetch('/get-records', { headers: { 'Authorization': localStorage.getItem('session_token') } }),
-                    fetch('/api/users', { headers: { 'Authorization': localStorage.getItem('session_token') } })
-                ]);
-
-                const activities = [];
+                // Get recent records (last 5)
+                const recent = records.slice(0, 5);
                 
-                if (recordsResponse.ok) {
-                    const data = await recordsResponse.json();
-                    const recentRecords = data.records?.slice(0, 5) || [];
-                    
-                    recentRecords.forEach(record => {
-                        activities.push({
-                            type: 'document',
-                            title: `New submission from ${record.name || 'Unknown student'}`,
-                            time: record.created_at,
-                            icon: 'document'
-                        });
-                    });
-                }
-                
-                if (usersResponse.ok) {
-                    const users = await usersResponse.json();
-                    const recentUsers = users.slice(0, 3);
-                    
-                    recentUsers.forEach(user => {
-                        activities.push({
-                            type: 'user-add',
-                            title: `New user created: ${user.full_name || user.username}`,
-                            time: user.created_at,
-                            icon: 'user-add'
-                        });
-                    });
-                }
-                
-                // Sort by time (newest first)
-                activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-                
-                // Display activities
-                if (activities.length > 0) {
-                    activityList.innerHTML = activities.map(activity => `
-                        <div class="activity-item">
-                            <div class="activity-icon ${activity.icon}">
-                                <i class="fas fa-${activity.icon === 'user-add' ? 'user-plus' : 'file-alt'}"></i>
+                if (recent.length > 0) {
+                    activityList.innerHTML = recent.map(record => {
+                        const date = new Date(record.created_at);
+                        const timeAgo = getTimeAgo(date);
+                        
+                        let icon = 'document';
+                        let iconClass = 'document';
+                        
+                        if (record.status === 'APPROVED') {
+                            icon = 'approved';
+                            iconClass = 'approved';
+                        } else if (record.is_transferee) {
+                            icon = 'scan';
+                            iconClass = 'scan';
+                        }
+                        
+                        return `
+                            <div class="activity-item" onclick="viewStudent(${record.user_id})">
+                                <div class="activity-icon ${iconClass}">
+                                    <i class="fas fa-${icon === 'approved' ? 'check-circle' : (icon === 'scan' ? 'exchange-alt' : 'file-alt')}"></i>
+                                </div>
+                                <div class="activity-details">
+                                    <div class="activity-title">${record.name || 'Unknown'} - ${record.status || 'INCOMPLETE'}</div>
+                                    <div class="activity-time">${timeAgo}</div>
+                                </div>
                             </div>
-                            <div class="activity-details">
-                                <div class="activity-title">${activity.title}</div>
-                                <div class="activity-time">${formatTime(activity.time)}</div>
-                            </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     activityList.innerHTML = `
                         <div style="text-align: center; padding: 30px; color: var(--text-muted);">
@@ -1246,84 +1047,23 @@
             }
         }
 
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+            return date.toLocaleDateString();
+        }
+
+        function viewStudent(userId) {
+            window.location.href = `/admin/scan/${userId}`;
+        }
+
         function refreshActivity() {
-            loadRecentActivity();
+            loadDashboardData();
             showNotification('Activity refreshed', 'info');
-        }
-
-        // Modal functions
-        function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        }
-
-        function openCreateUserModal() {
-            const form = document.getElementById('createUserForm');
-            if (form) form.reset();
-            
-            const roleSelect = document.getElementById('newRole');
-            if (roleSelect) roleSelect.value = 'STUDENT';
-            
-            const isActive = document.getElementById('newIsActive');
-            if (isActive) isActive.checked = true;
-            
-            openModal('createUserModal');
-        }
-
-        // Create user account
-        async function createUser() {
-            const form = document.getElementById('createUserForm');
-            if (!form) return;
-            
-            const userData = {
-                username: document.getElementById('newUsername')?.value,
-                full_name: document.getElementById('newFullName')?.value,
-                email: document.getElementById('newEmail')?.value,
-                role: document.getElementById('newRole')?.value,
-                college_id: document.getElementById('newCollegeId')?.value || null,
-                program_id: document.getElementById('newProgramId')?.value || null,
-                is_active: document.getElementById('newIsActive')?.checked
-            };
-            
-            try {
-                const response = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': localStorage.getItem('session_token')
-                    },
-                    body: JSON.stringify(userData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    showNotification(`User created successfully! Temporary password: ${data.user?.temp_password || 'N/A'}`, 'success');
-                    closeModal('createUserModal');
-                    
-                    // Reload dashboard data
-                    setTimeout(() => {
-                        loadDashboardData();
-                    }, 1000);
-                    
-                } else {
-                    showNotification(data.error || 'Failed to create user', 'error');
-                }
-            } catch (error) {
-                console.error('Create user error:', error);
-                showNotification('Connection error', 'error');
-            }
         }
 
         // Check system health
@@ -1359,38 +1099,19 @@
             window.location.href = '/login';
         }
 
-        // Helper functions
-        function formatTime(timestamp) {
-            if (!timestamp) return 'Unknown time';
-            
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = Math.floor((now - date) / 1000);
-            
-            if (diff < 60) return 'Just now';
-            if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-            if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-            
-            return date.toLocaleDateString();
-        }
-
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
-            if (!notification) return;
-            
             const messageEl = document.getElementById('notificationMessage');
             const icon = notification.querySelector('i');
             
-            if (icon) {
-                icon.className = {
-                    'success': 'fas fa-check-circle',
-                    'error': 'fas fa-exclamation-circle',
-                    'info': 'fas fa-info-circle'
-                }[type] || 'fas fa-info-circle';
-            }
+            icon.className = {
+                'success': 'fas fa-check-circle',
+                'error': 'fas fa-exclamation-circle',
+                'info': 'fas fa-info-circle'
+            }[type] || 'fas fa-info-circle';
             
             notification.className = `notification ${type}`;
-            if (messageEl) messageEl.textContent = message;
+            messageEl.textContent = message;
             
             notification.classList.add('show');
             
@@ -1398,12 +1119,6 @@
                 notification.classList.remove('show');
             }, 3000);
         }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            // Any additional initialization
-        });
-
     </script>
 </body>
 </html>
