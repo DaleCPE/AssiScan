@@ -89,10 +89,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHIVE_FOLDER'] = ARCHIVE_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
-# --- USER ROLES ---
+# --- USER ROLES (UPDATED) ---
 ROLES = {
     'SUPER_ADMIN': 1,
-    'STUDENT': 2
+    'STUDENT': 2,
+    'ADMISSIONS_STAFF': 3  # NEW ROLE
 }
 
 PERMISSIONS = {
@@ -101,12 +102,16 @@ PERMISSIONS = {
         'view_all_records', 'edit_records', 'archive_records',
         'view_archived_records', 'send_emails', 'view_dashboard', 
         'access_admin_panel', 'manage_settings', 'send_notifications',
-        'view_all_notifications', 'generate_reports'
+        'view_all_notifications', 'generate_reports', 'scan_documents'
+    ],
+    'ADMISSIONS_STAFF': [  # NEW ROLE
+        'scan_documents', 'view_all_records', 'send_notifications',
+        'view_dashboard', 'view_all_notifications', 'send_emails'
     ],
     'STUDENT': [
-        'access_scanner', 'submit_documents', 'view_own_records',
-        'change_password', 'view_own_documents', 'download_own_documents',
-        'upload_additional_documents', 'view_own_notifications'
+        'view_own_records', 'change_password', 'view_own_documents',
+        'download_own_documents', 'view_own_notifications',
+        'edit_own_information'  # NEW PERMISSION
     ]
 }
 
@@ -349,7 +354,7 @@ def init_db():
                 password_hash VARCHAR(255) NOT NULL,
                 full_name VARCHAR(100) NOT NULL,
                 email VARCHAR(100) UNIQUE NOT NULL,
-                role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'STUDENT')),
+                role VARCHAR(20) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'ADMISSIONS_STAFF', 'STUDENT')),
                 college_id INTEGER,
                 program_id INTEGER,
                 is_active BOOLEAN DEFAULT TRUE,
@@ -412,7 +417,7 @@ def init_db():
         ''')
         print("   ✅ Created programs table")
         
-        print("📝 Creating records table...")
+        print("📝 Creating records table with NEW FIELDS...")
         cur.execute('''
             CREATE TABLE records (
                 id SERIAL PRIMARY KEY,
@@ -502,6 +507,16 @@ def init_db():
                 last_reminder_sent TIMESTAMP,
                 reminder_count INTEGER DEFAULT 0,
                 
+                -- NEW FIELDS FOR WORKFLOW
+                scanned_by INTEGER REFERENCES users(id),
+                scanned_at TIMESTAMP,
+                verified_by INTEGER REFERENCES users(id),
+                verified_at TIMESTAMP,
+                student_verified BOOLEAN DEFAULT FALSE,
+                student_verified_at TIMESTAMP,
+                needs_review BOOLEAN DEFAULT FALSE,
+                review_reason TEXT,
+                
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (archived_by) REFERENCES users(id),
                 FOREIGN KEY (restored_by) REFERENCES users(id),
@@ -515,7 +530,7 @@ def init_db():
             CREATE TABLE notifications (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
-                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER')),
+                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER', 'INFO_NEEDS_REVIEW', 'INFO_UPDATED')),
                 title VARCHAR(255) NOT NULL,
                 message TEXT NOT NULL,
                 data JSONB,
@@ -578,6 +593,29 @@ def init_db():
             """, (admin_id,))
             
             print(f"✅ Default Super Admin created with ID: {admin_id}")
+            
+            # Create sample admissions staff
+            staff_password = hash_password("staff123")
+            cur.execute("""
+                INSERT INTO users (username, password_hash, full_name, email, role, is_active, requires_password_reset)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                "admissions",
+                staff_password,
+                'Admissions Staff',
+                'staff@assiscan.com',
+                'ADMISSIONS_STAFF',
+                True,
+                False
+            ))
+            staff_id = cur.fetchone()[0]
+            
+            cur.execute("""
+                INSERT INTO notification_preferences (user_id) VALUES (%s)
+            """, (staff_id,))
+            
+            print(f"✅ Default Admissions Staff created with ID: {staff_id}")
             
             print("📝 Inserting default colleges...")
             default_colleges = [
@@ -2707,7 +2745,7 @@ def create_user():
             if not data.get(field):
                 return jsonify({"error": f"{field.replace('_', ' ').title()} is required"}), 400
         
-        if data['role'] not in ['SUPER_ADMIN', 'STUDENT']:
+        if data['role'] not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF', 'STUDENT']:
             return jsonify({"error": "Invalid role"}), 400
         
         conn = get_db_connection()
@@ -2829,7 +2867,7 @@ def update_user(user_id):
             values.append(data['email'])
         
         if 'role' in data:
-            if data['role'] not in ['SUPER_ADMIN', 'STUDENT']:
+            if data['role'] not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF', 'STUDENT']:
                 conn.close()
                 return jsonify({"error": "Invalid role"}), 400
             updates.append("role = %s")
@@ -3808,7 +3846,7 @@ def get_records():
                 ORDER BY r.updated_at DESC
                 LIMIT 1
             """, (session['user_id'],))
-        elif user_role == 'SUPER_ADMIN':
+        elif user_role == 'SUPER_ADMIN' or user_role == 'ADMISSIONS_STAFF':
             cur.execute("""
                 SELECT DISTINCT ON (r.user_id) 
                        r.*, u.username, u.email as user_email, u.full_name as user_full_name
@@ -3959,6 +3997,579 @@ def get_archived_records():
         if conn:
             conn.close()
         return jsonify({"records": [], "error": str(e)}), 500
+
+# ================= NEW: ADMIN STUDENT LIST WITH SCAN BUTTONS =================
+@app.route('/api/admin/students', methods=['GET'])
+@login_required
+@permission_required('view_all_records')
+def get_student_list():
+    """Get list of all students for admin with scan buttons"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT u.id as user_id, u.full_name, u.username, u.email,
+                   r.id as record_id, r.name as student_name, r.lrn, 
+                   r.college, r.program, r.status, r.is_archived,
+                   r.document_status, r.needs_review,
+                   CASE 
+                       WHEN r.id IS NULL THEN 'NO_RECORD'
+                       ELSE r.status 
+                   END as record_status
+            FROM users u
+            LEFT JOIN records r ON u.id = r.user_id
+            WHERE u.role = 'STUDENT' AND u.is_active = TRUE
+            ORDER BY u.created_at DESC
+        """)
+        
+        students = cur.fetchall()
+        conn.close()
+        
+        # Parse JSON fields
+        for student in students:
+            if student.get('document_status') and isinstance(student['document_status'], str):
+                try:
+                    student['document_status'] = json.loads(student['document_status'])
+                except:
+                    student['document_status'] = {}
+        
+        return jsonify({
+            "students": students,
+            "total": len(students)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting student list: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# ================= NEW: ADMIN SCAN FOR SPECIFIC STUDENT =================
+@app.route('/api/admin/scan/<int:user_id>', methods=['GET'])
+@login_required
+@permission_required('scan_documents')
+def get_student_for_scan(user_id):
+    """Get student data for scanning page"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get student info
+        cur.execute("""
+            SELECT u.id, u.full_name, u.username, u.email,
+                   r.id as record_id, r.*
+            FROM users u
+            LEFT JOIN records r ON u.id = r.user_id
+            WHERE u.id = %s AND u.role = 'STUDENT'
+        """, (user_id,))
+        
+        student = cur.fetchone()
+        
+        if not student:
+            conn.close()
+            return jsonify({"error": "Student not found"}), 404
+        
+        # Parse JSON fields
+        if student.get('goodmoral_analysis') and isinstance(student['goodmoral_analysis'], str):
+            try:
+                student['goodmoral_analysis'] = json.loads(student['goodmoral_analysis'])
+            except:
+                student['goodmoral_analysis'] = {}
+        
+        if student.get('other_documents') and isinstance(student['other_documents'], str):
+            try:
+                student['other_documents'] = json.loads(student['other_documents'])
+            except:
+                student['other_documents'] = []
+        
+        if student.get('document_status') and isinstance(student['document_status'], str):
+            try:
+                student['document_status'] = json.loads(student['document_status'])
+            except:
+                student['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
+        
+        conn.close()
+        
+        return jsonify({
+            "student": student
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting student for scan: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# ================= NEW: ADMIN SCAN DOCUMENTS FOR STUDENT =================
+@app.route('/api/admin/scan/<int:user_id>/documents', methods=['POST'])
+@login_required
+@permission_required('scan_documents')
+def scan_student_documents(user_id):
+    """Admin scans documents for a specific student"""
+    try:
+        if 'doc_type' not in request.form:
+            return jsonify({"error": "Document type required"}), 400
+        
+        doc_type = request.form['doc_type']
+        files = request.files.getlist('files')
+        
+        if not files or files[0].filename == '':
+            return jsonify({"error": "No files uploaded"}), 400
+        
+        # Create student-specific folder
+        student_folder = os.path.join(app.config['UPLOAD_FOLDER'], f"student_{user_id}")
+        if not os.path.exists(student_folder):
+            os.makedirs(student_folder, exist_ok=True)
+        
+        # Save files
+        saved_paths = []
+        pil_images = []
+        
+        for i, file in enumerate(files):
+            if file and file.filename:
+                timestamp = int(datetime.now().timestamp())
+                filename = secure_filename(f"{doc_type}_{timestamp}_{i}_{file.filename}")
+                filepath = os.path.join(student_folder, filename)
+                file.save(filepath)
+                saved_paths.append(f"student_{user_id}/{filename}")
+                
+                try:
+                    img = Image.open(filepath)
+                    pil_images.append(img)
+                except Exception as e:
+                    print(f"Error opening image {filename}: {e}")
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Check if record exists
+        cur.execute("SELECT id FROM records WHERE user_id = %s", (user_id,))
+        record = cur.fetchone()
+        
+        column_map = {
+            'psa': 'image_path',
+            'form137': 'form137_path',
+            'goodmoral': 'goodmoral_path',
+            'form138': 'form138_path',
+            'honorable_dismissal': 'honorable_dismissal_path',
+            'transfer_credentials': 'transfer_credentials_path'
+        }
+        
+        db_column = column_map.get(doc_type)
+        
+        if record:
+            # Update existing record
+            if db_column:
+                cur.execute(f"SELECT {db_column} FROM records WHERE id = %s", (record[0],))
+                existing = cur.fetchone()[0]
+                
+                if existing:
+                    new_paths = existing.split(',') + saved_paths
+                else:
+                    new_paths = saved_paths
+                
+                new_path_str = ','.join([p for p in new_paths if p])
+                
+                cur.execute(f"""
+                    UPDATE records 
+                    SET {db_column} = %s,
+                        scanned_by = %s,
+                        scanned_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (new_path_str, session['user_id'], record[0]))
+                
+                record_id = record[0]
+            else:
+                record_id = record[0]
+        else:
+            # Create new record
+            cur.execute("""
+                INSERT INTO records (
+                    user_id, scanned_by, scanned_at, status
+                ) VALUES (%s, %s, CURRENT_TIMESTAMP, 'INCOMPLETE')
+                RETURNING id
+            """, (user_id, session['user_id']))
+            record_id = cur.fetchone()[0]
+            
+            # Update document path
+            if db_column:
+                new_path_str = ','.join(saved_paths)
+                cur.execute(f"UPDATE records SET {db_column} = %s WHERE id = %s", 
+                           (new_path_str, record_id))
+        
+        # Update document status
+        if doc_type in ['psa', 'form137', 'goodmoral']:
+            update_document_status(record_id, doc_type, True)
+        
+        conn.commit()
+        conn.close()
+        
+        # Process with AI if applicable
+        extracted_data = None
+        if doc_type == 'psa' and pil_images:
+            extracted_data = process_psa_extraction(pil_images, saved_paths)
+        elif doc_type == 'form137' and pil_images:
+            extracted_data = process_form137_extraction(pil_images, saved_paths)
+        elif doc_type == 'goodmoral' and pil_images:
+            extracted_data = process_goodmoral_extraction(pil_images, saved_paths)
+        
+        return jsonify({
+            "success": True,
+            "message": f"{doc_type} documents uploaded successfully",
+            "record_id": record_id,
+            "saved_paths": saved_paths,
+            "extracted_data": extracted_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error scanning documents: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# ================= NEW: STUDENT CAN EDIT THEIR INFORMATION =================
+@app.route('/api/student/update-info', methods=['PUT'])
+@login_required
+@permission_required('edit_own_information')
+def update_student_info():
+    """Allow student to correct information from scanned documents"""
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Check if record exists for this user
+        cur.execute("SELECT id FROM records WHERE user_id = %s", (session['user_id'],))
+        record = cur.fetchone()
+        
+        if not record:
+            conn.close()
+            return jsonify({"error": "No record found"}), 404
+        
+        # Build update query based on provided fields
+        updates = []
+        values = []
+        
+        editable_fields = [
+            'name', 'sex', 'birthdate', 'birthplace', 'birth_order', 
+            'religion', 'age', 'civil_status', 'mobile_no', 'email',
+            'province', 'specific_address', 'mother_name', 'mother_contact',
+            'father_name', 'father_contact', 'guardian_name', 'guardian_relation',
+            'guardian_contact', 'lrn', 'school_name', 'school_address',
+            'final_general_average', 'college', 'program', 'student_type'
+        ]
+        
+        for field in editable_fields:
+            if field in data and data[field] is not None:
+                updates.append(f"{field} = %s")
+                values.append(data[field])
+        
+        if not updates:
+            conn.close()
+            return jsonify({"error": "No fields to update"}), 400
+        
+        # Add updated timestamp and set needs_review flag
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        updates.append("needs_review = TRUE")
+        updates.append("review_reason = %s")
+        values.append("Student updated information")
+        values.append(session['user_id'])
+        
+        query = f"UPDATE records SET {', '.join(updates)} WHERE user_id = %s RETURNING id"
+        cur.execute(query, values)
+        
+        updated_id = cur.fetchone()[0]
+        conn.commit()
+        
+        # Notify admin that student updated their info
+        cur.execute("SELECT full_name FROM users WHERE id = %s", (session['user_id'],))
+        student_name = cur.fetchone()[0]
+        
+        create_notification(
+            user_id=1,  # Admin ID
+            notification_type='INFO_UPDATED',
+            title="Student Information Updated",
+            message=f"Student {student_name} has updated their information. Please review.",
+            data={'user_id': session['user_id'], 'record_id': updated_id},
+            priority=1
+        )
+        
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "Information updated successfully. Admin will review your changes.",
+            "record_id": updated_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error updating student info: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
+
+# ================= PROCESS EXTRACTIONS =================
+def process_psa_extraction(images, paths):
+    """Process PSA extraction"""
+    try:
+        prompt = """Extract information from this PSA Birth Certificate.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "Name": "Full Name Here",
+            "Sex": "Male or Female",
+            "Birthdate": "YYYY-MM-DD format",
+            "PlaceOfBirth": "City/Municipality, Province",
+            "BirthOrder": "1st, 2nd, 3rd, etc",
+            "Mother_MaidenName": "Mother's Maiden Name",
+            "Father_Name": "Father's Full Name"
+        }
+        
+        Return ONLY the JSON, no additional text."""
+        
+        response_text = extract_with_gemini(prompt, images)
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        return data
+        
+    except Exception as e:
+        print(f"❌ PSA extraction error: {e}")
+        return None
+
+def process_form137_extraction(images, paths):
+    """Process Form 137 extraction"""
+    try:
+        prompt = """Extract information from this Form 137 / SF10 document.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "lrn": "12-digit Learner Reference Number",
+            "school_name": "Complete School Name",
+            "school_address": "Complete School Address",
+            "final_general_average": "Numerical grade"
+        }
+        
+        Return ONLY the JSON, no additional text."""
+        
+        response_text = extract_with_gemini(prompt, images)
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        return data
+        
+    except Exception as e:
+        print(f"❌ Form 137 extraction error: {e}")
+        return None
+
+def process_goodmoral_extraction(images, paths):
+    """Process Good Moral extraction"""
+    try:
+        prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
+
+        Return ONLY this exact JSON format with no other text:
+        {
+          "issuing_school": "full school name or 'Not Found'",
+          "issuing_officer": "name of person who signed or 'Not Found'",
+          "issued_date": "YYYY-MM-DD format or 'Not Found'",
+          "student_name": "full student name or 'Not Found'",
+          "has_disciplinary_record": false,
+          "disciplinary_details": "any details about disciplinary records or ''",
+          "remarks": "any other remarks or ''"
+        }"""
+        
+        response_text = extract_with_gemini(prompt, images)
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        # Calculate score
+        score, status = calculate_goodmoral_score(data)
+        
+        data['goodmoral_score'] = score
+        data['disciplinary_status'] = status
+        
+        return data
+        
+    except Exception as e:
+        print(f"❌ Good Moral extraction error: {e}")
+        return None
+
+# ================= ADMIN: SAVE SCANNED DATA TO RECORD =================
+@app.route('/api/admin/scan/<int:user_id>/save', methods=['POST'])
+@login_required
+@permission_required('scan_documents')
+def save_scanned_data(user_id):
+    """Save extracted data to student record"""
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cur = conn.cursor()
+        
+        # Check if record exists
+        cur.execute("SELECT id FROM records WHERE user_id = %s", (user_id,))
+        record = cur.fetchone()
+        
+        # Prepare update data
+        updates = []
+        values = []
+        
+        editable_fields = [
+            'name', 'sex', 'birthdate', 'birthplace', 'birth_order', 
+            'religion', 'age', 'civil_status', 'mobile_no', 'email',
+            'province', 'specific_address', 'mother_name', 'mother_contact',
+            'father_name', 'father_contact', 'guardian_name', 'guardian_relation',
+            'guardian_contact', 'lrn', 'school_name', 'school_address',
+            'final_general_average', 'college', 'program', 'student_type',
+            'is_transferee', 'previous_school', 'previous_school_address',
+            'previous_school_year', 'year_level_to_enroll'
+        ]
+        
+        for field in editable_fields:
+            if field in data and data[field] is not None:
+                updates.append(f"{field} = %s")
+                values.append(data[field])
+        
+        # Handle good moral data
+        if data.get('goodmoral_analysis'):
+            updates.append("goodmoral_analysis = %s")
+            values.append(json.dumps(data['goodmoral_analysis']))
+        
+        if data.get('disciplinary_status'):
+            updates.append("disciplinary_status = %s")
+            values.append(data['disciplinary_status'])
+        
+        if data.get('goodmoral_score') is not None:
+            updates.append("goodmoral_score = %s")
+            values.append(data['goodmoral_score'])
+        
+        if data.get('has_disciplinary_record') is not None:
+            updates.append("has_disciplinary_record = %s")
+            values.append(data['has_disciplinary_record'])
+        
+        if data.get('disciplinary_details'):
+            updates.append("disciplinary_details = %s")
+            values.append(data['disciplinary_details'])
+        
+        # Add verified info
+        updates.append("verified_by = %s")
+        updates.append("verified_at = CURRENT_TIMESTAMP")
+        values.append(session['user_id'])
+        
+        if record:
+            # Update existing record
+            values.append(record[0])
+            query = f"UPDATE records SET {', '.join(updates)} WHERE id = %s RETURNING id"
+            cur.execute(query, values)
+            record_id = record[0]
+        else:
+            # Create new record
+            values.append(user_id)
+            values.append(session['user_id'])
+            
+            placeholders = ', '.join(['%s'] * len(updates))
+            insert_query = f"""
+                INSERT INTO records (
+                    user_id, {', '.join([f.split(' =')[0] for f in updates])}, 
+                    scanned_by, scanned_at, verified_by, verified_at
+                ) VALUES (%s, {placeholders}, %s, CURRENT_TIMESTAMP, %s, CURRENT_TIMESTAMP)
+                RETURNING id
+            """
+            # Reorganize values
+            insert_values = [user_id] + values[:-2] + [session['user_id']] + [session['user_id']]
+            cur.execute(insert_query, insert_values)
+            record_id = cur.fetchone()[0]
+        
+        conn.commit()
+        conn.close()
+        
+        # Notify student that record has been created/updated
+        create_notification(
+            user_id=user_id,
+            notification_type='SYSTEM',
+            title="Your Record Has Been Processed",
+            message="Your documents have been scanned and verified by the admissions office. Please log in to review your information and correct any errors.",
+            data={'record_id': record_id},
+            priority=1
+        )
+        
+        return jsonify({
+            "success": True,
+            "message": "Record saved successfully",
+            "record_id": record_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error saving scanned data: {e}")
+        traceback.print_exc()
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
 
 # ================= UPDATE RECORD STATUS (APPROVE/REJECT) =================
 @app.route('/api/record/<int:record_id>/status', methods=['PUT'])
@@ -4249,7 +4860,7 @@ def permanent_delete_record(record_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= SAVE RECORD ENDPOINT (UPSERT) =================
+# ================= SAVE RECORD ENDPOINT (For backward compatibility) =================
 @app.route('/save-record', methods=['POST'])
 @login_required
 @permission_required('access_scanner')
@@ -4259,316 +4870,13 @@ def save_record():
         d = request.json
         print(f"📥 Saving/UPDATING record for user: {session['user_id']}")
         
-        goodmoral_analysis = d.get('goodmoral_analysis')
-        disciplinary_status = d.get('disciplinary_status')
-        goodmoral_score = d.get('goodmoral_score')
-        disciplinary_details = d.get('disciplinary_details')
-        has_disciplinary_record = d.get('has_disciplinary_record', False)
+        # This endpoint is kept for backward compatibility
+        # But students should use /api/student/update-info instead
         
-        religion = d.get('religion', '')
-        
-        other_documents = d.get('other_documents')
-        if other_documents and isinstance(other_documents, list):
-            other_documents_json = json.dumps(other_documents)
-        else:
-            other_documents_json = None
-        
-        siblings_list = d.get('siblings', [])
-        siblings_json = json.dumps(siblings_list)
-        
-        college = d.get('college', '')
-        program = d.get('program', '')
-        
-        is_transferee = d.get('is_transferee', False)
-        previous_school = d.get('previous_school', '')
-        previous_school_address = d.get('previous_school_address', '')
-        previous_school_year = d.get('previous_school_year', '')
-        year_level_to_enroll = d.get('year_level_to_enroll', '')
-        honorable_dismissal_path = d.get('honorable_dismissal_path', '')
-        transfer_credentials_path = d.get('transfer_credentials_path', '')
-        
-        conn = get_db_connection()
-        if not conn: 
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor()
-        
-        cur.execute("SELECT id FROM records WHERE user_id = %s AND is_archived = FALSE", (session['user_id'],))
-        existing_record = cur.fetchone()
-        
-        if existing_record:
-            print(f"🔄 Updating existing record ID: {existing_record[0]}")
-            
-            cur.execute("SELECT document_status, image_path, form137_path, goodmoral_path, status FROM records WHERE id = %s", (existing_record[0],))
-            current = cur.fetchone()
-            current_status = {}
-            if current and current[0]:
-                try:
-                    if isinstance(current[0], dict):
-                        current_status = current[0]
-                    else:
-                        current_status = json.loads(current[0])
-                except:
-                    current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            else:
-                current_status = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-            
-            current_record_status = current[4] if current and len(current) > 4 else 'INCOMPLETE'
-            
-            if current_record_status not in ['APPROVED', 'REJECTED']:
-                if d.get('psa_image_path') and d.get('psa_image_path') != current[1]:
-                    current_status['psa'] = True
-                if d.get('f137_image_path') and d.get('f137_image_path') != current[2]:
-                    current_status['form137'] = True
-                if d.get('goodmoral_image_path') and d.get('goodmoral_image_path') != current[3]:
-                    current_status['goodmoral'] = True
-            
-            goodmoral_analysis_json = None
-            if goodmoral_analysis:
-                if isinstance(goodmoral_analysis, dict):
-                    goodmoral_analysis_json = json.dumps(goodmoral_analysis)
-                else:
-                    goodmoral_analysis_json = goodmoral_analysis
-            
-            if current_record_status not in ['APPROVED', 'REJECTED']:
-                all_docs = all([current_status.get('psa', False), current_status.get('form137', False), 
-                               current_status.get('form138', False), current_status.get('goodmoral', False)])
-                
-                if all_docs:
-                    overall_status = 'PENDING'
-                else:
-                    overall_status = 'INCOMPLETE'
-            else:
-                overall_status = current_record_status
-            
-            cur.execute('''
-                UPDATE records SET
-                    name = %s, sex = %s, birthdate = %s, birthplace = %s, 
-                    birth_order = %s, religion = %s, age = %s,
-                    mother_name = %s, mother_citizenship = %s, mother_occupation = %s, 
-                    father_name = %s, father_citizenship = %s, father_occupation = %s, 
-                    lrn = %s, school_name = %s, school_address = %s, final_general_average = %s,
-                    image_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(image_path, ''), CASE WHEN image_path IS NOT NULL AND image_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE image_path
-                        END, image_path),
-                    form137_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(form137_path, ''), CASE WHEN form137_path IS NOT NULL AND form137_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE form137_path
-                        END, form137_path),
-                    goodmoral_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(goodmoral_path, ''), CASE WHEN goodmoral_path IS NOT NULL AND goodmoral_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE goodmoral_path
-                        END, goodmoral_path),
-                    email = %s, mobile_no = %s, civil_status = %s, nationality = %s,
-                    mother_contact = %s, father_contact = %s,
-                    guardian_name = %s, guardian_relation = %s, guardian_contact = %s,
-                    region = %s, province = %s, specific_address = %s,
-                    school_year = %s, student_type = %s, college = %s, program = %s, last_level_attended = %s,
-                    is_ip = %s, is_pwd = %s, has_medication = %s, is_working = %s,
-                    residence_type = %s, employer_name = %s, marital_status = %s,
-                    is_gifted = %s, needs_assistance = %s, school_type = %s, year_attended = %s, 
-                    special_talents = %s, is_scholar = %s, siblings = %s,
-                    goodmoral_analysis = %s, disciplinary_status = %s, goodmoral_score = %s,
-                    has_disciplinary_record = %s, disciplinary_details = %s,
-                    other_documents = %s,
-                    document_status = %s,
-                    status = %s,
-                    is_transferee = %s,
-                    previous_school = %s,
-                    previous_school_address = %s,
-                    previous_school_year = %s,
-                    year_level_to_enroll = %s,
-                    honorable_dismissal_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(honorable_dismissal_path, ''), CASE WHEN honorable_dismissal_path IS NOT NULL AND honorable_dismissal_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE honorable_dismissal_path
-                        END, honorable_dismissal_path),
-                    transfer_credentials_path = COALESCE(
-                        CASE WHEN %s IS NOT NULL AND %s != '' 
-                             THEN CONCAT(COALESCE(transfer_credentials_path, ''), CASE WHEN transfer_credentials_path IS NOT NULL AND transfer_credentials_path != '' THEN ',' ELSE '' END, %s)
-                             ELSE transfer_credentials_path
-                        END, transfer_credentials_path),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = %s AND is_archived = FALSE
-                RETURNING id
-            ''', (
-                d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-                d.get('birth_order'), religion, d.get('age'),
-                d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
-                d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
-                d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-                d.get('psa_image_path', ''), d.get('psa_image_path', ''), d.get('psa_image_path', ''),
-                d.get('f137_image_path', ''), d.get('f137_image_path', ''), d.get('f137_image_path', ''),
-                d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''), d.get('goodmoral_image_path', ''),
-                d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
-                d.get('mother_contact'), d.get('father_contact'),
-                d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
-                d.get('region'), d.get('province'), d.get('specific_address'),
-                d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),
-                d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-                d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
-                d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
-                d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-                siblings_json,
-                goodmoral_analysis_json,
-                disciplinary_status,
-                goodmoral_score,
-                has_disciplinary_record,
-                disciplinary_details,
-                other_documents_json,
-                json.dumps(current_status),
-                overall_status,
-                is_transferee,
-                previous_school,
-                previous_school_address,
-                previous_school_year,
-                year_level_to_enroll,
-                d.get('honorable_dismissal_path', ''), d.get('honorable_dismissal_path', ''), d.get('honorable_dismissal_path', ''),
-                d.get('transfer_credentials_path', ''), d.get('transfer_credentials_path', ''), d.get('transfer_credentials_path', ''),
-                session['user_id']
-            ))
-            
-            updated_id = cur.fetchone()[0]
-            conn.commit()
-            conn.close()
-            
-            check_missing_documents(updated_id)
-            
-            return jsonify({
-                "status": "success", 
-                "db_id": updated_id,
-                "document_status": current_status,
-                "record_status": overall_status,
-                "message": "Record UPDATED successfully.",
-                "operation": "update"
-            })
-            
-        else:
-            print(f"🆕 Creating NEW record")
-            
-            doc_status = {
-                "psa": bool(d.get('psa_image_path')),
-                "form137": bool(d.get('f137_image_path')),
-                "form138": False,
-                "goodmoral": bool(d.get('goodmoral_image_path'))
-            }
-            
-            all_docs = all([doc_status.get('psa', False), doc_status.get('form137', False), 
-                           doc_status.get('form138', False), doc_status.get('goodmoral', False)])
-            
-            if all_docs:
-                initial_status = 'PENDING'
-            else:
-                initial_status = 'INCOMPLETE'
-            
-            goodmoral_analysis_json = None
-            if goodmoral_analysis:
-                if isinstance(goodmoral_analysis, dict):
-                    goodmoral_analysis_json = json.dumps(goodmoral_analysis)
-                else:
-                    goodmoral_analysis_json = goodmoral_analysis
-            
-            cur.execute('''
-                INSERT INTO records (
-                    user_id, name, sex, birthdate, birthplace, birth_order, religion, age,
-                    mother_name, mother_citizenship, mother_occupation, 
-                    father_name, father_citizenship, father_occupation, 
-                    lrn, school_name, school_address, final_general_average,
-                    image_path, form137_path, goodmoral_path,
-                    email, mobile_no, civil_status, nationality,
-                    mother_contact, father_contact,
-                    guardian_name, guardian_relation, guardian_contact,
-                    region, province, specific_address,
-                    school_year, student_type, college, program, last_level_attended,
-                    is_ip, is_pwd, has_medication, is_working,
-                    residence_type, employer_name, marital_status,
-                    is_gifted, needs_assistance, school_type, year_attended, 
-                    special_talents, is_scholar, siblings,
-                    goodmoral_analysis, disciplinary_status, goodmoral_score,
-                    has_disciplinary_record, disciplinary_details,
-                    other_documents,
-                    document_status,
-                    status,
-                    is_transferee, previous_school, previous_school_address,
-                    previous_school_year, year_level_to_enroll,
-                    honorable_dismissal_path, transfer_credentials_path
-                )
-                VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, 
-                    %s, %s, %s, 
-                    %s, %s, %s, %s, 
-                    %s, %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s,
-                    %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s,
-                    %s,
-                    %s, %s, %s,
-                    %s, %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s, %s, %s, %s, %s, %s, %s
-                ) 
-                RETURNING id
-            ''', (
-                session['user_id'],
-                d.get('name'), d.get('sex'), d.get('birthdate') or None, d.get('birthplace'), 
-                d.get('birth_order'), religion, d.get('age'),
-                d.get('mother_name'), d.get('mother_citizenship'), d.get('mother_occupation'), 
-                d.get('father_name'), d.get('father_citizenship'), d.get('father_occupation'), 
-                d.get('lrn'), d.get('school_name'), d.get('school_address'), d.get('final_general_average'),
-                d.get('psa_image_path', ''), d.get('f137_image_path', ''), d.get('goodmoral_image_path', ''), 
-                d.get('email'), d.get('mobile_no'), d.get('civil_status'), d.get('nationality'),
-                d.get('mother_contact'), d.get('father_contact'),
-                d.get('guardian_name'), d.get('guardian_relation'), d.get('guardian_contact'),
-                d.get('region'), d.get('province'), d.get('specific_address'),
-                d.get('school_year'), d.get('student_type'), college, program, d.get('last_level_attended'),
-                d.get('is_ip'), d.get('is_pwd'), d.get('has_medication'), d.get('is_working'),
-                d.get('residence_type'), d.get('employer_name'), d.get('marital_status'),
-                d.get('is_gifted'), d.get('needs_assistance'), d.get('school_type'), 
-                d.get('year_attended'), d.get('special_talents'), d.get('is_scholar'),
-                siblings_json,
-                goodmoral_analysis_json,
-                disciplinary_status,
-                goodmoral_score,
-                has_disciplinary_record,
-                disciplinary_details,
-                other_documents_json,
-                json.dumps(doc_status),
-                initial_status,
-                is_transferee,
-                previous_school,
-                previous_school_address,
-                previous_school_year,
-                year_level_to_enroll,
-                d.get('honorable_dismissal_path', ''),
-                d.get('transfer_credentials_path', '')
-            ))
-            
-            new_id = cur.fetchone()[0]
-            conn.commit()
-            conn.close()
-
-            check_missing_documents(new_id)
-            
-            return jsonify({
-                "status": "success", 
-                "db_id": new_id,
-                "document_status": doc_status,
-                "record_status": initial_status,
-                "message": "Record CREATED successfully.",
-                "operation": "create"
-            })
+        return jsonify({
+            "status": "error", 
+            "error": "Please use the student update endpoint"
+        }), 400
             
     except Exception as e:
         print(f"❌ SAVE ERROR: {e}")
@@ -4594,7 +4902,7 @@ def index():
     
     if user_role == 'STUDENT':
         return render_template('index.html')
-    elif user_role == 'SUPER_ADMIN':
+    elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/admin/dashboard')
     else:
         session.clear()
@@ -4607,7 +4915,7 @@ def login():
             user_role = session['role'].upper()
             if user_role == 'STUDENT':
                 return redirect('/')
-            elif user_role == 'SUPER_ADMIN':
+            elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
                 return redirect('/admin/dashboard')
             else:
                 session.clear()
@@ -4623,10 +4931,34 @@ def admin_dashboard():
         return redirect('/login')
     
     user_role = session.get('role', '').upper()
-    if user_role != 'SUPER_ADMIN':
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/')
     
     return render_template('admin_dashboard.html')
+
+@app.route('/admin/students')
+def admin_students():
+    """NEW: Student list page with scan buttons"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
+        return redirect('/')
+    
+    return render_template('admin_students.html')
+
+@app.route('/admin/scan/<int:user_id>')
+def admin_scan_student(user_id):
+    """NEW: Scan page for specific student"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
+        return redirect('/')
+    
+    return render_template('admin_scan_student.html', student_id=user_id)
 
 @app.route('/admin/users')
 def admin_users():
@@ -4645,7 +4977,7 @@ def history_page():
         return redirect('/login')
     
     user_role = session.get('role', '').upper()
-    if user_role != 'SUPER_ADMIN':
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/')
     
     return render_template('history.html')
@@ -4681,676 +5013,29 @@ def notifications_page():
 def missing_documents_page():
     return render_template('admin_missing_docs.html')
 
-# ================= DEBUG ENDPOINT FOR GOOD MORAL =================
-@app.route('/debug-goodmoral/<int:record_id>', methods=['GET'])
-@login_required
-def debug_goodmoral(record_id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "DB Connection failed"}), 500
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT goodmoral_analysis FROM records WHERE id = %s", (record_id,))
-        result = cur.fetchone()
-        conn.close()
-        
-        if not result:
-            return jsonify({"error": "Record not found"}), 404
-        
-        raw_value = result[0]
-        
-        parsed = None
-        parse_error = None
-        if raw_value:
-            try:
-                if isinstance(raw_value, dict):
-                    parsed = raw_value
-                else:
-                    parsed = json.loads(raw_value)
-            except Exception as e:
-                parse_error = str(e)
-        
-        return jsonify({
-            "record_id": record_id,
-            "raw_value": raw_value,
-            "type": str(type(raw_value)),
-            "is_null": raw_value is None,
-            "length": len(str(raw_value)) if raw_value else 0,
-            "parsed": parsed,
-            "parse_error": parse_error
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ================= FIXED GOOD MORAL SCANNING ENDPOINT =================
-@app.route('/scan-goodmoral', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def scan_goodmoral():
-    if 'imageFiles' not in request.files: 
-        return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': 
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "GOODMORAL")
-        
-        if not pil_images:
-            return jsonify({"error": "No valid images found"}), 400
-
-        print(f"📄 Processing Good Moral Certificate with Gemini (REST mode)")
-        
-        prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
-
-IMPORTANT: Look for these specific details:
-- School name (usually at the top or bottom of the document)
-- Issuing officer name (person who signed, like Registrar, Principal, etc.)
-- Date when certificate was issued
-- Student name
-- Whether there are any disciplinary records mentioned
-
-Return ONLY this exact JSON format with no other text:
-{
-  "issuing_school": "full school name or 'Not Found'",
-  "issuing_officer": "name of person who signed or 'Not Found'",
-  "issued_date": "YYYY-MM-DD format or 'Not Found'",
-  "student_name": "full student name or 'Not Found'",
-  "has_disciplinary_record": false,
-  "disciplinary_details": "any details about disciplinary records or ''",
-  "remarks": "any other remarks or ''"
-}"""
-        
-        try:
-            response_text = extract_with_gemini(prompt, pil_images)
-            print(f"✅ Gemini Response received: {len(response_text)} characters")
-            
-            cleaned_text = response_text.strip()
-            
-            if cleaned_text.startswith('```'):
-                lines = cleaned_text.split('\n')
-                if lines[0].startswith('```'):
-                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-            
-            start = cleaned_text.find('{')
-            end = cleaned_text.rfind('}') + 1
-            
-            if start == -1 or end == 0:
-                return jsonify({"error": "Invalid JSON response from AI"}), 500
-                
-            json_str = cleaned_text[start:end]
-            
-            try:
-                analysis_data = json.loads(json_str)
-                
-                if analysis_data.get('issuing_school') == 'Not Found' and 'STI College' in response_text:
-                    import re
-                    sti_match = re.search(r'STI College[^\n]*', response_text)
-                    if sti_match:
-                        analysis_data['issuing_school'] = sti_match.group(0).strip()
-                
-                if analysis_data.get('issuing_officer') == 'Not Found':
-                    import re
-                    name_pattern = r'[A-Z][A-Z\s]+(?:[A-Z]\.)?\s*[A-Z][A-Z]+'
-                    name_matches = re.findall(name_pattern, response_text)
-                    if name_matches:
-                        valid_names = [n for n in name_matches if len(n) > 5 and not n.startswith('STI')]
-                        if valid_names:
-                            analysis_data['issuing_officer'] = valid_names[-1].strip()
-                
-                if analysis_data.get('issued_date') == 'Not Found':
-                    import re
-                    date_patterns = [
-                        r'(\d{4}-\d{2}-\d{2})',
-                        r'(\d{1,2})[/-](\d{1,2})[/-](\d{4})',
-                        r'(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})',
-                        r'(March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})'
-                    ]
-                    
-                    for pattern in date_patterns:
-                        date_match = re.search(pattern, response_text, re.IGNORECASE)
-                        if date_match:
-                            analysis_data['issued_date'] = date_match.group(0)
-                            break
-                
-                analysis_data['student_name'] = analysis_data.get('student_name', 'Not Found')
-                analysis_data['issuing_school'] = analysis_data.get('issuing_school', 'Not Found')
-                analysis_data['issuing_officer'] = analysis_data.get('issuing_officer', 'Not Found')
-                analysis_data['issued_date'] = analysis_data.get('issued_date', 'Not Found')
-                analysis_data['has_disciplinary_record'] = analysis_data.get('has_disciplinary_record', False)
-                analysis_data['disciplinary_details'] = analysis_data.get('disciplinary_details', '')
-                analysis_data['remarks'] = analysis_data.get('remarks', '')
-                
-                score, status = calculate_goodmoral_score(analysis_data)
-                
-                analysis_data['goodmoral_score'] = score
-                analysis_data['disciplinary_status'] = status
-                
-                disciplinary_details = ""
-                if analysis_data.get('has_disciplinary_record'):
-                    disciplinary_details = analysis_data.get('disciplinary_details', '') or analysis_data.get('remarks', '') or 'Disciplinary issues detected'
-                
-                return jsonify({
-                    "message": "Good Moral Certificate analyzed successfully",
-                    "analysis": analysis_data,
-                    "goodmoral_score": score,
-                    "disciplinary_status": status,
-                    "disciplinary_details": disciplinary_details,
-                    "has_disciplinary_record": analysis_data.get('has_disciplinary_record', False),
-                    "image_paths": ",".join(saved_paths)
-                })
-            except json.JSONDecodeError as json_error:
-                print(f"❌ JSON Parse Error: {json_error}")
-                return jsonify({"error": f"Failed to parse AI response: {str(json_error)}"}), 500
-        except Exception as ai_error:
-            print(f"❌ AI Extraction Failed: {ai_error}")
-            traceback.print_exc()
-            return jsonify({
-                "error": "AI service unavailable",
-                "details": str(ai_error)[:200]
-            }), 500
-    except Exception as e:
-        print(f"❌ Good Moral Scanning Error: {e}")
-        traceback.print_exc()
-        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
-
-# ================= PSA EXTRACTION ENDPOINT =================
-@app.route('/extract', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def extract_data():
-    if 'imageFiles' not in request.files: 
-        return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': 
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "PSA")
-        
-        if not pil_images:
-             return jsonify({"error": "No valid images found"}), 400
-
-        print(f"📸 Processing PSA with Gemini (REST mode)")
-        
-        prompt = """Extract information from this PSA Birth Certificate.
-        
-        Return ONLY a valid JSON object with the following structure:
-        {
-            "is_valid_document": true,
-            "Name": "Full Name Here",
-            "Sex": "Male or Female",
-            "Birthdate": "YYYY-MM-DD format",
-            "PlaceOfBirth": "City/Municipality, Province",
-            "BirthOrder": "1st, 2nd, 3rd, etc",
-            "Mother_MaidenName": "Mother's Maiden Name",
-            "Mother_Citizenship": "Citizenship",
-            "Mother_Occupation": "Occupation if stated",
-            "Father_Name": "Father's Full Name",
-            "Father_Citizenship": "Citizenship",
-            "Father_Occupation": "Occupation if stated"
-        }
-        
-        IMPORTANT: DO NOT extract Religion field. Religion is selected separately in the system.
-        
-        Return ONLY the JSON, no additional text."""
-        
-        try:
-            response_text = extract_with_gemini(prompt, pil_images)
-            
-            cleaned_text = response_text.strip()
-            
-            if cleaned_text.startswith('```'):
-                lines = cleaned_text.split('\n')
-                if lines[0].startswith('```'):
-                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-            
-            start = cleaned_text.find('{')
-            end = cleaned_text.rfind('}') + 1
-            
-            if start == -1 or end == 0:
-                return jsonify({"error": "Invalid JSON response from AI"}), 500
-                
-            json_str = cleaned_text[start:end]
-            
-            try:
-                data = json.loads(json_str)
-                
-                if not data.get("is_valid_document", False):
-                    return jsonify({
-                        "error": f"Invalid document"
-                    }), 400
-                
-                return jsonify({
-                    "message": "Success", 
-                    "structured_data": data, 
-                    "image_paths": ",".join(saved_paths)
-                })
-            except json.JSONDecodeError:
-                return jsonify({"error": "Failed to parse AI response"}), 500
-        except Exception as ai_error:
-            return jsonify({
-                "error": "AI service unavailable",
-                "details": str(ai_error)[:200]
-            }), 500
-    except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
-
-# ================= UPLOAD OTHER DOCUMENTS ENDPOINT =================
-@app.route('/upload-other-document/<int:record_id>', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def upload_other_document(record_id):
-    if 'file' not in request.files or 'title' not in request.form:
-        return jsonify({"error": "File and title required"}), 400
-    
-    file = request.files['file']
-    title = request.form['title'].strip()
-    
-    if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-    
-    if not title:
-        return jsonify({"error": "Document title required"}), 400
-    
-    user_role = session.get('role', '').upper()
-    if user_role == 'STUDENT':
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
-        conn.close()
-        
-        if not record or record[0] != session['user_id']:
-            return jsonify({"error": "Unauthorized access to record"}), 403
-    
-    try:
-        timestamp = int(datetime.now().timestamp())
-        filename = secure_filename(f"OTHER_{record_id}_{timestamp}_{file.filename}")
-        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(path)
-        
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor()
-        
-        cur.execute("SELECT other_documents FROM records WHERE id = %s", (record_id,))
-        result = cur.fetchone()
-        
-        existing_documents = []
-        if result and result[0]:
-            try:
-                existing_documents = json.loads(result[0])
-            except:
-                existing_documents = []
-        
-        new_document = {
-            'id': len(existing_documents) + 1,
-            'title': title,
-            'filename': filename,
-            'uploaded_at': datetime.now().isoformat()
-        }
-        
-        existing_documents.append(new_document)
-        new_documents_json = json.dumps(existing_documents)
-        
-        cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
-                   (new_documents_json, record_id))
-        conn.commit()
-        conn.close()
-        
-        create_notification(
-            user_id=session['user_id'],
-            notification_type='DOCUMENT_UPLOADED',
-            title="Document Uploaded",
-            message=f"Your document '{title}' has been uploaded successfully.",
-            data={'record_id': record_id, 'title': title},
-            priority=0
-        )
-        
-        return jsonify({
-            "status": "success",
-            "message": "Document uploaded successfully",
-            "document": new_document,
-            "download_url": f"{request.host_url}uploads/{filename}"
-        })
-    except Exception as e:
-        print(f"❌ Upload error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-# ================= DELETE OTHER DOCUMENT ENDPOINT =================
-@app.route('/delete-other-document/<int:record_id>/<int:doc_id>', methods=['DELETE'])
-@login_required
-@permission_required('access_scanner')
-def delete_other_document(record_id, doc_id):
-    user_role = session.get('role', '').upper()
-    if user_role == 'STUDENT':
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
-        conn.close()
-        
-        if not record or record[0] != session['user_id']:
-            return jsonify({"error": "Unauthorized access to record"}), 403
-    
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("SELECT other_documents FROM records WHERE id = %s", (record_id,))
-        result = cur.fetchone()
-        
-        if not result or not result[0]:
-            conn.close()
-            return jsonify({"error": "No documents found"}), 404
-        
-        existing_documents = json.loads(result[0])
-        
-        document_to_delete = None
-        updated_documents = []
-        
-        for doc in existing_documents:
-            if doc.get('id') == doc_id:
-                document_to_delete = doc
-            else:
-                updated_documents.append(doc)
-        
-        if not document_to_delete:
-            conn.close()
-            return jsonify({"error": "Document not found"}), 404
-        
-        filename = document_to_delete.get('filename')
-        if filename:
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        updated_documents_json = json.dumps(updated_documents)
-        cur.execute("UPDATE records SET other_documents = %s WHERE id = %s", 
-                   (updated_documents_json, record_id))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "status": "success",
-            "message": "Document deleted successfully"
-        })
-    except Exception as e:
-        print(f"❌ Delete error: {e}")
-        if conn:
-            conn.close()
-        return jsonify({"error": str(e)}), 500
-
-# ================= FORM 137 ENDPOINT =================
-@app.route('/extract-form137', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def extract_form137():
-    if 'imageFiles' not in request.files: 
-        return jsonify({"error": "No files uploaded"}), 400
-    
-    files = request.files.getlist('imageFiles')
-    if not files or files[0].filename == '': 
-        return jsonify({"error": "No selected file"}), 400
-    
-    try:
-        saved_paths, pil_images = save_multiple_files(files, "F137")
-        print(f"📸 Processing Form 137 with Gemini (REST mode)")
-
-        if not pil_images:
-            return jsonify({"error": "No valid images found"}), 400
-        
-        prompt = """Extract information from this Form 137 / SF10 document.
-        
-        Return ONLY a valid JSON object with the following structure:
-        {
-            "lrn": "12-digit Learner Reference Number",
-            "school_name": "Complete School Name",
-            "school_address": "Complete School Address",
-            "final_general_average": "Numerical grade"
-        }
-        
-        Return ONLY the JSON, no additional text."""
-        
-        try:
-            response_text = extract_with_gemini(prompt, pil_images)
-            
-            cleaned_text = response_text.strip()
-            
-            if cleaned_text.startswith('```'):
-                lines = cleaned_text.split('\n')
-                if lines[0].startswith('```'):
-                    cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-            
-            start = cleaned_text.find('{')
-            end = cleaned_text.rfind('}') + 1
-            
-            if start == -1 or end == 0:
-                return jsonify({"error": "Invalid JSON response from AI"}), 500
-                
-            json_str = cleaned_text[start:end]
-            
-            try:
-                data = json.loads(json_str)
-                
-                if 'lrn' in data and data['lrn']:
-                    data['lrn'] = str(data['lrn']).strip()
-                
-                return jsonify({
-                    "message": "Success", 
-                    "structured_data": data, 
-                    "image_paths": ",".join(saved_paths)
-                })
-            except json.JSONDecodeError:
-                return jsonify({"error": "Failed to parse AI response"}), 500
-        except Exception as ai_error:
-            return jsonify({
-                "error": "AI service unavailable",
-                "details": str(ai_error)[:200]
-            }), 500
-    except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)[:100]}"}), 500
-
-# ================= EMAIL ENDPOINTS =================
-@app.route('/send-email/<int:record_id>', methods=['POST'])
-@login_required
-@permission_required('send_emails')
-def send_email_only(record_id):
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT name, email, email_sent, religion,
-                   goodmoral_score, disciplinary_status, disciplinary_details,
-                   lrn, sex, birthdate, birthplace, age, 
-                   civil_status, nationality,
-                   mother_name, mother_citizenship, mother_contact,
-                   father_name, father_citizenship, father_contact,
-                   province, specific_address, mobile_no,
-                   school_name, school_address, final_general_average,
-                   last_level_attended, student_type, college, program,
-                   school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status, rejection_reason,
-                   is_transferee, previous_school, year_level_to_enroll,
-                   user_id
-            FROM records WHERE id = %s
-        """, (record_id,))
-        
-        record = cur.fetchone()
-        
-        if not record:
-            conn.close()
-            return jsonify({"error": "Record not found"}), 404
-        
-        if record.get('email_sent'):
-            conn.close()
-            return jsonify({"warning": "Email has already been sent"}), 400
-        
-        email_addr = record['email']
-        student_name = record['name']
-        
-        if not email_addr:
-            conn.close()
-            return jsonify({"error": "No email address found"}), 400
-        
-        print(f"\n📧 Sending email for record ID: {record_id}")
-        
-        student_data = dict(record)
-        email_sent = send_email_notification(email_addr, student_name, [], student_data)
-        
-        if email_sent:
-            cur.execute("""
-                UPDATE records 
-                SET email_sent = TRUE, email_sent_at = CURRENT_TIMESTAMP 
-                WHERE id = %s
-            """, (record_id,))
-            conn.commit()
-            conn.close()
-            
-            if record.get('user_id'):
-                create_notification(
-                    user_id=record['user_id'],
-                    notification_type='SYSTEM',
-                    title="Email Sent",
-                    message=f"Your record summary has been emailed to {email_addr}",
-                    data={'record_id': record_id},
-                    priority=0
-                )
-            
-            print(f"✅ Email sent for ID: {record_id}")
-            return jsonify({
-                "status": "success",
-                "message": f"Email sent successfully to {email_addr}",
-                "record_id": record_id
-            })
-        else:
-            conn.close()
-            return jsonify({
-                "status": "error",
-                "error": "Failed to send email."
-            }), 500
-    except Exception as e:
-        print(f"❌ EMAIL SEND ERROR: {e}")
-        if conn:
-            conn.rollback()
-            conn.close()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-
-@app.route('/resend-email/<int:record_id>', methods=['POST'])
-@login_required
-@permission_required('send_emails')
-def resend_email(record_id):
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "DB Connection Failed"}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
-            SELECT name, email, religion,
-                   goodmoral_score, disciplinary_status, disciplinary_details,
-                   lrn, sex, birthdate, birthplace, age, 
-                   civil_status, nationality,
-                   mother_name, mother_citizenship, mother_contact,
-                   father_name, father_citizenship, father_contact,
-                   province, specific_address, mobile_no,
-                   school_name, school_address, final_general_average,
-                   last_level_attended, student_type, college, program,
-                   school_year, is_ip, is_pwd, has_medication,
-                   special_talents, document_status, status,
-                   user_id
-            FROM records WHERE id = %s
-        """, (record_id,))
-        
-        record = cur.fetchone()
-        
-        if not record:
-            conn.close()
-            return jsonify({"error": "Record not found"}), 404
-        
-        email_addr = record['email']
-        student_name = record['name']
-        
-        if not email_addr:
-            conn.close()
-            return jsonify({"error": "No email address found"}), 400
-        
-        print(f"\n📧 Resending email for ID: {record_id}")
-        
-        student_data = dict(record)
-        email_sent = send_email_notification(email_addr, student_name, [], student_data)
-        
-        if email_sent:
-            cur.execute("""
-                UPDATE records 
-                SET email_sent_at = CURRENT_TIMESTAMP 
-                WHERE id = %s
-            """, (record_id,))
-            conn.commit()
-            conn.close()
-            
-            if record.get('user_id'):
-                create_notification(
-                    user_id=record['user_id'],
-                    notification_type='SYSTEM',
-                    title="Email Resent",
-                    message=f"Your record summary has been resent to {email_addr}",
-                    data={'record_id': record_id},
-                    priority=0
-                )
-            
-            print(f"✅ Email resent for ID: {record_id}")
-            return jsonify({
-                "status": "success",
-                "message": f"Email resent successfully to {email_addr}",
-                "record_id": record_id
-            })
-        else:
-            conn.close()
-            return jsonify({
-                "status": "error",
-                "error": "Failed to send email."
-            }), 500
-    except Exception as e:
-        print(f"❌ EMAIL RESEND ERROR: {e}")
-        if conn:
-            conn.rollback()
-            conn.close()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-
-# ================= OTHER ENDPOINTS =================
+# ================= UPLOADS SERVING =================
 @app.route('/uploads/<path:filename>')
 @login_required
 def uploaded_file(filename):
     try:
+        # Security: Students can only access their own folder
+        if session.get('role', '').upper() == 'STUDENT':
+            expected_folder = f"student_{session['user_id']}"
+            if not filename.startswith(expected_folder):
+                return jsonify({"error": "Access denied"}), 403
+        
+        # Clean filename
         if '..' in filename or filename.startswith('/'):
             return "Invalid filename", 400
         
-        clean_filename = filename.split('/')[-1] if '/' in filename else filename
+        # Try upload folder first
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], clean_filename)
+        # Try archive folder if not found
+        if not os.path.exists(file_path):
+            file_path = os.path.join(app.config['ARCHIVE_FOLDER'], filename)
         
         if not os.path.exists(file_path):
-            file_path = os.path.join(app.config['ARCHIVE_FOLDER'], clean_filename)
-            
-            if not os.path.exists(file_path) and '/' in filename:
-                file_path = os.path.join(app.config['ARCHIVE_FOLDER'], filename)
-        
-        if not os.path.exists(file_path):
-            print(f"❌ File not found: {filename}")
             return jsonify({"error": f"File not found"}), 404
         
         mime_types = {
@@ -5362,14 +5047,14 @@ def uploaded_file(filename):
             '.txt': 'text/plain'
         }
         
-        ext = os.path.splitext(clean_filename)[1].lower()
+        ext = os.path.splitext(filename)[1].lower()
         mimetype = mime_types.get(ext, 'application/octet-stream')
         
         response = send_file(
             file_path,
             mimetype=mimetype,
             as_attachment=False,
-            download_name=clean_filename
+            download_name=os.path.basename(filename)
         )
         
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -5444,336 +5129,58 @@ def view_form(record_id):
     except Exception as e:
         return f"Error loading form: {str(e)}", 500
 
-@app.route('/upload-additional', methods=['POST'])
+# ================= DEBUG ENDPOINTS =================
+@app.route('/debug-goodmoral/<int:record_id>', methods=['GET'])
 @login_required
-@permission_required('access_scanner')
-def upload_additional():
-    files = request.files.getlist('files')
-    rid, dtype = request.form.get('id'), request.form.get('type')
-    
-    if not files or not rid: 
-        return jsonify({"error": "Data Missing"}), 400
-    
-    user_role = session.get('role', '').upper()
-    if user_role == 'STUDENT':
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT user_id FROM records WHERE id = %s", (rid,))
-        record = cur.fetchone()
-        conn.close()
-        
-        if not record or record[0] != session['user_id']:
-            return jsonify({"error": "Unauthorized access to record"}), 403
-    
-    saved_paths = []
-    for i, file in enumerate(files):
-        if file and file.filename:
-            timestamp = int(datetime.now().timestamp())
-            fname = secure_filename(f"{dtype}_{rid}_{timestamp}_{i}_{file.filename}")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
-            file.save(path)
-            saved_paths.append(fname)
-
-    full_path_str = ",".join(saved_paths)
-    
-    col_map = {
-        'form137': 'form137_path', 
-        'form138': 'form138_path', 
-        'goodmoral': 'goodmoral_path',
-        'honorable_dismissal': 'honorable_dismissal_path',
-        'transfer_credentials': 'transfer_credentials_path'
-    }
-    
-    if dtype not in col_map:
-        return jsonify({"error": "Invalid document type"}), 400
-    
+def debug_goodmoral(record_id):
     conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "DB Connection failed"}), 500
+    
     try:
         cur = conn.cursor()
-        
-        cur.execute(f"SELECT {col_map[dtype]} FROM records WHERE id = %s", (rid,))
-        existing = cur.fetchone()
-        
-        new_paths = []
-        if existing and existing[0]:
-            new_paths = existing[0].split(',')
-        
-        new_paths.extend(saved_paths)
-        new_path_str = ','.join([p for p in new_paths if p])
-        
-        cur.execute(f"UPDATE records SET {col_map[dtype]} = %s WHERE id = %s", (new_path_str, rid))
-        
-        doc_type_map = {
-            'form137': 'form137', 
-            'form138': 'form138', 
-            'goodmoral': 'goodmoral'
-        }
-        if dtype in doc_type_map:
-            update_document_status(int(rid), doc_type_map[dtype], True)
-        
-        conn.commit()
+        cur.execute("SELECT goodmoral_analysis FROM records WHERE id = %s", (record_id,))
+        result = cur.fetchone()
         conn.close()
         
-        create_notification(
-            user_id=session['user_id'],
-            notification_type='DOCUMENT_UPLOADED',
-            title="Document Uploaded",
-            message=f"Your {dtype} document has been uploaded successfully.",
-            data={'record_id': int(rid), 'type': dtype},
-            priority=0
-        )
-        
-        return jsonify({"status": "success", "message": "File uploaded successfully"})
-    except Exception as e:
-        print(f"❌ Upload error: {e}")
-        if conn:
-            conn.close()
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/delete-record/<int:record_id>', methods=['DELETE'])
-@login_required
-@permission_required('delete_records')
-def delete_record(record_id):
-    return jsonify({"error": "Direct deletion is not allowed. Use archive function instead."}), 400
-
-@app.route('/check-email-status/<int:record_id>', methods=['GET'])
-@login_required
-def check_email_status(record_id):
-    user_role = session.get('role', '').upper()
-    if user_role == 'STUDENT':
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT user_id FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
-        conn.close()
-        
-        if not record or record[0] != session['user_id']:
-            return jsonify({"error": "Unauthorized access to record"}), 403
-    
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT email_sent, email_sent_at FROM records WHERE id = %s", (record_id,))
-        record = cur.fetchone()
-        conn.close()
-        
-        if record:
-            email_sent_at = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S') if record['email_sent_at'] else None
-            return jsonify({
-                "email_sent": record['email_sent'],
-                "email_sent_at": email_sent_at
-            })
-        else:
+        if not result:
             return jsonify({"error": "Record not found"}), 404
+        
+        raw_value = result[0]
+        
+        parsed = None
+        parse_error = None
+        if raw_value:
+            try:
+                if isinstance(raw_value, dict):
+                    parsed = raw_value
+                else:
+                    parsed = json.loads(raw_value)
+            except Exception as e:
+                parse_error = str(e)
+        
+        return jsonify({
+            "record_id": record_id,
+            "raw_value": raw_value,
+            "type": str(type(raw_value)),
+            "is_null": raw_value is None,
+            "length": len(str(raw_value)) if raw_value else 0,
+            "parsed": parsed,
+            "parse_error": parse_error
+        })
     except Exception as e:
-        if conn:
-            conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= HEALTH AND DIAGNOSTIC ENDPOINTS =================
+# ================= HEALTH CHECK =================
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         "status": "healthy",
         "service": "AssiScan Backend",
-        "goodmoral_scanning": "ENABLED",
-        "transport": "REST (SSL errors bypassed)",
-        "model": "Gemini 3 Flash (REST mode)",
-        "user_management": "ENABLED",
-        "roles": ["SUPER_ADMIN", "STUDENT"],
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected",
-        "features": {
-            "password_reset": "ENABLED",
-            "change_password": "ENABLED",
-            "college_management": "ENABLED",
-            "goodmoral_analysis": "ENABLED",
-            "religion_dropdown": "ENABLED",
-            "student_records": "ENABLED",
-            "document_access": "ENABLED",
-            "one_record_per_user": "ENABLED",
-            "school_year_management": "ENABLED",
-            "tofollow_documents": "ENABLED",
-            "approve_reject": "ENABLED",
-            "transferee_documents": "ENABLED",
-            "archive_system": "ENABLED",
-            "notification_system": "ENABLED",
-            "missing_document_alerts": "ENABLED",
-            "enrollment_reminders": "ENABLED",
-            "report_generation": "ENABLED"
-        }
+        "roles": list(PERMISSIONS.keys())
     })
-
-@app.route('/list-uploads', methods=['GET'])
-@login_required
-def list_uploads():
-    try:
-        if not os.path.exists(UPLOAD_FOLDER):
-            return jsonify({"error": "Uploads folder not found"}), 404
-        
-        files = []
-        for filename in os.listdir(UPLOAD_FOLDER):
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            if os.path.isfile(filepath):
-                files.append({
-                    "name": filename,
-                    "size": os.path.getsize(filepath),
-                    "url": f"{request.host_url}uploads/{filename}"
-                })
-        
-        return jsonify({
-            "count": len(files),
-            "files": files[:20],
-            "folder": UPLOAD_FOLDER
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/list-archives', methods=['GET'])
-@login_required
-@permission_required('view_archived_records')
-def list_archives():
-    try:
-        if not os.path.exists(ARCHIVE_FOLDER):
-            return jsonify({"error": "Archives folder not found"}), 404
-        
-        files = []
-        for root, dirs, filenames in os.walk(ARCHIVE_FOLDER):
-            for filename in filenames:
-                rel_path = os.path.relpath(os.path.join(root, filename), ARCHIVE_FOLDER)
-                filepath = os.path.join(root, filename)
-                files.append({
-                    "name": filename,
-                    "path": rel_path,
-                    "size": os.path.getsize(filepath),
-                    "url": f"{request.host_url}uploads/{rel_path}"
-                })
-        
-        return jsonify({
-            "count": len(files),
-            "files": files[:50],
-            "folder": ARCHIVE_FOLDER
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ================= SIMPLE SESSION CHECK =================
-@app.route('/check-login', methods=['GET'])
-def check_login():
-    print(f"🔍 /check-login accessed. Session: {dict(session)}")
-    
-    if 'user_id' in session and 'role' in session:
-        return jsonify({
-            "logged_in": True,
-            "username": session.get('username'),
-            "role": session.get('role'),
-            "full_name": session.get('full_name'),
-            "requires_password_reset": session.get('requires_password_reset', False)
-        })
-    else:
-        return jsonify({"logged_in": False})
-
-# ================= STUDENT RECORDS API =================
-@app.route('/api/record/<int:record_id>', methods=['GET'])
-@login_required
-def get_single_record(record_id):
-    conn = get_db_connection()
-    if not conn: 
-        return jsonify({"error": "Database connection failed"}), 500
-    
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        user_role = session.get('role', '').upper()
-        
-        if user_role == 'STUDENT':
-            cur.execute("""
-                SELECT * FROM records 
-                WHERE id = %s AND user_id = %s
-            """, (record_id, session['user_id']))
-        elif user_role == 'SUPER_ADMIN':
-            cur.execute("SELECT * FROM records WHERE id = %s", (record_id,))
-        else:
-            conn.close()
-            return jsonify({"error": "Unauthorized"}), 403
-        
-        record = cur.fetchone()
-        conn.close()
-        
-        if not record:
-            return jsonify({"error": "Record not found"}), 404
-        
-        if record['created_at']: 
-            record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        if record['updated_at']: 
-            record['updated_at'] = record['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-        if record['birthdate']: 
-            record['birthdate'] = str(record['birthdate'])
-        if record['email_sent_at']: 
-            record['email_sent_at'] = record['email_sent_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        if record.get('goodmoral_analysis'):
-            try:
-                if isinstance(record['goodmoral_analysis'], str):
-                    record['goodmoral_analysis'] = json.loads(record['goodmoral_analysis'])
-            except:
-                record['goodmoral_analysis'] = {}
-        
-        if record.get('other_documents'):
-            try:
-                if isinstance(record['other_documents'], str):
-                    record['other_documents'] = json.loads(record['other_documents'])
-            except:
-                record['other_documents'] = []
-        else:
-            record['other_documents'] = []
-        
-        if record.get('document_status'):
-            try:
-                if isinstance(record['document_status'], str):
-                    record['document_status'] = json.loads(record['document_status'])
-            except:
-                record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        else:
-            record['document_status'] = {"psa": False, "form137": False, "form138": False, "goodmoral": False}
-        
-        image_fields = ['image_path', 'form137_path', 'form138_path', 'goodmoral_path', 'honorable_dismissal_path', 'transfer_credentials_path']
-        for field in image_fields:
-            if record.get(field):
-                paths = str(record[field]).split(',')
-                if paths and paths[0].strip():
-                    first_path = paths[0].strip()
-                    record[f'{field}_url'] = f"{request.host_url}uploads/{first_path}"
-                else:
-                    record[f'{field}_url'] = None
-            else:
-                record[f'{field}_url'] = None
-        
-        return jsonify({"record": record})
-    except Exception as e:
-        print(f"❌ Error in get_single_record: {e}")
-        if conn:
-            conn.close()
-        return jsonify({"error": str(e)}), 500
-
-# ================= SCHEDULED TASKS =================
-def run_scheduled_tasks():
-    while True:
-        try:
-            print("🔄 Running scheduled tasks...")
-            
-            check_missing_documents()
-            
-            send_enrollment_reminders()
-            
-            time.sleep(3600)
-        except Exception as e:
-            print(f"❌ Error in scheduled tasks: {e}")
-            time.sleep(3600)
-
-# Start scheduled tasks in background thread
-scheduler_thread = threading.Thread(target=run_scheduled_tasks, daemon=True)
-scheduler_thread.start()
 
 # ================= APPLICATION START =================
 if __name__ == '__main__':
@@ -5782,19 +5189,19 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH REPORT GENERATION")
+    print("🚀 ASSISCAN WITH NEW WORKFLOW")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"🚀 Transport: REST (SSL errors bypassed)")
-    print(f"🤖 Models: Gemini 3 Flash, Gemini 1.5 Flash")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("📊 NEW FEATURE: Report Generation")
-    print("   • /api/report/enrollment - Get enrollment report data")
-    print("   • Summary statistics")
-    print("   • College/Program breakdown")
-    print("   • Document completion rates")
+    print("📋 NEW WORKFLOW FEATURES:")
+    print("   • New Role: ADMISSIONS_STAFF")
+    print("   • Admin: Student list with SCAN buttons per student")
+    print("   • Admin: Per-student scanning page")
+    print("   • Student: Can edit their information after scanning")
+    print("   • Student: View-only access to scanner")
+    print("   • Per-student folder structure for privacy")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
