@@ -47,6 +47,7 @@
             --archived: #6c757d;
             --archive: #6f42c1;
             --report: #9c27b0;
+            --scan: #9c27b0;
         }
 
         * {
@@ -591,7 +592,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1200px;
+            min-width: 1300px;
         }
 
         thead {
@@ -636,14 +637,15 @@
         }
 
         /* Column widths */
-        th:nth-child(1), td:nth-child(1) { width: 18%; }  /* Student */
+        th:nth-child(1), td:nth-child(1) { width: 15%; }  /* Student */
         th:nth-child(2), td:nth-child(2) { width: 10%; }  /* LRN */
-        th:nth-child(3), td:nth-child(3) { width: 12%; }  /* College */
-        th:nth-child(4), td:nth-child(4) { width: 12%; }  /* Program */
-        th:nth-child(5), td:nth-child(5) { width: 15%; }  /* Documents */
+        th:nth-child(3), td:nth-child(3) { width: 10%; }  /* College */
+        th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Program */
+        th:nth-child(5), td:nth-child(5) { width: 12%; }  /* Documents */
         th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
         th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Moral */
-        th:nth-child(8), td:nth-child(8) { width: 17%; }  /* Actions */
+        th:nth-child(8), td:nth-child(8) { width: 12%; }  /* Actions */
+        th:nth-child(9), td:nth-child(9) { width: 15%; }  /* SCAN BUTTON (NEW) */
 
         /* ===== STUDENT INFO ===== */
         .student-info {
@@ -1085,6 +1087,47 @@
             border-color: var(--danger);
         }
 
+        /* ===== SCAN BUTTON (NEW) ===== */
+        .scan-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(156, 39, 176, 0.15);
+            border: 1px solid #9c27b0;
+            color: #e1a7ff;
+            border-radius: var(--border-radius);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .scan-btn:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+
+        .scan-btn i {
+            font-size: 14px;
+        }
+
+        .needs-review-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
         /* Status action buttons */
         .status-action-buttons {
             display: flex;
@@ -1401,6 +1444,19 @@
             transform: translateY(-2px);
         }
 
+        .btn-scan {
+            background: rgba(156, 39, 176, 0.15);
+            color: #e1a7ff;
+            border: 1px solid #9c27b0;
+        }
+
+        .btn-scan:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+
         .report-section {
             margin-bottom: 30px;
             padding: 20px;
@@ -1579,6 +1635,7 @@
             }
             
             th:nth-child(8), td:nth-child(8) { width: 20%; }
+            th:nth-child(9), td:nth-child(9) { width: 20%; }
         }
 
         @media (max-width: 992px) {
@@ -1637,7 +1694,7 @@
             }
             
             table {
-                min-width: 1200px;
+                min-width: 1300px;
             }
             
             .student-info {
@@ -1738,7 +1795,8 @@
         .doc-link,
         .status-btn,
         .toggle-btn,
-        .report-btn {
+        .report-btn,
+        .scan-btn {
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -1784,7 +1842,7 @@
                     <div class="user-avatar" id="userAvatar">A</div>
                     <div>
                         <div id="userName">System Administrator</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Super Admin</div>
+                        <div style="font-size: 11px; color: var(--text-muted);" id="userRole">Super Admin</div>
                     </div>
                 </div>
             </div>
@@ -1813,7 +1871,7 @@
                 </button>
             </div>
             
-            <!-- NEW REPORT GENERATION BUTTON -->
+            <!-- REPORT GENERATION BUTTON -->
             <button class="report-btn" onclick="openReportModal()">
                 <i class="fas fa-chart-pie"></i> GENERATE REPORT
             </button>
@@ -1948,11 +2006,12 @@
                         <th>STATUS</th>
                         <th>MORAL</th>
                         <th>ACTIONS</th>
+                        <th>SCAN</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="loading">
                                 <div class="loading-spinner"></div>
                                 <p>Loading records...</p>
@@ -2109,7 +2168,7 @@
             </div>
         </div>
 
-        <!-- MODALS (Keep all existing modals) -->
+        <!-- MODALS -->
         <div id="studentModal" class="modal-overlay">
             <div class="modal-container">
                 <div class="modal-header">
@@ -2264,9 +2323,6 @@
         let collegesData = [];
         let userData = {};
         let currentView = 'active';
-        
-        // Chart instance
-        let statusChart = null;
 
         // College mapping for badges
         const collegeBadgeMap = {
@@ -2326,7 +2382,7 @@
                 });
                 const data = await response.json();
                 
-                if (!data.authenticated || data.user.role !== 'SUPER_ADMIN') {
+                if (!data.authenticated || (data.user.role !== 'SUPER_ADMIN' && data.user.role !== 'ADMISSIONS_STAFF')) {
                     localStorage.clear();
                     window.location.href = '/login';
                     return;
@@ -2334,6 +2390,7 @@
                 
                 userData = data.user;
                 document.getElementById('userName').textContent = userData.full_name;
+                document.getElementById('userRole').textContent = userData.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admissions Staff';
                 const initials = userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
                 document.getElementById('userAvatar').textContent = initials;
                 
@@ -2632,7 +2689,7 @@
             if (records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="empty-state">
                                 <i class="fas fa-database"></i>
                                 <h3>No Records Found</h3>
@@ -2650,6 +2707,7 @@
                 const initials = r.name ? r.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '??';
                 const age = r.age ? `${r.age}y` : '';
                 const lrn = r.lrn ? r.lrn.slice(-4) : 'N/A';
+                const needsReview = r.needs_review ? '<span class="needs-review-badge">NEEDS REVIEW</span>' : '';
                 
                 let actionButtons = '';
                 if (currentView === 'active') {
@@ -2714,6 +2772,14 @@
 
                 const rowClass = currentView === 'archived' ? 'archived-row' : '';
 
+                // SCAN BUTTON (NEW)
+                const scanButton = `
+                    <a href="/admin/scan/${r.user_id}" class="scan-btn">
+                        <i class="fas fa-qrcode"></i> SCAN
+                    </a>
+                    ${needsReview}
+                `;
+
                 return `
                 <tr id="row-${r.id}" class="${rowClass}">
                     <td>
@@ -2734,6 +2800,7 @@
                     <td>${getStatusBadge(recordStatus)}</td>
                     <td>${getMoralBadge(r)}</td>
                     <td>${actionButtons}</td>
+                    <td>${scanButton}</td>
                 </tr>
             `}).join('');
         }
@@ -2932,11 +2999,11 @@
         function updateStatusChart(data) {
             const ctx = document.getElementById('statusChart').getContext('2d');
             
-            if (statusChart) {
-                statusChart.destroy();
+            if (window.statusChart) {
+                window.statusChart.destroy();
             }
             
-            statusChart = new Chart(ctx, {
+            window.statusChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Complete', 'Incomplete', 'Pending', 'Approved'],
@@ -3478,6 +3545,7 @@
                                 '<span class="status-badge status-archived">ARCHIVED</span>' : 
                                 getStatusBadge(record.status || 'INCOMPLETE')
                             }
+                            ${record.needs_review ? '<span class="needs-review-badge" style="margin-left: 5px;">NEEDS REVIEW</span>' : ''}
                         </div>
                     </div>
                 </div>
@@ -3614,9 +3682,9 @@
             if (id === 'archiveModal') currentArchiveRecordId = null;
             if (id === 'restoreModal') currentRestoreRecordId = null;
             if (id === 'permanentDeleteModal') currentPermanentDeleteRecordId = null;
-            if (id === 'reportModal' && statusChart) {
-                statusChart.destroy();
-                statusChart = null;
+            if (id === 'reportModal' && window.statusChart) {
+                window.statusChart.destroy();
+                window.statusChart = null;
             }
         }
 
