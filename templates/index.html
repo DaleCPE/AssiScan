@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>AssiScan | UB LIPA</title>
+    <title>AssiScan | Document Scanner</title>
     
     <!-- External CSS with fallback -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -168,27 +168,48 @@
             letter-spacing: 1px;
             margin-top: 2px;
         }
-        
-        .btn-access { 
-            margin-top: auto; 
-            background: rgba(212, 175, 55, 0.05); 
-            border: 1px solid var(--border-dim); 
-            color: var(--primary-gold); 
-            padding: 12px; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            font-size: 13px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-            transition: 0.3s; 
+
+        /* Student Info Badge for Scanning */
+        .student-info-badge {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .student-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-gold);
+            margin-bottom: 5px;
+        }
+
+        .student-id {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .back-btn {
+            margin-top: 20px;
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid var(--border-dim);
+            color: var(--primary-gold);
+            padding: 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
             cursor: pointer;
             width: 100%;
-            position: relative;
         }
         
-        .btn-access:hover { 
+        .back-btn:hover { 
             background: var(--primary-gold); 
             color: #000; 
         }
@@ -203,346 +224,6 @@
         .btn-logout:hover {
             background: #dc3545;
             color: white;
-        }
-
-        /* Notification Badge */
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #dc3545;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            min-width: 18px;
-            text-align: center;
-            border: 1px solid var(--gold);
-            font-weight: bold;
-        }
-
-        /* Student Access Buttons */
-        .student-actions {
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-            width: 100%;
-        }
-
-        .student-action-btn {
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid var(--border-dim);
-            color: var(--primary-gold);
-            padding: 10px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.3s;
-            cursor: pointer;
-            width: 100%;
-            position: relative;
-        }
-
-        .student-action-btn:hover {
-            background: rgba(212, 175, 55, 0.2);
-            transform: translateY(-2px);
-        }
-
-        /* Admin Access Buttons */
-        .admin-actions {
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-            width: 100%;
-        }
-
-        /* Change Password Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-dim);
-            border-radius: 8px;
-            padding: 25px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-dim);
-            padding-bottom: 10px;
-        }
-
-        .modal-title {
-            font-family: 'Cinzel', serif;
-            color: var(--primary-gold);
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 20px;
-            cursor: pointer;
-            transition: 0.3s;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .close-modal:hover {
-            color: var(--primary-gold);
-        }
-
-        .modal-form-group {
-            margin-bottom: 15px;
-        }
-
-        .modal-label {
-            display: block;
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-        }
-
-        .modal-input {
-            width: 100%;
-            background: var(--input-bg);
-            border: 1px solid #331010;
-            color: var(--text-main);
-            padding: 10px;
-            border-radius: 4px;
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            outline: none;
-            transition: 0.3s;
-        }
-
-        .modal-input:focus {
-            border-color: var(--primary-gold);
-            background: rgba(212, 175, 55, 0.05);
-        }
-
-        .password-strength {
-            font-size: 10px;
-            margin-top: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .strength-weak { color: #f44336; }
-        .strength-fair { color: #ff9800; }
-        .strength-good { color: #4caf50; }
-        .strength-strong { color: #2e7d32; }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn-modal-primary {
-            flex: 1;
-            background: linear-gradient(90deg, #1e3c22, #2e7d32);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-modal-primary:hover {
-            background: #388e3c;
-            transform: translateY(-2px);
-        }
-
-        .btn-modal-secondary {
-            flex: 1;
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid var(--border-dim);
-            color: var(--primary-gold);
-            padding: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .btn-modal-secondary:hover {
-            background: rgba(212, 175, 55, 0.2);
-        }
-
-        /* Password Requirements */
-        .password-requirements {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid #331010;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-
-        .requirement {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 3px;
-        }
-
-        .requirement.valid {
-            color: #4CAF50;
-        }
-
-        .requirement.invalid {
-            color: #f44336;
-        }
-
-        /* Password Toggle */
-        .password-toggle {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .password-input-wrapper {
-            position: relative;
-        }
-
-        /* Alert Messages */
-        .alert {
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .alert-success {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: #4CAF50;
-        }
-
-        .alert-error {
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            color: #f44336;
-        }
-
-        .alert-warning {
-            background: rgba(255, 152, 0, 0.1);
-            border: 1px solid rgba(255, 152, 0, 0.3);
-            color: #ff9800;
-        }
-
-        /* Force Password Reset Modal */
-        .force-reset-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 1100;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .force-reset-content {
-            background: var(--panel-bg);
-            border: 2px solid var(--danger-red);
-            border-radius: 10px;
-            padding: 30px 20px;
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-            box-shadow: 0 15px 40px rgba(244, 67, 54, 0.3);
-        }
-
-        .force-reset-icon {
-            font-size: 48px;
-            color: var(--danger-red);
-            margin-bottom: 20px;
-        }
-
-        .force-reset-title {
-            font-family: 'Cinzel', serif;
-            color: var(--primary-gold);
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-
-        .force-reset-message {
-            color: var(--text-muted);
-            margin-bottom: 30px;
-            line-height: 1.6;
-            font-size: 14px;
-        }
-
-        .force-reset-warning {
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            color: #ff6b6b;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
         }
 
         /* Main Container */
@@ -922,7 +603,7 @@
         }
         
         /* Button Styles */
-        .btn-save, .btn-send { 
+        .btn-save { 
             border: none; 
             padding: 15px; 
             font-weight: 600; 
@@ -951,117 +632,6 @@
             background: #388e3c; 
             box-shadow: 0 5px 15px rgba(50, 200, 50, 0.2); 
             transform: translateY(-2px); 
-        }
-        
-        .btn-send { 
-            background: linear-gradient(90deg, #1976D2, #2196F3); 
-            color: #fff; 
-        }
-        
-        .btn-send:hover { 
-            background: #1E88E5; 
-            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.2); 
-            transform: translateY(-2px); 
-        }
-        
-        .btn-send:disabled {
-            background: #546E7A;
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-            box-shadow: none !important;
-        }
-        
-        /* Good Moral Status Display */
-        .goodmoral-status-container {
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 6px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(212, 175, 55, 0.1);
-            display: none;
-        }
-        
-        .goodmoral-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .goodmoral-title {
-            font-family: 'Cinzel', serif;
-            color: var(--primary-gold);
-            font-size: 14px;
-        }
-        
-        .goodmoral-score {
-            font-size: 24px;
-            font-weight: bold;
-            padding: 5px 15px;
-            border-radius: 20px;
-            min-width: 60px;
-            text-align: center;
-        }
-        
-        .score-excellent { background: #4CAF50; color: white; }
-        .score-good { background: #8BC34A; color: white; }
-        .score-fair { background: #FF9800; color: black; }
-        .score-poor { background: #F44336; color: white; }
-        
-        .goodmoral-details {
-            font-size: 11px;
-            line-height: 1.4;
-            color: #ccc;
-        }
-        
-        .goodmoral-warning, .goodmoral-success {
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            color: #ff6b6b;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .goodmoral-success {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: #4CAF50;
-        }
-        
-        /* Other Documents */
-        .other-doc-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-            flex-wrap: wrap;
-        }
-        
-        .other-doc-title {
-            flex: 1;
-            font-size: 11px;
-            min-width: 150px;
-        }
-        
-        .remove-doc-btn {
-            background: #331010;
-            color: #ff6b6b;
-            border: 1px solid #441515;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 10px;
         }
         
         .save-status {
@@ -1289,24 +859,6 @@
             font-size: 11px;
         }
 
-        /* DEBUG BUTTON */
-        .debug-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 9999;
-            background: #ff9800;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
         /* Mobile Responsive */
         @media (max-width: 1200px) {
             .main-container {
@@ -1320,51 +872,6 @@
                 border-right: none;
                 border-bottom: 1px solid var(--border-dim);
                 padding: 20px;
-                display: grid;
-                grid-template-columns: auto 1fr auto;
-                grid-template-areas: 
-                    "brand brand menu"
-                    "user actions logout";
-                gap: 15px;
-                align-items: center;
-                min-height: auto;
-            }
-            
-            .brand-title {
-                grid-area: brand;
-            }
-            
-            .brand-subtitle {
-                display: none;
-            }
-            
-            .user-info {
-                grid-area: user;
-                margin: 0;
-                padding: 10px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                background: transparent;
-                border: none;
-            }
-            
-            .user-avatar {
-                margin: 0;
-            }
-            
-            .student-actions,
-            .admin-actions {
-                grid-area: actions;
-                flex-direction: row;
-                margin: 0;
-                justify-content: flex-end;
-            }
-            
-            .btn-logout {
-                grid-area: logout;
-                margin: 0;
-                width: auto;
             }
             
             .form-panel {
@@ -1390,32 +897,8 @@
         }
 
         @media (max-width: 768px) {
-            .sidebar {
-                grid-template-columns: 1fr auto;
-                grid-template-areas: 
-                    "brand menu"
-                    "user user"
-                    "actions logout";
-            }
-            
             .brand-title {
                 font-size: 24px;
-            }
-            
-            .user-info {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .student-actions,
-            .admin-actions {
-                flex-direction: column;
-            }
-            
-            .student-action-btn,
-            .btn-access {
-                font-size: 11px;
-                padding: 8px;
             }
             
             .mobile-menu-toggle {
@@ -1432,12 +915,6 @@
                 transition: left 0.3s ease;
                 display: flex;
                 flex-direction: column;
-                grid-template-columns: 1fr;
-                grid-template-areas: 
-                    "brand"
-                    "user"
-                    "actions"
-                    "logout";
                 padding: 80px 20px 30px;
             }
             
@@ -1451,19 +928,6 @@
             
             .brand-subtitle {
                 display: block;
-            }
-            
-            .user-info {
-                flex-direction: row;
-                text-align: left;
-                background: rgba(0, 0, 0, 0.3);
-                border: 1px solid var(--border-dim);
-            }
-            
-            .student-actions,
-            .admin-actions {
-                flex-direction: column;
-                justify-content: flex-start;
             }
             
             .mobile-menu-overlay.active {
@@ -1499,14 +963,6 @@
         }
 
         @media (max-width: 480px) {
-            .modal-content {
-                padding: 20px 15px;
-            }
-            
-            .modal-actions {
-                flex-direction: column;
-            }
-            
             .scan-frame {
                 height: 180px;
             }
@@ -1519,25 +975,9 @@
                 font-size: 9px;
             }
             
-            .btn-save, .btn-send {
+            .btn-save {
                 padding: 12px;
                 font-size: 12px;
-            }
-            
-            .goodmoral-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .goodmoral-score {
-                align-self: flex-start;
-            }
-            
-            .debug-btn {
-                bottom: 10px;
-                left: 10px;
-                padding: 6px 10px;
-                font-size: 10px;
             }
             
             .action-column {
@@ -1555,9 +995,7 @@
 
         button, 
         input[type="button"],
-        input[type="submit"],
-        .btn-access,
-        .student-action-btn {
+        input[type="submit"] {
             min-height: 44px;
             min-width: 44px;
         }
@@ -1583,120 +1021,20 @@
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
 
-    <!-- Change Password Modal -->
-    <div id="changePasswordModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <i class="fas fa-key"></i> CHANGE PASSWORD
-                </div>
-                <button class="close-modal" onclick="closeChangePasswordModal()">&times;</button>
-            </div>
-            
-            <div id="passwordAlert" class="alert" style="display: none;"></div>
-            
-            <form id="changePasswordForm">
-                <div class="modal-form-group">
-                    <label class="modal-label">Current Password</label>
-                    <div class="password-input-wrapper">
-                        <input type="password" id="currentPassword" class="modal-input" required>
-                        <button type="button" class="password-toggle" onclick="togglePassword('currentPassword', this)">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="modal-form-group">
-                    <label class="modal-label">New Password</label>
-                    <div class="password-input-wrapper">
-                        <input type="password" id="newPassword" class="modal-input" required 
-                               oninput="checkPasswordStrength()">
-                        <button type="button" class="password-toggle" onclick="togglePassword('newPassword', this)">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div id="passwordStrength" class="password-strength">
-                        <i class="fas fa-shield-alt"></i>
-                        <span id="strengthText">Password strength</span>
-                    </div>
-                </div>
-                
-                <div class="modal-form-group">
-                    <label class="modal-label">Confirm New Password</label>
-                    <div class="password-input-wrapper">
-                        <input type="password" id="confirmPassword" class="modal-input" required>
-                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword', this)">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div id="passwordMatch" class="password-strength" style="display: none;">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Passwords match</span>
-                    </div>
-                </div>
-                
-                <div class="password-requirements">
-                    <div class="requirement" id="reqLength">
-                        <i class="fas fa-circle" style="font-size: 6px;"></i>
-                        <span>At least 6 characters</span>
-                    </div>
-                    <div class="requirement" id="reqUppercase">
-                        <i class="fas fa-circle" style="font-size: 6px;"></i>
-                        <span>Contains uppercase letter</span>
-                    </div>
-                    <div class="requirement" id="reqLowercase">
-                        <i class="fas fa-circle" style="font-size: 6px;"></i>
-                        <span>Contains lowercase letter</span>
-                    </div>
-                    <div class="requirement" id="reqNumber">
-                        <i class="fas fa-circle" style="font-size: 6px;"></i>
-                        <span>Contains number</span>
-                    </div>
-                </div>
-                
-                <div class="modal-actions">
-                    <button type="button" class="btn-modal-secondary" onclick="closeChangePasswordModal()">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-modal-primary" id="changePasswordBtn">
-                        <i class="fas fa-key"></i> Change Password
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Force Password Reset Modal -->
-    <div id="forcePasswordResetModal" class="force-reset-modal">
-        <div class="force-reset-content">
-            <div class="force-reset-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="force-reset-title">
-                SECURITY ALERT
-            </div>
-            <div class="force-reset-message">
-                For security reasons, you are required to change your password before accessing the system.
-                This is a mandatory security measure to ensure the safety of your account.
-            </div>
-            <div class="force-reset-warning">
-                <i class="fas fa-shield-alt"></i>
-                <span>You cannot access any features until you change your password.</span>
-            </div>
-            <button class="btn-modal-primary" onclick="openChangePasswordModal()" style="margin-top: 20px; width: 100%;">
-                <i class="fas fa-key"></i> CHANGE PASSWORD NOW
-            </button>
-        </div>
-    </div>
-
-    <!-- Access Denied -->
+    <!-- Access Denied (for students) -->
     <div id="accessDenied" class="access-denied" style="display: none;">
         <i class="fas fa-lock"></i>
         <h2>ACCESS RESTRICTED</h2>
-        <p>Please login using your credentials to access the document scanning system.</p>
-        <a href="login.html" class="btn-login">
-            <i class="fas fa-sign-in-alt"></i> GO TO LOGIN PAGE
+        <p>This page is for admissions staff only. Please use the student portal.</p>
+        <a href="/my-records" class="btn-login">
+            <i class="fas fa-user-graduate"></i> GO TO MY RECORDS
         </a>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="access-denied" style="display: flex; background: radial-gradient(circle at 20% 50%, #1a0505 0%, #000000 100%);">
+        <div class="loading-spinner" style="width: 50px; height: 50px; border: 3px solid rgba(212, 175, 55, 0.3); border-top-color: var(--primary-gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+        <p style="color: var(--primary-gold);">Loading scanner...</p>
     </div>
 
     <!-- Main Scanner Interface -->
@@ -1714,49 +1052,19 @@
                     </div>
                 </div>
                 
-                <!-- Student Actions -->
-                <div id="studentActions" class="student-actions">
-                    <button onclick="openChangePasswordModal()" class="student-action-btn">
-                        <i class="fas fa-key"></i> CHANGE PASSWORD
-                    </button>
-                    
-                    <button onclick="viewMyRecords()" class="student-action-btn">
-                        <i class="fas fa-history"></i> MY SCANNED RECORDS
-                    </button>
-                    
-                    <!-- NEW NOTIFICATION BUTTON -->
-                    <a href="/notifications" class="student-action-btn" style="position: relative;">
-                        <i class="fas fa-bell"></i> NOTIFICATIONS
-                        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-                    </a>
+                <!-- Student Info for Scanning (will be shown when scanning) -->
+                <div id="scanningStudentInfo" class="student-info-badge" style="display: none;">
+                    <div class="student-name" id="scanStudentName"></div>
+                    <div class="student-id" id="scanStudentId"></div>
                 </div>
                 
-                <!-- Admin Actions -->
-                <div id="adminActions" class="admin-actions">
-                    <a href="/admin/dashboard" class="btn-access">
-                        <i class="fas fa-tachometer-alt"></i> DASHBOARD
-                    </a>
-                    
-                    <a href="/admin/users" class="btn-access">
-                        <i class="fas fa-users-cog"></i> MANAGE USERS
-                    </a>
-                    
-                    <a href="/admin/colleges" class="btn-access">
-                        <i class="fas fa-university"></i> MANAGE COLLEGES
-                    </a>
-                    
-                    <a href="/admin/missing-documents" class="btn-access" style="position: relative;">
-                        <i class="fas fa-exclamation-triangle"></i> MISSING DOCS
-                        <span id="adminMissingBadge" class="notification-badge" style="display: none; background: #ff9800;">0</span>
-                    </a>
-                    
-                    <a href="/history.html" class="btn-access">
-                        <i class="fas fa-database"></i> VIEW DATABASE
-                    </a>
-                </div>
+                <!-- Back to Student List Button -->
+                <a href="/history.html" class="back-btn" id="backToStudentList">
+                    <i class="fas fa-arrow-left"></i> BACK TO STUDENT LIST
+                </a>
                 
                 <!-- Logout Button -->
-                <button class="btn-access btn-logout" onclick="logout()" style="margin-top: 10px;">
+                <button class="back-btn btn-logout" onclick="logout()" style="margin-top: 10px;">
                     <i class="fas fa-sign-out-alt"></i> LOGOUT
                 </button>
             </nav>
@@ -1783,7 +1091,7 @@
                         <div class="upload-placeholder" id="psaPlaceholder">
                             <i class="fas fa-camera"></i>
                             <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN PSA</div>
-                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Click to upload)</div>
                         </div>
                         <img id="psaPreview" class="img-preview" alt="PSA Preview">
                         <input type="file" id="psaInput" hidden accept="image/*,application/pdf" multiple onchange="processPSA(this)">
@@ -1811,7 +1119,7 @@
                         <div class="upload-placeholder" id="f137Placeholder">
                             <i class="fas fa-camera"></i>
                             <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN FORM 137</div>
-                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Click to upload)</div>
                         </div>
                         <img id="f137Preview" class="img-preview" alt="Form 137 Preview">
                         <input type="file" id="f137Input" hidden accept="image/*,application/pdf" multiple onchange="processForm137(this)">
@@ -1839,7 +1147,7 @@
                         <div class="upload-placeholder" id="goodmoralPlaceholder">
                             <i class="fas fa-camera"></i>
                             <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">SCAN GOOD MORAL</div>
-                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Click to upload)</div>
                         </div>
                         <img id="goodmoralPreview" class="img-preview" alt="Good Moral Preview">
                         <input type="file" id="goodmoralInput" hidden accept="image/*,application/pdf" multiple onchange="processGoodMoral(this)">
@@ -1868,7 +1176,7 @@
                         <div class="upload-placeholder" id="honorableDismissalPlaceholder">
                             <i class="fas fa-file-signature"></i>
                             <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">HONORABLE DISMISSAL</div>
-                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Click to upload)</div>
                         </div>
                         <img id="honorableDismissalPreview" class="img-preview" alt="Honorable Dismissal Preview">
                         <input type="file" id="honorableDismissalInput" hidden accept="image/*,application/pdf" multiple onchange="processHonorableDismissal(this)">
@@ -1896,7 +1204,7 @@
                         <div class="upload-placeholder" id="transferCredentialsPlaceholder">
                             <i class="fas fa-file-export"></i>
                             <div style="font-size: 10px; letter-spacing: 2px; font-weight: bold;">TRANSFER CREDENTIALS</div>
-                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Tap: Camera / Gallery)</div>
+                            <div style="font-size: 9px; color: #666; margin-top: 5px;">(Click to upload)</div>
                         </div>
                         <img id="transferCredentialsPreview" class="img-preview" alt="Transfer Credentials Preview">
                         <input type="file" id="transferCredentialsInput" hidden accept="image/*,application/pdf" multiple onchange="processTransferCredentials(this)">
@@ -2404,30 +1712,18 @@
                 </button>
                 
                 <div id="saveStatus" class="save-status"></div>
-                
-                <!-- SEND EMAIL BUTTON -->
-                <button class="btn-send" onclick="sendEmail()" id="sendBtn" disabled>
-                    <i class="fas fa-paper-plane"></i> Send Email to Student
-                </button>
-                
-                <div id="sendStatus" class="save-status"></div>
 
                 <!-- TOFOLLOW INFO -->
                 <div id="tofollowInfo" style="margin-top: 15px; padding: 10px; background: rgba(255, 152, 0, 0.1); border: 1px dashed #ff9800; border-radius: 4px; font-size: 11px; display: none;">
                     <i class="fas fa-info-circle" style="color: #ff9800;"></i>
-                    <span id="tofollowMessage">You can upload missing documents later. Your previous uploads will be saved.</span>
+                    <span id="tofollowMessage">Missing documents can be uploaded later.</span>
                 </div>
             </aside>
         </div>
     </div>
 
-    <!-- DEBUG BUTTON -->
-    <button class="debug-btn" onclick="showDebugInfo()">
-        ℹ️ Debug Info
-    </button>
-
     <script>
-        // ================= SCANNER VARIABLES =================
+        // ==================== GLOBAL VARIABLES ====================
         let psaImagePath = "";
         let f137ImagePath = "";
         let goodmoralImagePath = "";
@@ -2435,7 +1731,6 @@
         let currentRecordId = null;
         let otherDocuments = [];
         let currentUser = null;
-        let requiresPasswordReset = false;
         let isMobileMenuOpen = false;
         
         // Transferee variables
@@ -2451,7 +1746,7 @@
             goodmoral: false
         };
         
-        let recordStatus = "INCOMPLETE"; // INCOMPLETE, PENDING, APPROVED, REJECTED
+        let recordStatus = "INCOMPLETE";
         
         // Store Good Moral data
         let goodmoralData = {
@@ -2461,9 +1756,12 @@
             disciplinaryDetails: ""
         };
 
-        // Store dynamic colleges and programs from database
+        // Store dynamic colleges and programs
         let dynamicColleges = [];
         let dynamicPrograms = [];
+
+        // Student being scanned (from URL parameter)
+        let scanUserId = null;
 
         const philippineLocations = {
             "NCR": ["Metro Manila"],
@@ -2479,103 +1777,176 @@
             "Region XI": ["Davao del Sur", "Davao del Norte"]
         };
 
-        // ================= LOAD EXISTING RECORD =================
-        async function loadExistingRecord() {
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('load', async function() {
+            // Check for user_id parameter (admin scanning mode)
+            const urlParams = new URLSearchParams(window.location.search);
+            scanUserId = urlParams.get('user_id');
+            
+            // Check authentication and role
+            await checkAuth();
+            
+            if (scanUserId) {
+                // Admin scanning mode - load student data
+                await loadStudentForScan(scanUserId);
+                showScannerInterface();
+            } else {
+                // No user_id - show access denied (students can't access scanner)
+                showAccessDenied();
+            }
+        });
+
+        // ==================== AUTHENTICATION ====================
+        async function checkAuth() {
             try {
-                const response = await fetch('/api/my-records', {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                
+                if (!data.authenticated) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                currentUser = data.user;
+                
+                // Check if user is admin or staff (not student)
+                if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMISSIONS_STAFF') {
+                    showAccessDenied();
+                    return false;
+                }
+                
+                // Update UI with user info
+                document.getElementById('userName').textContent = currentUser.full_name || currentUser.username;
+                document.getElementById('currentOperator').textContent = currentUser.full_name || currentUser.username;
+                document.getElementById('userRole').textContent = currentUser.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admissions Staff';
+                
+                const initials = (currentUser.full_name || currentUser.username).substring(0, 2).toUpperCase();
+                document.getElementById('userAvatar').textContent = initials;
+                
+                // Hide loading screen
+                document.getElementById('loadingScreen').style.display = 'none';
+                
+                return true;
+            } catch (error) {
+                console.error('Auth error:', error);
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // ==================== ACCESS CONTROL ====================
+        function showAccessDenied() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('accessDenied').style.display = 'flex';
+            document.getElementById('scannerInterface').style.display = 'none';
+        }
+
+        function showScannerInterface() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('accessDenied').style.display = 'none';
+            document.getElementById('scannerInterface').style.display = 'block';
+            
+            // Load colleges and initialize form
+            loadDynamicColleges();
+            populateRegions();
+            initializeForm();
+        }
+
+        // ==================== LOAD STUDENT FOR SCANNING ====================
+        async function loadStudentForScan(userId) {
+            try {
+                const response = await fetch(`/api/admin/scan/${userId}`, {
                     headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.records && data.records.length > 0) {
-                        const record = data.records[0];
-                        currentRecordId = record.id;
+                    const student = data.student;
+                    
+                    // Display student info in sidebar
+                    document.getElementById('scanStudentName').textContent = student.full_name || 'Unknown Student';
+                    document.getElementById('scanStudentId').textContent = `ID: ${student.id}`;
+                    document.getElementById('scanningStudentInfo').style.display = 'block';
+                    
+                    // If there's an existing record, load it
+                    if (student.record_id) {
+                        currentRecordId = student.record_id;
+                        populateFormWithRecord(student);
+                        
+                        // Load document paths
+                        psaImagePath = student.image_path || "";
+                        f137ImagePath = student.form137_path || "";
+                        goodmoralImagePath = student.goodmoral_path || "";
+                        honorableDismissalImagePath = student.honorable_dismissal_path || "";
+                        transferCredentialsImagePath = student.transfer_credentials_path || "";
                         
                         // Load transferee status
-                        if (record.is_transferee) {
+                        if (student.is_transferee) {
                             document.getElementById('isTransferee').checked = true;
                             toggleTransfereeFields();
                             
-                            // Load transferee data
-                            document.getElementById('previousSchool').value = record.previous_school || '';
-                            document.getElementById('previousSchoolAddress').value = record.previous_school_address || '';
-                            document.getElementById('previousSchoolYear').value = record.previous_school_year || '';
-                            document.getElementById('yearLevelToEnroll').value = record.year_level_to_enroll || '';
-                            
-                            honorableDismissalImagePath = record.honorable_dismissal_path || "";
-                            transferCredentialsImagePath = record.transfer_credentials_path || "";
-                            
-                            updateTransfereeDocumentStatus();
+                            document.getElementById('previousSchool').value = student.previous_school || '';
+                            document.getElementById('previousSchoolAddress').value = student.previous_school_address || '';
+                            document.getElementById('previousSchoolYear').value = student.previous_school_year || '';
+                            document.getElementById('yearLevelToEnroll').value = student.year_level_to_enroll || '';
                         }
                         
                         // Load document status
-                        if (record.document_status) {
-                            documentStatus = record.document_status;
+                        if (student.document_status) {
+                            documentStatus = student.document_status;
                         }
                         
-                        recordStatus = record.status || "INCOMPLETE";
+                        recordStatus = student.status || "INCOMPLETE";
                         
-                        // Update document paths
-                        psaImagePath = record.image_path || "";
-                        f137ImagePath = record.form137_path || "";
-                        goodmoralImagePath = record.goodmoral_path || "";
-                        
-                        // Load Good Moral data if exists
-                        if (record.goodmoral_analysis) {
-                            goodmoralAnalysis = record.goodmoral_analysis;
+                        // Load Good Moral data
+                        if (student.goodmoral_analysis) {
+                            goodmoralAnalysis = student.goodmoral_analysis;
                             goodmoralData = {
-                                score: record.goodmoral_score || 0,
-                                status: record.disciplinary_status || "UNKNOWN",
-                                hasIssues: record.has_disciplinary_record || false,
-                                disciplinaryDetails: record.disciplinary_details || ""
+                                score: student.goodmoral_score || 0,
+                                status: student.disciplinary_status || "UNKNOWN",
+                                hasIssues: student.has_disciplinary_record || false,
+                                disciplinaryDetails: student.disciplinary_details || ""
                             };
+                            displayGoodmoralStatus();
                         }
                         
-                        // Populate form with existing data
-                        populateFormWithRecord(record);
-                        
-                        console.log("✅ Loaded existing record:", record.id);
-                        console.log("📄 Document status:", documentStatus);
+                        updateDocumentStatusUI();
+                        updateRecordStatusUI();
                     }
+                } else {
+                    console.error('Failed to load student for scan');
+                    alert('Failed to load student data');
                 }
             } catch (error) {
-                console.error("Error loading existing record:", error);
-            } finally {
-                updateDocumentStatusUI();
-                updateRecordStatusUI();
-                updateTofollowInfo();
+                console.error('Error loading student for scan:', error);
             }
         }
 
+        // ==================== FORM FUNCTIONS ====================
+        function initializeForm() {
+            addSiblingRow();
+        }
+
         function populateFormWithRecord(record) {
-            // Helper function to set value if exists
             const setValue = (id, value) => {
                 const el = document.getElementById(id);
                 if (el && value) el.value = value;
             };
 
-            // Enrollment Details
             setValue('studentType', record.student_type);
             if (record.college) {
-                const collegeSelect = document.getElementById('collegeSelect');
-                if (collegeSelect) {
-                    // Wait for colleges to load
-                    setTimeout(() => {
+                setTimeout(() => {
+                    const collegeSelect = document.getElementById('collegeSelect');
+                    if (collegeSelect) {
                         collegeSelect.value = record.college;
                         updatePrograms();
                         setTimeout(() => {
-                            const programSelect = document.getElementById('programSelect');
-                            if (programSelect && record.program) {
-                                programSelect.value = record.program;
-                            }
+                            setValue('programSelect', record.program);
                         }, 500);
-                    }, 1000);
-                }
+                    }
+                }, 1000);
             }
             setValue('lastLevel', record.last_level_attended);
-            
-            // Personal Information
             setValue('childName', record.name);
             setValue('childSex', record.sex);
             setValue('childBirthdate', record.birthdate);
@@ -2585,16 +1956,12 @@
             setValue('childReligion', record.religion);
             setValue('childAge', record.age);
             setValue('childMobile', record.mobile_no);
-            
-            // Special Groups
             setValue('isIP', record.is_ip);
             setValue('isPWD', record.is_pwd);
             setValue('hasMedication', record.has_medication);
             setValue('isWorking', record.is_working);
             setValue('isGifted', record.is_gifted);
             setValue('needsAssistance', record.needs_assistance);
-            
-            // Address
             setValue('addressRegion', record.region);
             if (record.region) {
                 setTimeout(() => {
@@ -2606,11 +1973,7 @@
             }
             setValue('addressSpecific', record.specific_address);
             setValue('residenceType', record.residence_type);
-            
-            // Employer
             setValue('employerName', record.employer_name);
-            
-            // Family
             setValue('maritalStatus', record.marital_status);
             setValue('motherName', record.mother_name);
             setValue('motherCitizenship', record.mother_citizenship);
@@ -2624,7 +1987,6 @@
             setValue('guardianRelation', record.guardian_relation);
             setValue('guardianContact', record.guardian_contact);
             
-            // Siblings
             if (record.siblings && record.siblings.length > 0) {
                 const tbody = document.querySelector('#siblingsTable tbody');
                 if (tbody) {
@@ -2635,23 +1997,18 @@
                 }
             }
             
-            // Contact
             setValue('contactEmail', record.email);
-            
-            // School Record
             setValue('lrn', record.lrn);
             setValue('schoolName', record.school_name);
             setValue('schoolAddress', record.school_address);
             setValue('schoolType', record.school_type);
             setValue('yearAttended', record.year_attended);
             setValue('genAverage', record.final_general_average);
-            
-            // Additional
             setValue('specialTalents', record.special_talents);
             setValue('isScholar', record.is_scholar);
         }
 
-        // ================= DOCUMENT STATUS UI UPDATES =================
+        // ==================== DOCUMENT STATUS UI ====================
         function updateDocumentStatusUI() {
             // Update PSA
             const psaBadge = document.getElementById('psaStatusBadge');
@@ -2731,16 +2088,6 @@
                 if (gmStatusText) gmStatusText.textContent = 'Missing';
             }
 
-            // Form 138 is always optional for now
-            const f138Icon = document.getElementById('checklistForm138Icon');
-            const f138StatusText = document.getElementById('checklistForm138Status');
-            if (f138Icon) {
-                f138Icon.className = 'checklist-icon missing';
-                f138Icon.innerHTML = '<i class="fas fa-minus"></i>';
-            }
-            if (f138StatusText) f138StatusText.textContent = 'Optional';
-            
-            // Update transferee document status if visible
             updateTransfereeDocumentStatus();
         }
 
@@ -2814,25 +2161,19 @@
                         icon.className = 'status-icon incomplete';
                         icon.innerHTML = '<i class="fas fa-clock"></i>';
                         title.textContent = 'Incomplete Record';
-                        message.textContent = 'Some documents are still missing. You can upload them later.';
+                        message.textContent = 'Some documents are missing.';
                         break;
                     case 'PENDING':
                         icon.className = 'status-icon pending';
                         icon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
                         title.textContent = 'Pending Review';
-                        message.textContent = 'All documents submitted. Waiting for admin approval.';
+                        message.textContent = 'All documents submitted.';
                         break;
                     case 'APPROVED':
                         icon.className = 'status-icon approved';
                         icon.innerHTML = '<i class="fas fa-check-circle"></i>';
                         title.textContent = 'Approved';
-                        message.textContent = 'Your record has been approved.';
-                        break;
-                    case 'REJECTED':
-                        icon.className = 'status-icon incomplete';
-                        icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                        title.textContent = 'Rejected';
-                        message.textContent = 'Please check your documents and resubmit.';
+                        message.textContent = 'Record has been approved.';
                         break;
                     default:
                         container.style.display = 'none';
@@ -2842,88 +2183,583 @@
             }
         }
 
-        function updateTofollowInfo() {
-            const info = document.getElementById('tofollowInfo');
-            const message = document.getElementById('tofollowMessage');
+        function displayGoodmoralStatus() {
+            const container = document.getElementById('goodmoralStatusDisplay');
+            const scoreElement = document.getElementById('goodmoralScoreDisplay');
+            const statusElement = document.getElementById('goodmoralStatusText');
+            const recordElement = document.getElementById('goodmoralRecord');
+            const warningElement = document.getElementById('goodmoralWarning');
+            const successElement = document.getElementById('goodmoralSuccess');
+            const warningText = document.getElementById('goodmoralWarningText');
             
-            if (currentRecordId) {
-                info.style.display = 'block';
-                const missingDocs = [];
-                if (!documentStatus.psa && !psaImagePath) missingDocs.push('PSA');
-                if (!documentStatus.form137 && !f137ImagePath) missingDocs.push('Form 137');
-                if (!documentStatus.goodmoral && !goodmoralImagePath) missingDocs.push('Good Moral');
-                
-                // Check transferee documents if applicable
-                if (isTransferee) {
-                    if (!honorableDismissalImagePath) missingDocs.push('Honorable Dismissal');
-                    if (!transferCredentialsImagePath) missingDocs.push('Transfer Credentials');
-                }
-                
-                if (missingDocs.length > 0) {
-                    message.innerHTML = `<i class="fas fa-info-circle" style="color: #ff9800;"></i> Missing documents: ${missingDocs.join(', ')}. You can upload them now - your previous uploads will be saved.`;
-                } else {
-                    message.innerHTML = '<i class="fas fa-check-circle" style="color: #4CAF50;"></i> All required documents have been uploaded!';
-                }
+            container.style.display = 'block';
+            
+            scoreElement.textContent = goodmoralData.score;
+            scoreElement.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
+            
+            if (goodmoralData.score >= 90) {
+                scoreElement.classList.add('score-excellent');
+                statusElement.textContent = "EXCELLENT";
+                recordElement.textContent = "Good record - No past incidents";
+                warningElement.style.display = 'none';
+                successElement.style.display = 'flex';
+            } else if (goodmoralData.score >= 70) {
+                scoreElement.classList.add('score-good');
+                statusElement.textContent = "GOOD";
+                recordElement.textContent = "Good record - No past incidents";
+                warningElement.style.display = 'none';
+                successElement.style.display = 'flex';
+            } else if (goodmoralData.score >= 50) {
+                scoreElement.classList.add('score-fair');
+                statusElement.textContent = "FAIR";
+                recordElement.textContent = goodmoralData.disciplinaryDetails || "Some concerns noted";
+                warningText.textContent = goodmoralData.disciplinaryDetails || "Some concerns noted";
+                warningElement.style.display = 'flex';
+                successElement.style.display = 'none';
             } else {
-                info.style.display = 'none';
+                scoreElement.classList.add('score-poor');
+                statusElement.textContent = "POOR";
+                recordElement.textContent = goodmoralData.disciplinaryDetails || "Significant concerns";
+                warningText.textContent = goodmoralData.disciplinaryDetails || "Significant concerns";
+                warningElement.style.display = 'flex';
+                successElement.style.display = 'none';
             }
         }
 
-        // ================= LOAD SCHOOL YEAR =================
-        async function loadSchoolYear() {
+        // ==================== FILE INPUT FUNCTIONS ====================
+        function triggerFileInput(inputId) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.click();
+            }
+        }
+
+        function showPreview(files, imgId, placeholderId) {
+            if (files && files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.getElementById(imgId);
+                    const placeholder = document.getElementById(placeholderId);
+                    
+                    if (img && placeholder) {
+                        img.src = e.target.result;
+                        img.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    }
+                }
+                reader.readAsDataURL(files[0]);
+            }
+        }
+
+        // ==================== DOCUMENT PROCESSING ====================
+        async function processPSA(input) {
+            if (!scanUserId) return;
+            
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'psaPreview', 'psaPlaceholder');
+            document.getElementById('psaLaser').style.display = 'block';
+            document.getElementById('psaStatus').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            formData.append('doc_type', 'psa');
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
             try {
-                const response = await fetch('/api/settings/school-year', {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
+                    method: 'POST',
+                    body: formData,
                     headers: { 'Authorization': localStorage.getItem('session_token') }
                 });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    const schoolYearInput = document.getElementById('schoolYear');
-                    if (schoolYearInput) {
-                        schoolYearInput.value = data.school_year;
-                        console.log('✅ Loaded school year from server:', data.school_year);
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading school year:', error);
-            }
-        }
+                const data = await res.json();
+                document.getElementById('psaLaser').style.display = 'none';
 
-        // ================= NOTIFICATION BADGE UPDATE =================
-        async function updateNotificationBadge() {
-            try {
-                const response = await fetch('/api/check-session');
-                const data = await response.json();
-                
-                if (data.authenticated) {
-                    // Update student notification badge
-                    if (data.unread_notifications > 0) {
-                        const badge = document.getElementById('notificationBadge');
-                        if (badge) {
-                            badge.textContent = data.unread_notifications;
-                            badge.style.display = 'inline';
-                        }
+                if (data.success) {
+                    document.getElementById('psaStatus').innerText = "✅ Uploaded";
+                    
+                    if (data.extracted_data) {
+                        const d = data.extracted_data;
+                        document.getElementById('childName').value = d.Name || "";
+                        document.getElementById('childSex').value = d.Sex || "";
+                        document.getElementById('childBirthdate').value = d.Birthdate || "";
+                        document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
+                        document.getElementById('birthOrder').value = d.BirthOrder || "";
+                        document.getElementById('motherName').value = d.Mother_MaidenName || "";
+                        document.getElementById('fatherName').value = d.Father_Name || "";
+                        
+                        if(d.Birthdate) calculateAge();
                     }
                     
-                    // Update admin missing docs badge if admin
-                    if (data.user && data.user.role === 'SUPER_ADMIN') {
-                        const missingResponse = await fetch('/api/missing-documents');
-                        if (missingResponse.ok) {
-                            const missingData = await missingResponse.json();
-                            const adminBadge = document.getElementById('adminMissingBadge');
-                            if (adminBadge && missingData.total_count > 0) {
-                                adminBadge.textContent = missingData.total_count;
-                                adminBadge.style.display = 'inline';
-                            }
-                        }
-                    }
+                    psaImagePath = data.saved_paths.join(',');
+                    documentStatus.psa = true;
+                    updateDocumentStatusUI();
+                    
+                } else {
+                    document.getElementById('psaStatus').innerText = "❌ Failed";
                 }
-            } catch (error) {
-                console.error('Error updating notification badge:', error);
+            } catch (e) {
+                console.error("PSA processing error:", e);
+                document.getElementById('psaLaser').style.display = 'none';
+                document.getElementById('psaStatus').innerText = "❌ Error";
             }
         }
 
-        // ================= MOBILE MENU FUNCTIONS =================
+        async function processForm137(input) {
+            if (!scanUserId) return;
+            
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'f137Preview', 'f137Placeholder');
+            document.getElementById('f137Laser').style.display = 'block';
+            document.getElementById('f137Status').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            formData.append('doc_type', 'form137');
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                const data = await res.json();
+                document.getElementById('f137Laser').style.display = 'none';
+
+                if (data.success) {
+                    document.getElementById('f137Status').innerText = "✅ Uploaded";
+                    
+                    if (data.extracted_data) {
+                        const d = data.extracted_data;
+                        document.getElementById('lrn').value = d.lrn || "";
+                        document.getElementById('schoolName').value = d.school_name || "";
+                        document.getElementById('genAverage').value = d.final_general_average || "";
+                    }
+                    
+                    f137ImagePath = data.saved_paths.join(',');
+                    documentStatus.form137 = true;
+                    updateDocumentStatusUI();
+                    
+                } else {
+                    document.getElementById('f137Status').innerText = "❌ Failed";
+                }
+            } catch (e) {
+                console.error("Form 137 processing error:", e);
+                document.getElementById('f137Laser').style.display = 'none';
+                document.getElementById('f137Status').innerText = "❌ Error";
+            }
+        }
+
+        async function processGoodMoral(input) {
+            if (!scanUserId) return;
+            
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'goodmoralPreview', 'goodmoralPlaceholder');
+            document.getElementById('goodmoralLaser').style.display = 'block';
+            document.getElementById('goodmoralStatus').innerText = `Scanning ${files.length} Page(s)...`;
+
+            const formData = new FormData();
+            formData.append('doc_type', 'goodmoral');
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                const data = await res.json();
+                document.getElementById('goodmoralLaser').style.display = 'none';
+
+                if (data.success) {
+                    document.getElementById('goodmoralStatus').innerText = "✅ Uploaded";
+                    
+                    if (data.extracted_data) {
+                        goodmoralAnalysis = data.extracted_data;
+                        goodmoralData = {
+                            score: data.extracted_data.goodmoral_score || 0,
+                            status: data.extracted_data.disciplinary_status || "UNKNOWN",
+                            hasIssues: data.extracted_data.has_disciplinary_record || false,
+                            disciplinaryDetails: data.extracted_data.disciplinary_details || ""
+                        };
+                        displayGoodmoralStatus();
+                    }
+                    
+                    goodmoralImagePath = data.saved_paths.join(',');
+                    documentStatus.goodmoral = true;
+                    updateDocumentStatusUI();
+                    
+                } else {
+                    document.getElementById('goodmoralStatus').innerText = "❌ Failed";
+                }
+            } catch (e) {
+                console.error("Good Moral processing error:", e);
+                document.getElementById('goodmoralLaser').style.display = 'none';
+                document.getElementById('goodmoralStatus').innerText = "❌ Error";
+            }
+        }
+
+        // ==================== TRANSFEREE FUNCTIONS ====================
+        function toggleTransfereeFields() {
+            const checkbox = document.getElementById('isTransferee');
+            const transfereeFields = document.getElementById('transfereeFields');
+            const transfereeScanner = document.getElementById('transfereeScanner');
+            const transferCredentialsScanner = document.getElementById('transferCredentialsScanner');
+            const checklistHonorableDismissal = document.getElementById('checklistHonorableDismissal');
+            const checklistTransferCredentials = document.getElementById('checklistTransferCredentials');
+            
+            isTransferee = checkbox.checked;
+            
+            if (isTransferee) {
+                transfereeFields.style.display = 'block';
+                transfereeScanner.style.display = 'block';
+                transferCredentialsScanner.style.display = 'block';
+                checklistHonorableDismissal.style.display = 'flex';
+                checklistTransferCredentials.style.display = 'flex';
+            } else {
+                transfereeFields.style.display = 'none';
+                transfereeScanner.style.display = 'none';
+                transferCredentialsScanner.style.display = 'none';
+                checklistHonorableDismissal.style.display = 'none';
+                checklistTransferCredentials.style.display = 'none';
+            }
+        }
+
+        async function processHonorableDismissal(input) {
+            if (!scanUserId) return;
+            
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'honorableDismissalPreview', 'honorableDismissalPlaceholder');
+            document.getElementById('honorableDismissalLaser').style.display = 'block';
+            document.getElementById('honorableDismissalStatus').innerText = `Uploading...`;
+
+            const formData = new FormData();
+            formData.append('doc_type', 'honorable_dismissal');
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                const data = await res.json();
+                document.getElementById('honorableDismissalLaser').style.display = 'none';
+
+                if (data.success) {
+                    document.getElementById('honorableDismissalStatus').innerText = "✅ Uploaded";
+                    honorableDismissalImagePath = data.saved_paths.join(',');
+                    updateTransfereeDocumentStatus();
+                } else {
+                    document.getElementById('honorableDismissalStatus').innerText = "❌ Failed";
+                }
+            } catch (e) {
+                document.getElementById('honorableDismissalLaser').style.display = 'none';
+                document.getElementById('honorableDismissalStatus').innerText = "❌ Error";
+            }
+        }
+
+        async function processTransferCredentials(input) {
+            if (!scanUserId) return;
+            
+            const files = input.files;
+            if (files.length === 0) return;
+
+            showPreview(files, 'transferCredentialsPreview', 'transferCredentialsPlaceholder');
+            document.getElementById('transferCredentialsLaser').style.display = 'block';
+            document.getElementById('transferCredentialsStatus').innerText = `Uploading...`;
+
+            const formData = new FormData();
+            formData.append('doc_type', 'transfer_credentials');
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                });
+                
+                const data = await res.json();
+                document.getElementById('transferCredentialsLaser').style.display = 'none';
+
+                if (data.success) {
+                    document.getElementById('transferCredentialsStatus').innerText = "✅ Uploaded";
+                    transferCredentialsImagePath = data.saved_paths.join(',');
+                    updateTransfereeDocumentStatus();
+                } else {
+                    document.getElementById('transferCredentialsStatus').innerText = "❌ Failed";
+                }
+            } catch (e) {
+                document.getElementById('transferCredentialsLaser').style.display = 'none';
+                document.getElementById('transferCredentialsStatus').innerText = "❌ Error";
+            }
+        }
+
+        // ==================== SAVE RECORD ====================
+        async function saveRecord() {
+            if (!scanUserId) {
+                alert('No student selected for scanning');
+                return;
+            }
+            
+            const btn = document.getElementById('saveBtn');
+            const name = document.getElementById('childName').value;
+            const college = document.getElementById('collegeSelect').value;
+            const program = document.getElementById('programSelect').value;
+            
+            if(!name) {
+                alert("Student Name is required!");
+                return;
+            }
+
+            if (!college || !program) {
+                alert("Please select College and Program!");
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+            btn.disabled = true;
+
+            let siblingsList = [];
+            const siblingsTable = document.getElementById('siblingsTable');
+            if (siblingsTable) {
+                siblingsTable.querySelectorAll('tbody tr').forEach(row => {
+                    let sName = row.querySelector('.sib-name')?.value.trim();
+                    if(sName) { 
+                        siblingsList.push({ 
+                            name: sName, 
+                            age: row.querySelector('.sib-age')?.value.trim() || '',
+                            occupation: row.querySelector('.sib-occ')?.value.trim() || ''
+                        });
+                    }
+                });
+            }
+
+            function getValue(id) {
+                const element = document.getElementById(id);
+                return element ? element.value.trim() : "";
+            }
+
+            const recordData = {
+                name: name,
+                college: college,
+                program: program,
+                student_type: getValue('studentType'),
+                is_transferee: document.getElementById('isTransferee').checked,
+                previous_school: getValue('previousSchool'),
+                previous_school_address: getValue('previousSchoolAddress'),
+                previous_school_year: getValue('previousSchoolYear'),
+                year_level_to_enroll: getValue('yearLevelToEnroll'),
+                sex: getValue('childSex'),
+                birthdate: getValue('childBirthdate'),
+                birthplace: getValue('childBirthplace'),
+                birth_order: getValue('birthOrder'),
+                civil_status: getValue('childCivilStatus'),
+                religion: getValue('childReligion'),
+                age: getValue('childAge'),
+                mobile_no: getValue('childMobile'),
+                email: getValue('contactEmail'),
+                province: getValue('addressProvince'),
+                specific_address: getValue('addressSpecific'),
+                mother_name: getValue('motherName'),
+                mother_contact: getValue('motherContact'),
+                father_name: getValue('fatherName'),
+                father_contact: getValue('fatherContact'),
+                guardian_name: getValue('guardianName'),
+                guardian_relation: getValue('guardianRelation'),
+                guardian_contact: getValue('guardianContact'),
+                lrn: getValue('lrn'),
+                school_name: getValue('schoolName'),
+                final_general_average: getValue('genAverage'),
+                siblings: siblingsList
+            };
+
+            try {
+                const res = await fetch(`/api/admin/scan/${scanUserId}/save`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('session_token')
+                    },
+                    body: JSON.stringify(recordData)
+                });
+                
+                const result = await res.json();
+                
+                if(result.success) {
+                    currentRecordId = result.record_id;
+                    
+                    const statusEl = document.getElementById('saveStatus');
+                    statusEl.textContent = '✅ Record Saved Successfully!';
+                    statusEl.className = 'save-status success';
+                    statusEl.style.display = 'block';
+                    
+                    btn.innerHTML = '<i class="fas fa-check"></i> Saved to Database';
+                    
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(result.error || 'Save failed');
+                }
+            } catch(e) {
+                console.error('Save Error:', e);
+                const statusEl = document.getElementById('saveStatus');
+                statusEl.textContent = '❌ Error saving record';
+                statusEl.className = 'save-status error';
+                statusEl.style.display = 'block';
+                
+                btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
+                btn.disabled = false;
+            }
+        }
+
+        // ==================== HELPER FUNCTIONS ====================
+        function calculateAge() {
+            const birthDate = new Date(document.getElementById('childBirthdate').value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+            document.getElementById('childAge').value = age >= 0 ? age : 0;
+        }
+
+        function addSiblingRow(name = '', age = '', occupation = '') {
+            const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
+            if (!table) return;
+            
+            const newRow = table.insertRow();
+            newRow.innerHTML = `
+                <td><input type="text" class="sib-name" placeholder="Full name" value="${name}"></td>
+                <td><input type="number" class="sib-age" placeholder="Age" value="${age}"></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Employer" value="${occupation}"></td>
+                <td><button type="button" class="sibling-remove-btn" onclick="this.closest('tr').remove()">×</button></td>
+            `;
+        }
+
+        function removeSiblingRow(button) {
+            const row = button.closest('tr');
+            if (row) row.remove();
+        }
+
+        // ==================== COLLEGE FUNCTIONS ====================
+        async function loadDynamicColleges() {
+            const collegeSelect = document.getElementById('collegeSelect');
+            
+            try {
+                const response = await fetch('/api/colleges-dropdown');
+                if (response.ok) {
+                    const colleges = await response.json();
+                    dynamicColleges = colleges;
+                    
+                    collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
+                    
+                    colleges.forEach(college => {
+                        const option = document.createElement('option');
+                        option.value = college.name;
+                        option.textContent = `${college.code} - ${college.name}`;
+                        collegeSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading colleges:', error);
+            }
+        }
+        
+        function updatePrograms() {
+            const collegeSelect = document.getElementById('collegeSelect');
+            const programSelect = document.getElementById('programSelect');
+            
+            const selectedCollege = dynamicColleges.find(c => c.name === collegeSelect.value);
+            
+            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
+            programSelect.disabled = !selectedCollege;
+            
+            if (selectedCollege && selectedCollege.programs) {
+                selectedCollege.programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.name;
+                    option.textContent = program.name;
+                    programSelect.appendChild(option);
+                });
+            }
+        }
+
+        // ==================== LOCATION FUNCTIONS ====================
+        function populateRegions() {
+            const regionSelect = document.getElementById("addressRegion");
+            
+            regionSelect.innerHTML = '<option value="">Select Region</option>';
+            
+            for (const region in philippineLocations) {
+                const option = document.createElement("option");
+                option.value = region;
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            }
+        }
+
+        function updateProvinces() {
+            const regionSelect = document.getElementById("addressRegion");
+            const provinceSelect = document.getElementById("addressProvince");
+            
+            const selectedRegion = regionSelect.value;
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            
+            if (selectedRegion && philippineLocations[selectedRegion]) {
+                philippineLocations[selectedRegion].forEach(province => {
+                    const option = document.createElement("option");
+                    option.value = province;
+                    option.textContent = province;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        }
+
+        // ==================== OTHER DOCUMENTS ====================
+        function addOtherDocumentField() {
+            const container = document.getElementById('otherDocumentsContainer');
+            const docId = otherDocuments.length + 1;
+            
+            const docDiv = document.createElement('div');
+            docDiv.className = 'file-upload-group';
+            docDiv.id = `otherDoc-${docId}`;
+            docDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="file-label">Document Title</span>
+                    <button type="button" onclick="this.closest('.file-upload-group').remove()" class="remove-doc-btn">×</button>
+                </div>
+                <input type="text" placeholder="Document title" style="margin-bottom: 8px;">
+                <input type="file" accept="image/*,application/pdf">
+            `;
+            
+            container.appendChild(docDiv);
+            otherDocuments.push({ id: docId });
+        }
+
+        // ==================== MOBILE MENU ====================
         function toggleMobileMenu() {
             const sidebar = document.getElementById('mainSidebar');
             const overlay = document.querySelector('.mobile-menu-overlay');
@@ -2953,1534 +2789,13 @@
             isMobileMenuOpen = false;
         }
 
-        // ================= FILE INPUT TRIGGER =================
-        function triggerFileInput(inputId) {
-            const input = document.getElementById(inputId);
-            if (input) {
-                input.click();
-            }
-        }
-
-        // ================= CHECK SESSION STATUS =================
-        async function checkSession() {
-            console.log("🔍 Checking session status...");
-            
+        // ==================== LOGOUT ====================
+        async function logout() {
             try {
-                const response = await fetch('/api/check-session', {
-                    method: 'GET',
-                    credentials: 'same-origin'
-                });
-                
-                const data = await response.json();
-                console.log("Session check response:", data);
-                
-                if (data.authenticated && data.user) {
-                    currentUser = data.user;
-                    
-                    await checkPasswordReset();
-                    
-                    if (requiresPasswordReset && currentUser.role === 'STUDENT') {
-                        showForcePasswordReset();
-                    } else {
-                        showScanner(data.user);
-                        await loadSchoolYear();
-                        await loadDynamicColleges();
-                        await loadExistingRecord();
-                        
-                        // Start notification badge updates
-                        updateNotificationBadge();
-                        setInterval(updateNotificationBadge, 30000); // Update every 30 seconds
-                    }
-                    
-                    return true;
-                } else {
-                    showAccessDenied();
-                    return false;
-                }
-            } catch (error) {
-                console.error('Error checking session:', error);
-                showAccessDenied();
-                return false;
-            }
-        }
-
-        async function checkPasswordReset() {
-            try {
-                const response = await fetch('/api/check-password-reset', {
-                    method: 'GET',
-                    credentials: 'same-origin'
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    requiresPasswordReset = data.requires_password_reset;
-                    console.log('Password reset required:', requiresPasswordReset);
-                }
-            } catch (error) {
-                console.error('Error checking password reset:', error);
-            }
-        }
-
-        function showForcePasswordReset() {
-            console.log("🔒 Showing force password reset modal");
-            const forceResetModal = document.getElementById('forcePasswordResetModal');
-            if (forceResetModal) {
-                forceResetModal.style.display = 'flex';
-            }
-            document.getElementById('accessDenied').style.display = 'none';
-            document.getElementById('scannerInterface').style.display = 'none';
-            closeMobileMenu();
-        }
-
-        function hideForcePasswordReset() {
-            console.log("🔓 Hiding force password reset modal");
-            const forceResetModal = document.getElementById('forcePasswordResetModal');
-            if (forceResetModal) {
-                forceResetModal.style.display = 'none';
-            }
-        }
-
-        function showScanner(user) {
-            console.log("👤 Showing scanner for user:", user);
-            
-            hideForcePasswordReset();
-            closeChangePasswordModal();
-            
-            document.getElementById('accessDenied').style.display = 'none';
-            document.getElementById('scannerInterface').style.display = 'block';
-            
-            document.getElementById('userName').textContent = user.full_name || user.username;
-            document.getElementById('currentOperator').textContent = user.full_name || user.username;
-            document.getElementById('userRole').textContent = user.role;
-            
-            const name = user.full_name || user.username;
-            const initials = name.substring(0, 2).toUpperCase();
-            document.getElementById('userAvatar').textContent = initials;
-            
-            if (user.role === 'STUDENT') {
-                document.getElementById('studentActions').style.display = 'flex';
-                document.getElementById('adminActions').style.display = 'none';
-            } else if (user.role === 'SUPER_ADMIN') {
-                document.getElementById('studentActions').style.display = 'none';
-                document.getElementById('adminActions').style.display = 'flex';
-            }
-            
-            populateRegions();
-            initializeForm();
-        }
-
-        function showAccessDenied() {
-            console.log("🔒 Showing access denied screen");
-            document.getElementById('accessDenied').style.display = 'flex';
-            document.getElementById('scannerInterface').style.display = 'none';
-            hideForcePasswordReset();
-            closeMobileMenu();
-        }
-
-        function initializeForm() {
-            addSiblingRow();
-        }
-
-        // ================= CHANGE PASSWORD FUNCTIONS =================
-        function openChangePasswordModal() {
-            console.log("Opening change password modal");
-            
-            hideForcePasswordReset();
-            
-            document.getElementById('changePasswordModal').style.display = 'flex';
-            document.getElementById('passwordAlert').style.display = 'none';
-            document.getElementById('changePasswordForm').reset();
-            checkPasswordStrength();
-            closeMobileMenu();
-        }
-
-        function closeChangePasswordModal() {
-            document.getElementById('changePasswordModal').style.display = 'none';
-            
-            if (requiresPasswordReset) {
-                showForcePasswordReset();
-            }
-        }
-
-        function togglePassword(fieldId, button) {
-            const field = document.getElementById(fieldId);
-            const icon = button.querySelector('i');
-            
-            if (field.type === 'password') {
-                field.type = 'text';
-                icon.className = 'fas fa-eye-slash';
-            } else {
-                field.type = 'password';
-                icon.className = 'fas fa-eye';
-            }
-        }
-
-        function checkPasswordStrength() {
-            const password = document.getElementById('newPassword').value;
-            const strengthElement = document.getElementById('strengthText');
-            const requirements = {
-                length: password.length >= 6,
-                uppercase: /[A-Z]/.test(password),
-                lowercase: /[a-z]/.test(password),
-                number: /[0-9]/.test(password)
-            };
-
-            document.getElementById('reqLength').className = requirements.length ? 'requirement valid' : 'requirement invalid';
-            document.getElementById('reqUppercase').className = requirements.uppercase ? 'requirement valid' : 'requirement invalid';
-            document.getElementById('reqLowercase').className = requirements.lowercase ? 'requirement valid' : 'requirement invalid';
-            document.getElementById('reqNumber').className = requirements.number ? 'requirement valid' : 'requirement invalid';
-
-            let strength = 0;
-            if (requirements.length) strength++;
-            if (requirements.uppercase) strength++;
-            if (requirements.lowercase) strength++;
-            if (requirements.number) strength++;
-
-            const strengthClasses = ['strength-weak', 'strength-fair', 'strength-good', 'strength-strong'];
-            const strengthTexts = ['Weak', 'Fair', 'Good', 'Strong'];
-            
-            document.getElementById('passwordStrength').className = 'password-strength';
-            
-            if (password.length > 0) {
-                document.getElementById('passwordStrength').classList.add(strengthClasses[strength - 1]);
-                strengthElement.textContent = strengthTexts[strength - 1];
-            } else {
-                strengthElement.textContent = 'Password strength';
-            }
-
-            checkPasswordMatch();
-        }
-
-        function checkPasswordMatch() {
-            const password = document.getElementById('newPassword').value;
-            const confirm = document.getElementById('confirmPassword').value;
-            const matchElement = document.getElementById('passwordMatch');
-            
-            if (password && confirm) {
-                if (password === confirm) {
-                    matchElement.style.display = 'flex';
-                } else {
-                    matchElement.style.display = 'none';
-                }
-            }
-        }
-
-        async function handleChangePassword(event) {
-            event.preventDefault();
-            
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showPasswordAlert('Please fill in all fields', 'error');
-                return;
-            }
-            
-            if (newPassword.length < 6) {
-                showPasswordAlert('Password must be at least 6 characters', 'error');
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showPasswordAlert('Passwords do not match', 'error');
-                return;
-            }
-            
-            const requirements = {
-                uppercase: /[A-Z]/.test(newPassword),
-                lowercase: /[a-z]/.test(newPassword),
-                number: /[0-9]/.test(newPassword)
-            };
-            
-            if (!requirements.uppercase || !requirements.lowercase || !requirements.number) {
-                showPasswordAlert('Password must contain uppercase, lowercase, and number', 'error');
-                return;
-            }
-            
-            const btn = document.getElementById('changePasswordBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing...';
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch('/api/change-password', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword,
-                        force_reset: requiresPasswordReset
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    showPasswordAlert('Password changed successfully!', 'success');
-                    
-                    setTimeout(() => {
-                        closeChangePasswordModal();
-                        
-                        if (requiresPasswordReset) {
-                            requiresPasswordReset = false;
-                            hideForcePasswordReset();
-                            showScanner(currentUser);
-                        }
-                    }, 2000);
-                } else {
-                    showPasswordAlert(data.error || 'Failed to change password', 'error');
-                    btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
-                    btn.disabled = false;
-                    
-                    if (requiresPasswordReset) {
-                        setTimeout(() => {
-                            showForcePasswordReset();
-                        }, 500);
-                    }
-                }
-            } catch (error) {
-                console.error('Password change error:', error);
-                showPasswordAlert('Connection error. Please try again.', 'error');
-                btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
-                btn.disabled = false;
-                
-                if (requiresPasswordReset) {
-                    setTimeout(() => {
-                        showForcePasswordReset();
-                    }, 500);
-                }
-            }
-        }
-
-        document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-
-        function showPasswordAlert(message, type) {
-            const alertElement = document.getElementById('passwordAlert');
-            alertElement.textContent = message;
-            alertElement.className = `alert alert-${type}`;
-            alertElement.style.display = 'flex';
-            alertElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        // ================= LOGOUT =================
-        function logout() {
-            console.log("🚪 Logging out...");
-            window.location.href = '/logout';
-        }
-
-        // ================= VIEW MY RECORDS =================
-        function viewMyRecords() {
-            window.location.href = '/my-records';
-            closeMobileMenu();
-        }
-
-        // ================= COLLEGE FUNCTIONS =================
-        async function loadDynamicColleges() {
-            const collegeSelect = document.getElementById('collegeSelect');
-            if (!collegeSelect) {
-                console.error('collegeSelect element not found');
-                return;
-            }
-            
-            collegeSelect.innerHTML = '<option value="">Loading colleges from database...</option>';
-            
-            try {
-                const response = await fetch('/api/colleges-dropdown');
-                if (response.ok) {
-                    const colleges = await response.json();
-                    dynamicColleges = colleges;
-                    
-                    collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
-                    
-                    colleges.forEach(college => {
-                        const option = document.createElement('option');
-                        option.value = college.name;
-                        option.textContent = `${college.code} - ${college.name}`;
-                        option.dataset.collegeId = college.id;
-                        collegeSelect.appendChild(option);
-                    });
-                    
-                    console.log(`✅ Loaded ${colleges.length} colleges from database`);
-                    
-                } else {
-                    console.log('⚠️ Using fallback hardcoded colleges');
-                    loadFallbackColleges();
-                }
-                
-            } catch (error) {
-                console.error('Error loading colleges:', error);
-                loadFallbackColleges();
-            }
-        }
-        
-        function loadFallbackColleges() {
-            const collegeSelect = document.getElementById('collegeSelect');
-            if (!collegeSelect) return;
-            
-            const hardcodedColleges = [
-                { id: 1, code: 'CCJE', name: 'College of Criminal Justice Education (CCJE)' },
-                { id: 2, code: 'CEAS', name: 'College of Education, Arts and Sciences (CEAS)' },
-                { id: 3, code: 'CITEC', name: 'College of Information Technology, Entertainment and Communication (CITEC)' },
-                { id: 4, code: 'CENAR', name: 'College of Engineering and Architecture (CENAR)' },
-                { id: 5, code: 'CBAA', name: 'College of Business, Accountancy and Auditing (CBAA)' }
-            ];
-            
-            collegeSelect.innerHTML = '<option value="">-- Select College --</option>';
-            
-            hardcodedColleges.forEach(college => {
-                const option = document.createElement('option');
-                option.value = college.name;
-                option.textContent = `${college.code} - ${college.name}`;
-                option.dataset.collegeId = college.id;
-                collegeSelect.appendChild(option);
-            });
-            
-            dynamicColleges = hardcodedColleges.map(college => ({
-                id: college.id,
-                code: college.code,
-                name: college.name,
-                programs: getFallbackPrograms(college.code)
-            }));
-        }
-        
-        function getFallbackPrograms(collegeCode) {
-            switch(collegeCode) {
-                case 'CCJE':
-                    return [{ name: 'Bachelor of Science in Criminology' }];
-                case 'CEAS':
-                    return [
-                        { name: 'Bachelor of Elementary Education' },
-                        { name: 'Bachelor of Secondary Education' },
-                        { name: 'Bachelor of Science in Psychology' },
-                        { name: 'Bachelor of Science in Legal Management' },
-                        { name: 'Bachelor of Science in Social Work' }
-                    ];
-                case 'CITEC':
-                    return [
-                        { name: 'Bachelor of Science in Information Technology' },
-                        { name: 'Bachelor of Arts in Multimedia Arts' }
-                    ];
-                case 'CENAR':
-                    return [
-                        { name: 'Bachelor of Science in Industrial Engineering' },
-                        { name: 'Bachelor of Science in Computer Engineering' },
-                        { name: 'Bachelor of Science in Architecture' }
-                    ];
-                case 'CBAA':
-                    return [
-                        { name: 'Bachelor of Science in Business Administration' },
-                        { name: 'Bachelor of Science in Accountancy' },
-                        { name: 'Bachelor of Science in Internal Auditing' }
-                    ];
-                default:
-                    return [];
-            }
-        }
-        
-        function updatePrograms() {
-            const collegeSelect = document.getElementById('collegeSelect');
-            const programSelect = document.getElementById('programSelect');
-            
-            if (!collegeSelect || !programSelect) return;
-            
-            const selectedCollege = dynamicColleges.find(c => c.name === collegeSelect.value);
-            
-            programSelect.innerHTML = '<option value="">-- Select Program --</option>';
-            programSelect.disabled = !selectedCollege;
-            
-            if (selectedCollege && selectedCollege.programs) {
-                selectedCollege.programs.forEach(program => {
-                    const option = document.createElement('option');
-                    option.value = program.name;
-                    option.textContent = program.name;
-                    programSelect.appendChild(option);
-                });
-            }
-        }
-
-        // ================= SCANNER FUNCTIONS =================
-        function calculateAge() {
-            const birthDate = new Date(document.getElementById('childBirthdate').value);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
-            document.getElementById('childAge').value = age >= 0 ? age : 0;
-        }
-
-        function showPreview(files, imgId, placeholderId) {
-            if (files && files.length > 0) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = document.getElementById(imgId);
-                    const placeholder = document.getElementById(placeholderId);
-                    
-                    if (img && placeholder) {
-                        img.src = e.target.result;
-                        img.style.display = 'block';
-                        placeholder.style.display = 'none';
-                    }
-                }
-                reader.readAsDataURL(files[0]);
-            }
-        }
-
-        function addSiblingRow(name = '', age = '', occupation = '') {
-            const table = document.getElementById('siblingsTable').getElementsByTagName('tbody')[0];
-            if (!table) return;
-            
-            const newRow = table.insertRow();
-            
-            newRow.innerHTML = `
-                <td class="name-column"><input type="text" class="sib-name" placeholder="Full name" value="${name}" style="margin:0; width: 100%;"></td>
-                <td class="age-column"><input type="number" class="sib-age" placeholder="Age" min="0" max="100" value="${age}" style="margin:0; width: 100%;"></td>
-                <td class="occ-column"><input type="text" class="sib-occ" placeholder="School/Employer" value="${occupation}" style="margin:0; width: 100%;"></td>
-                <td class="action-column">
-                    <button type="button" class="sibling-remove-btn" onclick="removeSiblingRow(this)" title="Remove sibling">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>
-            `;
-            
-            const inputs = newRow.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.style.borderColor = 'var(--primary-gold)';
-                    this.style.backgroundColor = 'rgba(212, 175, 55, 0.05)';
-                });
-                input.addEventListener('blur', function() {
-                    this.style.borderColor = '#331010';
-                    this.style.backgroundColor = 'var(--input-bg)';
-                });
-            });
-        }
-
-        function removeSiblingRow(button) {
-            const row = button.closest('tr');
-            if (row) {
-                const tbody = row.parentNode;
-                if (tbody.children.length <= 1) {
-                    const inputs = row.querySelectorAll('input');
-                    inputs.forEach(input => {
-                        input.value = '';
-                    });
-                    return;
-                }
-                
-                row.style.transition = 'opacity 0.2s ease, background-color 0.2s ease';
-                row.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
-                row.style.opacity = '0.5';
-                
-                setTimeout(() => {
-                    row.remove();
-                }, 200);
-            }
-        }
-
-        async function processPSA(input) {
-            const files = input.files;
-            if (files.length === 0) return;
-
-            showPreview(files, 'psaPreview', 'psaPlaceholder');
-            document.getElementById('psaLaser').style.display = 'block';
-            document.getElementById('psaStatus').innerText = `Scanning ${files.length} Page(s)...`;
-
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('imageFiles', files[i]);
-            }
-
-            try {
-                const res = await fetch('/extract', { method: 'POST', body: formData });
-                const data = await res.json();
-                document.getElementById('psaLaser').style.display = 'none';
-
-                if (data.structured_data) {
-                    const d = data.structured_data;
-                    document.getElementById('psaStatus').innerText = "✅ Data Extracted";
-                    
-                    document.getElementById('childName').value = d.Name || "";
-                    document.getElementById('childSex').value = d.Sex || "";
-                    document.getElementById('childBirthdate').value = d.Birthdate || "";
-                    document.getElementById('childBirthplace').value = d.PlaceOfBirth || "";
-                    document.getElementById('birthOrder').value = d.BirthOrder || "";
-                    
-                    document.getElementById('motherName').value = d.Mother_MaidenName || "";
-                    document.getElementById('motherCitizenship').value = d.Mother_Citizenship || "";
-                    document.getElementById('motherOccupation').value = d.Mother_Occupation || "";
-                    document.getElementById('fatherName').value = d.Father_Name || "";
-                    document.getElementById('fatherCitizenship').value = d.Father_Citizenship || "";
-                    document.getElementById('fatherOccupation').value = d.Father_Occupation || "";
-                    
-                    if(d.Birthdate) calculateAge();
-                    
-                    // Append new paths to existing
-                    if (psaImagePath) {
-                        psaImagePath += ',' + data.image_paths;
-                    } else {
-                        psaImagePath = data.image_paths;
-                    }
-                    
-                    documentStatus.psa = true;
-                    updateDocumentStatusUI();
-                    
-                } else {
-                    document.getElementById('psaStatus').innerText = "❌ Scan Failed";
-                }
-            } catch (e) {
-                console.error("PSA processing error:", e);
-                document.getElementById('psaLaser').style.display = 'none';
-                document.getElementById('psaStatus').innerText = "❌ Error";
-            }
-        }
-
-        async function processForm137(input) {
-            const files = input.files;
-            if (files.length === 0) return;
-
-            showPreview(files, 'f137Preview', 'f137Placeholder');
-            document.getElementById('f137Laser').style.display = 'block';
-            document.getElementById('f137Status').innerText = `Scanning ${files.length} Page(s)...`;
-
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('imageFiles', files[i]);
-            }
-
-            try {
-                const res = await fetch('/extract-form137', { method: 'POST', body: formData });
-                const data = await res.json();
-                document.getElementById('f137Laser').style.display = 'none';
-
-                if (data.structured_data) {
-                    const d = data.structured_data;
-                    document.getElementById('f137Status').innerText = "✅ Data Extracted";
-                    
-                    document.getElementById('lrn').value = d.lrn || "";
-                    document.getElementById('schoolName').value = d.school_name || "";
-                    document.getElementById('schoolAddress').value = d.school_address || "";
-                    document.getElementById('genAverage').value = d.final_general_average || "";
-                    
-                    // Append new paths to existing
-                    if (f137ImagePath) {
-                        f137ImagePath += ',' + data.image_paths;
-                    } else {
-                        f137ImagePath = data.image_paths;
-                    }
-                    
-                    documentStatus.form137 = true;
-                    updateDocumentStatusUI();
-                    
-                } else {
-                    document.getElementById('f137Status').innerText = "❌ Scan Failed";
-                }
-            } catch (e) {
-                console.error("Form 137 processing error:", e);
-                document.getElementById('f137Laser').style.display = 'none';
-                document.getElementById('f137Status').innerText = "❌ Error";
-            }
-        }
-
-        async function processGoodMoral(input) {
-            const files = input.files;
-            if (files.length === 0) return;
-
-            showPreview(files, 'goodmoralPreview', 'goodmoralPlaceholder');
-            document.getElementById('goodmoralLaser').style.display = 'block';
-            document.getElementById('goodmoralStatus').innerText = `Scanning ${files.length} Page(s)...`;
-
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('imageFiles', files[i]);
-            }
-
-            try {
-                const res = await fetch('/scan-goodmoral', { method: 'POST', body: formData });
-                const data = await res.json();
-                document.getElementById('goodmoralLaser').style.display = 'none';
-
-                if (data.analysis) {
-                    document.getElementById('goodmoralStatus').innerText = "✅ Analysis Complete";
-                    
-                    goodmoralAnalysis = data.analysis;
-                    
-                    // Append new paths to existing
-                    if (goodmoralImagePath) {
-                        goodmoralImagePath += ',' + data.image_paths;
-                    } else {
-                        goodmoralImagePath = data.image_paths;
-                    }
-                    
-                    goodmoralData = {
-                        score: data.goodmoral_score || 0,
-                        status: data.disciplinary_status || "UNKNOWN",
-                        hasIssues: data.has_disciplinary_record || false,
-                        disciplinaryDetails: data.disciplinary_details || ""
-                    };
-                    
-                    documentStatus.goodmoral = true;
-                    updateDocumentStatusUI();
-                    displayGoodmoralStatus();
-                    
-                    alert('Good Moral Certificate analyzed successfully!');
-                    
-                } else {
-                    document.getElementById('goodmoralStatus').innerText = "❌ Scan Failed";
-                    alert('Failed to analyze Good Moral Certificate.');
-                }
-            } catch (e) {
-                console.error("Good Moral processing error:", e);
-                document.getElementById('goodmoralLaser').style.display = 'none';
-                document.getElementById('goodmoralStatus').innerText = "❌ Error";
-                alert('Error scanning Good Moral Certificate.');
-            }
-        }
-
-        // ================= TRANSFEREE FUNCTIONS =================
-        function toggleTransfereeFields() {
-            const checkbox = document.getElementById('isTransferee');
-            const transfereeFields = document.getElementById('transfereeFields');
-            const transfereeScanner = document.getElementById('transfereeScanner');
-            const transferCredentialsScanner = document.getElementById('transferCredentialsScanner');
-            const checklistHonorableDismissal = document.getElementById('checklistHonorableDismissal');
-            const checklistTransferCredentials = document.getElementById('checklistTransferCredentials');
-            
-            isTransferee = checkbox.checked;
-            
-            if (isTransferee) {
-                transfereeFields.style.display = 'block';
-                transfereeScanner.style.display = 'block';
-                transferCredentialsScanner.style.display = 'block';
-                checklistHonorableDismissal.style.display = 'flex';
-                checklistTransferCredentials.style.display = 'flex';
-            } else {
-                transfereeFields.style.display = 'none';
-                transfereeScanner.style.display = 'none';
-                transferCredentialsScanner.style.display = 'none';
-                checklistHonorableDismissal.style.display = 'none';
-                checklistTransferCredentials.style.display = 'none';
-                // Clear transferee data
-                honorableDismissalImagePath = "";
-                transferCredentialsImagePath = "";
-                document.getElementById('previousSchool').value = '';
-                document.getElementById('previousSchoolAddress').value = '';
-                document.getElementById('previousSchoolYear').value = '';
-                document.getElementById('yearLevelToEnroll').value = '';
-                updateTransfereeDocumentStatus();
-            }
-        }
-
-        async function processHonorableDismissal(input) {
-            const files = input.files;
-            if (files.length === 0) return;
-
-            showPreview(files, 'honorableDismissalPreview', 'honorableDismissalPlaceholder');
-            document.getElementById('honorableDismissalLaser').style.display = 'block';
-            document.getElementById('honorableDismissalStatus').innerText = `Uploading ${files.length} Page(s)...`;
-
-            // Save files
-            if (currentRecordId) {
-                const formData = new FormData();
-                formData.append('id', currentRecordId);
-                formData.append('type', 'honorable_dismissal');
-                
-                for (let i = 0; i < files.length; i++) {
-                    formData.append('files', files[i]);
-                }
-
-                try {
-                    const res = await fetch('/upload-additional', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if (data.status === "success") {
-                        document.getElementById('honorableDismissalLaser').style.display = 'none';
-                        document.getElementById('honorableDismissalStatus').innerText = "✅ Uploaded";
-                        showNotification('Honorable Dismissal uploaded successfully', 'success');
-                    }
-                } catch (e) {
-                    console.error("Honorable Dismissal upload error:", e);
-                    document.getElementById('honorableDismissalLaser').style.display = 'none';
-                    document.getElementById('honorableDismissalStatus').innerText = "❌ Error";
-                }
-            } else {
-                // Store temporarily
-                honorableDismissalImagePath = "temp_" + Date.now() + "_" + files[0].name;
-                document.getElementById('honorableDismissalLaser').style.display = 'none';
-                document.getElementById('honorableDismissalStatus').innerText = "✅ Ready to Save";
-            }
-            
-            updateTransfereeDocumentStatus();
-        }
-
-        async function processTransferCredentials(input) {
-            const files = input.files;
-            if (files.length === 0) return;
-
-            showPreview(files, 'transferCredentialsPreview', 'transferCredentialsPlaceholder');
-            document.getElementById('transferCredentialsLaser').style.display = 'block';
-            document.getElementById('transferCredentialsStatus').innerText = `Uploading ${files.length} Page(s)...`;
-
-            if (currentRecordId) {
-                const formData = new FormData();
-                formData.append('id', currentRecordId);
-                formData.append('type', 'transfer_credentials');
-                
-                for (let i = 0; i < files.length; i++) {
-                    formData.append('files', files[i]);
-                }
-
-                try {
-                    const res = await fetch('/upload-additional', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if (data.status === "success") {
-                        document.getElementById('transferCredentialsLaser').style.display = 'none';
-                        document.getElementById('transferCredentialsStatus').innerText = "✅ Uploaded";
-                        showNotification('Transfer Credentials uploaded successfully', 'success');
-                    }
-                } catch (e) {
-                    console.error("Transfer Credentials upload error:", e);
-                    document.getElementById('transferCredentialsLaser').style.display = 'none';
-                    document.getElementById('transferCredentialsStatus').innerText = "❌ Error";
-                }
-            } else {
-                // Store temporarily
-                transferCredentialsImagePath = "temp_" + Date.now() + "_" + files[0].name;
-                document.getElementById('transferCredentialsLaser').style.display = 'none';
-                document.getElementById('transferCredentialsStatus').innerText = "✅ Ready to Save";
-            }
-            
-            updateTransfereeDocumentStatus();
-        }
-
-        function displayGoodmoralStatus() {
-            const container = document.getElementById('goodmoralStatusDisplay');
-            const scoreElement = document.getElementById('goodmoralScoreDisplay');
-            const statusElement = document.getElementById('goodmoralStatusText');
-            const recordElement = document.getElementById('goodmoralRecord');
-            const warningElement = document.getElementById('goodmoralWarning');
-            const successElement = document.getElementById('goodmoralSuccess');
-            const warningText = document.getElementById('goodmoralWarningText');
-            
-            container.style.display = 'block';
-            
-            scoreElement.textContent = goodmoralData.score;
-            scoreElement.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
-            
-            let statusText = "";
-            let recordText = "";
-            
-            if (goodmoralData.score >= 90) {
-                scoreElement.classList.add('score-excellent');
-                statusText = "EXCELLENT";
-                statusElement.textContent = statusText;
-                recordText = "Good record - No past incidents in previous school";
-                recordElement.textContent = recordText;
-                warningElement.style.display = 'none';
-                successElement.style.display = 'flex';
-            } else if (goodmoralData.score >= 70) {
-                scoreElement.classList.add('score-good');
-                statusText = "GOOD";
-                statusElement.textContent = statusText;
-                recordText = "Good record - No past incidents in previous school";
-                recordElement.textContent = recordText;
-                warningElement.style.display = 'none';
-                successElement.style.display = 'flex';
-            } else if (goodmoralData.score >= 50) {
-                scoreElement.classList.add('score-fair');
-                statusText = "FAIR";
-                statusElement.textContent = statusText;
-                if (goodmoralData.disciplinaryDetails && goodmoralData.disciplinaryDetails.trim() !== '') {
-                    recordText = `Bad record - ${goodmoralData.disciplinaryDetails}`;
-                } else {
-                    recordText = "Bad record - Reason not specified";
-                }
-                recordElement.textContent = recordText;
-                warningText.textContent = recordText;
-                warningElement.style.display = 'flex';
-                successElement.style.display = 'none';
-            } else {
-                scoreElement.classList.add('score-poor');
-                statusText = "POOR";
-                statusElement.textContent = statusText;
-                if (goodmoralData.disciplinaryDetails && goodmoralData.disciplinaryDetails.trim() !== '') {
-                    recordText = `Bad record - ${goodmoralData.disciplinaryDetails}`;
-                } else {
-                    recordText = "Bad record - Reason not specified";
-                }
-                recordElement.textContent = recordText;
-                warningText.textContent = recordText;
-                warningElement.style.display = 'flex';
-                successElement.style.display = 'none';
-            }
-        }
-
-        function addOtherDocumentField() {
-            const container = document.getElementById('otherDocumentsContainer');
-            const docId = otherDocuments.length + 1;
-            
-            const docDiv = document.createElement('div');
-            docDiv.className = 'file-upload-group';
-            docDiv.id = `otherDoc-${docId}`;
-            docDiv.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                    <span class="file-label">Document Title</span>
-                    <button type="button" onclick="removeOtherDocument(${docId})" class="remove-doc-btn">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                </div>
-                <input type="text" id="otherDocTitle-${docId}" placeholder="e.g. Medical Certificate, NSO, etc." 
-                       style="margin-bottom: 8px;">
-                <input type="file" id="otherDocFile-${docId}" accept="image/*,application/pdf">
-            `;
-            
-            container.appendChild(docDiv);
-            otherDocuments.push({
-                id: docId,
-                title: '',
-                file: null
-            });
-        }
-
-        function removeOtherDocument(docId) {
-            const docDiv = document.getElementById(`otherDoc-${docId}`);
-            if (docDiv) {
-                docDiv.remove();
-                otherDocuments = otherDocuments.filter(doc => doc.id !== docId);
-            }
-        }
-
-        function validateEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(email);
-        }
-
-        function updateStatus(elementId, message, type = 'info') {
-            const element = document.getElementById(elementId);
-            if (!element) return;
-            
-            element.textContent = message;
-            element.className = 'save-status ' + type;
-            element.style.display = 'block';
-            
-            if (type === 'info' || type === 'success') {
-                setTimeout(() => {
-                    element.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        function showNotification(message, type = 'info') {
-            // Create a temporary notification
-            const notification = document.createElement('div');
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.padding = '15px 20px';
-            notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
-            notification.style.color = 'white';
-            notification.style.borderRadius = '4px';
-            notification.style.zIndex = '2000';
-            notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-            notification.innerHTML = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        // ================= FIXED SAVE RECORD FUNCTION =================
-        async function saveRecord() {
-            console.log("💾 Starting saveRecord function...");
-            
-            const btn = document.getElementById('saveBtn');
-            const nameElement = document.getElementById('childName');
-            const collegeElement = document.getElementById('collegeSelect');
-            const programElement = document.getElementById('programSelect');
-            
-            if (!btn || !nameElement || !collegeElement || !programElement) {
-                console.error('Required elements not found');
-                alert("System error: Required form elements not found. Please refresh the page.");
-                return;
-            }
-            
-            const name = nameElement.value;
-            const college = collegeElement.value;
-            const program = programElement.value;
-            
-            console.log("📝 Form data:", { name, college, program });
-            
-            if(!name || name.trim() === "") {
-                alert("Student Name is required!");
-                nameElement.focus();
-                return;
-            }
-
-            if (!college || college === "") {
-                alert("Please select a College/Department!");
-                collegeElement.focus();
-                return;
-            }
-            
-            if (!program || program === "") {
-                alert("Please select a Program/Course!");
-                programElement.focus();
-                return;
-            }
-
-            const emailInput = document.getElementById('contactEmail');
-            const emailValue = emailInput ? emailInput.value.trim() : '';
-            
-            if (emailValue && !validateEmail(emailValue)) {
-                alert("Please enter a valid email address!");
-                if (emailInput) {
-                    emailInput.focus();
-                    emailInput.style.borderColor = 'red';
-                }
-                return;
-            } else if (emailInput) {
-                emailInput.style.borderColor = '';
-            }
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-            btn.disabled = true;
-
-            let siblingsList = [];
-            const siblingsTable = document.getElementById('siblingsTable');
-            if (siblingsTable) {
-                siblingsTable.querySelectorAll('tbody tr').forEach(row => {
-                    let sName = row.querySelector('.sib-name') ? row.querySelector('.sib-name').value.trim() : '';
-                    let sAge = row.querySelector('.sib-age') ? row.querySelector('.sib-age').value.trim() : '';
-                    let sOcc = row.querySelector('.sib-occ') ? row.querySelector('.sib-occ').value.trim() : '';
-                    
-                    if(sName && sName !== "") { 
-                        siblingsList.push({ 
-                            name: sName, 
-                            age: sAge, 
-                            occupation: sOcc 
-                        });
-                    }
-                });
-            }
-
-            let goodmoralPayload = {};
-            if (goodmoralAnalysis) {
-                goodmoralPayload = {
-                    goodmoral_analysis: goodmoralAnalysis,
-                    disciplinary_status: goodmoralData.status,
-                    goodmoral_score: goodmoralData.score,
-                    has_disciplinary_record: goodmoralData.hasIssues,
-                    disciplinary_details: goodmoralData.disciplinaryDetails
-                };
-            }
-
-            function getValue(id) {
-                const element = document.getElementById(id);
-                return element ? element.value.trim() : "";
-            }
-
-            // FIXED: Include ALL form fields including school information
-            const recordData = {
-                // Enrollment Details
-                school_year: getValue('schoolYear'),
-                student_type: getValue('studentType'),
-                college: college,
-                program: program,
-                last_level_attended: getValue('lastLevel'),
-                
-                // Transferee data
-                is_transferee: document.getElementById('isTransferee').checked,
-                previous_school: getValue('previousSchool'),
-                previous_school_address: getValue('previousSchoolAddress'),
-                previous_school_year: getValue('previousSchoolYear'),
-                year_level_to_enroll: getValue('yearLevelToEnroll'),
-                honorable_dismissal_path: honorableDismissalImagePath,
-                transfer_credentials_path: transferCredentialsImagePath,
-                
-                // Personal Information
-                name: name,
-                sex: getValue('childSex'),
-                birthdate: getValue('childBirthdate'),
-                birthplace: getValue('childBirthplace'),
-                birth_order: getValue('birthOrder'),
-                civil_status: getValue('childCivilStatus'),
-                religion: getValue('childReligion'),
-                age: getValue('childAge'),
-                mobile_no: getValue('childMobile'),
-                
-                // Special Groups
-                is_ip: getValue('isIP'),
-                is_pwd: getValue('isPWD'),
-                has_medication: getValue('hasMedication'),
-                is_working: getValue('isWorking'),
-                is_gifted: getValue('isGifted'),
-                needs_assistance: getValue('needsAssistance'),
-                
-                // Address
-                region: getValue('addressRegion'),
-                province: getValue('addressProvince'),
-                specific_address: getValue('addressSpecific'),
-                residence_type: getValue('residenceType'),
-                
-                // Employer
-                employer_name: getValue('employerName'),
-                
-                // Family
-                marital_status: getValue('maritalStatus'),
-                mother_name: getValue('motherName'),
-                mother_citizenship: getValue('motherCitizenship'),
-                mother_occupation: getValue('motherOccupation'),
-                mother_contact: getValue('motherContact'),
-                father_name: getValue('fatherName'),
-                father_citizenship: getValue('fatherCitizenship'),
-                father_occupation: getValue('fatherOccupation'),
-                father_contact: getValue('fatherContact'),
-                guardian_name: getValue('guardianName'),
-                guardian_relation: getValue('guardianRelation'),
-                guardian_contact: getValue('guardianContact'),
-                
-                // Siblings
-                siblings: siblingsList,
-
-                // Contact
-                email: emailValue,
-                
-                // SCHOOL INFORMATION
-                lrn: getValue('lrn'),
-                school_name: getValue('schoolName'),
-                school_address: getValue('schoolAddress'),
-                final_general_average: getValue('genAverage'),
-                school_type: getValue('schoolType'),
-                year_attended: getValue('yearAttended'),
-                special_talents: getValue('specialTalents'),
-                is_scholar: getValue('isScholar'),
-                
-                // Document paths
-                psa_image_path: psaImagePath,
-                f137_image_path: f137ImagePath,
-                goodmoral_image_path: goodmoralImagePath,
-                
-                // Operator info
-                operator_id: currentUser ? currentUser.id : null,
-                operator_name: currentUser ? currentUser.full_name || currentUser.username : 'Unknown',
-                
-                // Good Moral data
-                ...goodmoralPayload
-            };
-
-            console.log("📤 Saving record data:", recordData);
-
-            try {
-                const res = await fetch('/save-record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(recordData)
-                });
-                
-                const result = await res.json();
-                
-                console.log("Backend response:", result);
-                
-                if(result.status === "success") {
-                    currentRecordId = result.db_id;
-                    
-                    // Update document status from response
-                    if (result.document_status) {
-                        documentStatus = result.document_status;
-                    }
-                    
-                    // Update record status
-                    recordStatus = result.record_status || "INCOMPLETE";
-                    
-                    const form138File = document.getElementById('fileForm138').files[0];
-                    if (form138File && currentRecordId) {
-                        await uploadAdditionalFile(currentRecordId, 'form138', form138File);
-                        documentStatus.form138 = true;
-                    }
-                    
-                    for (const doc of otherDocuments) {
-                        const titleInput = document.getElementById(`otherDocTitle-${doc.id}`);
-                        const fileInput = document.getElementById(`otherDocFile-${doc.id}`);
-                        
-                        if (titleInput && fileInput && fileInput.files[0]) {
-                            const title = titleInput.value.trim();
-                            const file = fileInput.files[0];
-                            
-                            if (title && file) {
-                                await uploadOtherDocument(currentRecordId, title, file);
-                            }
-                        }
-                    }
-                    
-                    updateDocumentStatusUI();
-                    updateRecordStatusUI();
-                    updateTofollowInfo();
-                    
-                    updateStatus('saveStatus', 
-                        `✅ Record Saved Successfully! ID: ${currentRecordId}`, 
-                        'success');
-                    
-                    const sendBtn = document.getElementById('sendBtn');
-                    if (sendBtn) {
-                        sendBtn.disabled = false;
-                        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
-                    }
-                    
-                    btn.innerHTML = '<i class="fas fa-check"></i> Saved to Database';
-                    btn.style.background = 'linear-gradient(90deg, #2E7D32, #388E3C)';
-                    
-                    console.log(`Record saved with ID: ${currentRecordId}`);
-                    
-                } else if (result.status === "error" && result.error === "DUPLICATE_ENTRY") {
-                    updateStatus('saveStatus', '⚠️ Record already exists in the system!', 'error');
-                    btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
-                    btn.disabled = false;
-                    
-                } else {
-                    updateStatus('saveStatus', 
-                        '❌ Error saving record: ' + (result.error || result.message || "Unknown error"), 
-                        'error');
-                    btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
-                    btn.disabled = false;
-                }
-            } catch(e) {
-                console.error('Connection Error:', e);
-                updateStatus('saveStatus', '❌ Connection Error! Check console for details.', 'error');
-                btn.innerHTML = '<i class="fas fa-database"></i> Save to Database';
-                btn.disabled = false;
-            }
-        }
-
-        async function uploadAdditionalFile(recordId, fileType, file) {
-            const formData = new FormData();
-            formData.append('id', recordId);
-            formData.append('type', fileType);
-            formData.append('files', file);
-            
-            try {
-                const response = await fetch('/upload-additional', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (result.status === "success") {
-                    console.log(`${fileType} uploaded successfully`);
-                }
-            } catch (error) {
-                console.error("Upload error:", error);
-            }
-        }
-
-        async function uploadOtherDocument(recordId, title, file) {
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch(`/upload-other-document/${recordId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (result.status === "success") {
-                    console.log(`Other document "${title}" uploaded successfully`);
-                }
-            } catch (error) {
-                console.error("Other document upload error:", error);
-            }
-        }
-
-        async function sendEmail() {
-            if (!currentRecordId) {
-                alert("Please save the record first before sending email!");
-                return;
-            }
-            
-            const emailInput = document.getElementById('contactEmail');
-            const emailValue = emailInput ? emailInput.value.trim() : '';
-            
-            if (!emailValue) {
-                alert("Email address is required to send notification!");
-                return;
-            }
-            
-            if (!validateEmail(emailValue)) {
-                alert("Please enter a valid email address!");
-                if (emailInput) {
-                    emailInput.focus();
-                    emailInput.style.borderColor = 'red';
-                }
-                return;
-            }
-            
-            const btn = document.getElementById('sendBtn');
-            if (!btn) return;
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
-            btn.disabled = true;
-            
-            updateStatus('sendStatus', '📧 Preparing to send email...', 'info');
-            
-            try {
-                const response = await fetch(`/send-email/${currentRecordId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                console.log("Email send response:", result);
-                
-                if (response.ok) {
-                    if (result.status === "success") {
-                        updateStatus('sendStatus', 
-                            `✅ Email sent successfully to ${emailValue}`, 
-                            'success');
-                        
-                        btn.innerHTML = '<i class="fas fa-check"></i> Email Sent';
-                        btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
-                        btn.disabled = true;
-                        
-                    } else if (result.warning === "Email has already been sent for this record") {
-                        updateStatus('sendStatus', 
-                            '⚠️ Email was already sent for this record. You can resend if needed.', 
-                            'info');
-                        
-                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                        btn.disabled = false;
-                        
-                        btn.onclick = function() { resendEmail(); };
-                    }
-                } else {
-                    updateStatus('sendStatus', 
-                        `❌ Failed to send email: ${result.error || 'Unknown error'}`, 
-                        'error');
-                    
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error("Email send error:", error);
-                updateStatus('sendStatus', 
-                    '❌ Connection error while sending email', 
-                    'error');
-                
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Email to Student';
-                btn.disabled = false;
-            }
-        }
-
-        async function resendEmail() {
-            if (!currentRecordId) return;
-            
-            const btn = document.getElementById('sendBtn');
-            if (!btn) return;
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> RESENDING...';
-            btn.disabled = true;
-            
-            updateStatus('sendStatus', '📧 Resending email...', 'info');
-            
-            try {
-                const response = await fetch(`/resend-email/${currentRecordId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok && result.status === "success") {
-                    updateStatus('sendStatus', 
-                        `✅ Email resent successfully!`, 
-                        'success');
-                    
-                    btn.innerHTML = '<i class="fas fa-check"></i> Email Resent';
-                    btn.style.background = 'linear-gradient(90deg, #1976D2, #1E88E5)';
-                    btn.disabled = true;
-                } else {
-                    updateStatus('sendStatus', 
-                        `❌ Failed to resend email: ${result.error || 'Unknown error'}`, 
-                        'error');
-                    
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error("Resend error:", error);
-                updateStatus('sendStatus', '❌ Connection error', 'error');
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Email';
-                btn.disabled = false;
-            }
-        }
-
-        function showDebugInfo() {
-            const info = {
-                currentUser: currentUser,
-                currentRecordId: currentRecordId,
-                recordStatus: recordStatus,
-                documentStatus: documentStatus,
-                isTransferee: isTransferee,
-                honorableDismissalPath: honorableDismissalImagePath ? "✓ Set" : "✗ Not set",
-                transferCredentialsPath: transferCredentialsImagePath ? "✓ Set" : "✗ Not set",
-                psaImagePath: psaImagePath ? "✓ Set" : "✗ Not set",
-                f137ImagePath: f137ImagePath ? "✓ Set" : "✗ Not set",
-                goodmoralImagePath: goodmoralImagePath ? "✓ Set" : "✗ Not set",
-                goodmoralScore: goodmoralData.score || "Not scanned",
-                goodmoralStatus: goodmoralData.status || "Not analyzed",
-                hasDisciplinaryRecord: goodmoralData.hasIssues ? "Yes" : "No",
-                disciplinaryDetails: goodmoralData.disciplinaryDetails || "None",
-                studentName: document.getElementById('childName') ? document.getElementById('childName').value : "Not found",
-                college: document.getElementById('collegeSelect') ? document.getElementById('collegeSelect').value : "Not found",
-                program: document.getElementById('programSelect') ? document.getElementById('programSelect').value : "Not found",
-                email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : "Not found",
-                lrn: document.getElementById('lrn') ? document.getElementById('lrn').value : "Not found",
-                schoolName: document.getElementById('schoolName') ? document.getElementById('schoolName').value : "Not found",
-                previousSchool: document.getElementById('previousSchool') ? document.getElementById('previousSchool').value : "Not set",
-                yearLevelToEnroll: document.getElementById('yearLevelToEnroll') ? document.getElementById('yearLevelToEnroll').value : "Not set",
-                otherDocumentsCount: otherDocuments.length,
-                requiresPasswordReset: requiresPasswordReset ? "Yes" : "No",
-                screenWidth: window.innerWidth,
-                deviceType: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
-                schoolYear: document.getElementById('schoolYear') ? document.getElementById('schoolYear').value : "Not found"
-            };
-            
-            alert(`DEBUG INFORMATION:\n\n
-👤 Current User: ${info.currentUser ? JSON.stringify(info.currentUser) : "Not logged in"}
-📋 Record ID: ${info.currentRecordId || "Not saved yet"}
-📊 Record Status: ${info.recordStatus}
-🔄 Transferee: ${info.isTransferee ? "Yes" : "No"}
-📝 Previous School: ${info.previousSchool}
-📋 Year Level: ${info.yearLevelToEnroll}
-📄 Document Status: ${JSON.stringify(info.documentStatus)}
-📸 PSA Images: ${info.psaImagePath}
-📄 Form 137: ${info.f137ImagePath}
-🛡️ Good Moral: ${info.goodmoralImagePath}
-📜 Honorable Dismissal: ${info.honorableDismissalPath}
-📋 Transfer Credentials: ${info.transferCredentialsPath}
-⭐ Good Moral Score: ${info.goodmoralScore}/100
-📊 Good Moral Status: ${info.goodmoralStatus}
-⚠️ Disciplinary Record: ${info.hasDisciplinaryRecord}
-📝 Details: ${info.disciplinaryDetails}
-👤 Student: ${info.studentName}
-🎓 College: ${info.college}
-📚 Program: ${info.program}
-📧 Email: ${info.email}
-📚 LRN: ${info.lrn}
-🏫 School: ${info.schoolName}
-📎 Other Documents: ${info.otherDocumentsCount}
-🔐 Password Reset Required: ${info.requiresPasswordReset}
-📱 Device: ${info.deviceType} (${info.screenWidth}px)
-📅 School Year: ${info.schoolYear}`);
-        }
-
-        function populateRegions() {
-            const regionSelect = document.getElementById("addressRegion");
-            if (!regionSelect) return;
-            
-            regionSelect.innerHTML = '<option value="">Select Region</option>';
-            
-            for (const region in philippineLocations) {
-                const option = document.createElement("option");
-                option.value = region;
-                option.textContent = region;
-                regionSelect.appendChild(option);
-            }
-        }
-
-        function updateProvinces() {
-            const regionSelect = document.getElementById("addressRegion");
-            const provinceSelect = document.getElementById("addressProvince");
-            
-            if (!regionSelect || !provinceSelect) return;
-            
-            const selectedRegion = regionSelect.value;
-            provinceSelect.innerHTML = '<option value="">Select Province</option>';
-            
-            if (selectedRegion && philippineLocations[selectedRegion]) {
-                philippineLocations[selectedRegion].forEach(province => {
-                    const option = document.createElement("option");
-                    option.value = province;
-                    option.textContent = province;
-                    provinceSelect.appendChild(option);
-                });
-            }
-        }
-
-        window.addEventListener('load', function() {
-            console.log("🔄 Page loaded, initializing...");
-            
-            checkSession();
-            
-            const newPasswordField = document.getElementById('newPassword');
-            const confirmPasswordField = document.getElementById('confirmPassword');
-            
-            if (newPasswordField) {
-                newPasswordField.addEventListener('input', checkPasswordStrength);
-            }
-            
-            if (confirmPasswordField) {
-                confirmPasswordField.addEventListener('input', checkPasswordMatch);
-            }
-            
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    filterRecords(this.value.toLowerCase());
-                });
-            }
-            
-            const scanFrames = document.querySelectorAll('.scan-frame');
-            scanFrames.forEach(frame => {
-                frame.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.98)';
-                });
-                
-                frame.addEventListener('touchend', function(e) {
-                    this.style.transform = 'scale(1)';
-                });
-            });
-            
-            document.addEventListener('click', function(event) {
-                const sidebar = document.getElementById('mainSidebar');
-                const toggleBtn = document.querySelector('.mobile-menu-toggle');
-                
-                if (isMobileMenuOpen && 
-                    !sidebar.contains(event.target) && 
-                    !toggleBtn.contains(event.target)) {
-                    closeMobileMenu();
-                }
-            });
-            
-            let resizeTimer;
-            window.addEventListener('resize', function() {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(function() {
-                    if (window.innerWidth > 768 && isMobileMenuOpen) {
-                        closeMobileMenu();
-                    }
-                }, 250);
-            });
-        });
-
-        function filterRecords(searchTerm) {
-            const records = document.querySelectorAll('.record-card');
-            
-            records.forEach(record => {
-                const name = record.querySelector('.record-info h3').textContent.toLowerCase();
-                const college = record.querySelector('.record-subtitle:nth-child(3)').textContent.toLowerCase();
-                const program = record.querySelector('.detail-value:nth-child(2)').textContent.toLowerCase();
-                
-                if (name.includes(searchTerm) || 
-                    college.includes(searchTerm) || 
-                    program.includes(searchTerm) ||
-                    searchTerm === '') {
-                    record.style.display = 'block';
-                } else {
-                    record.style.display = 'none';
-                }
-            });
+                await fetch('/api/logout', { method: 'POST' });
+            } catch (e) {}
+            localStorage.clear();
+            window.location.href = '/login';
         }
     </script>
 </body>
