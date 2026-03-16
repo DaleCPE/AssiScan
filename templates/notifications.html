@@ -39,6 +39,7 @@
             --notif-rejected: #f44336;
             --notif-reminder: #2196F3;
             --notif-system: #9C27B0;
+            --notif-updated: #FF9800;
         }
 
         * {
@@ -332,6 +333,12 @@
             background: rgba(156, 39, 176, 0.15);
             color: #9C27B0;
             border: 1px solid #9C27B0;
+        }
+
+        .type-updated {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            border: 1px solid #ff9800;
         }
 
         .notification-time {
@@ -733,13 +740,17 @@
                 </div>
             </div>
             <div class="nav-links">
-                <a href="/" class="nav-link">
-                    <i class="fas fa-qrcode"></i>
-                    <span>Scanner</span>
+                <a href="/" class="nav-link" id="homeLink">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
                 </a>
-                <a href="/my-records" class="nav-link">
+                <a href="/my-records" class="nav-link" id="recordsLink">
                     <i class="fas fa-history"></i>
                     <span>My Records</span>
+                </a>
+                <a href="/admin/dashboard" class="nav-link" id="adminLink" style="display: none;">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Admin</span>
                 </a>
                 <a href="#" class="nav-link active">
                     <i class="fas fa-bell"></i>
@@ -754,7 +765,7 @@
                 <div class="user-avatar" id="userAvatar">U</div>
                 <div>
                     <div id="userName">Loading...</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">Student</div>
+                    <div style="font-size: 10px; color: var(--text-muted);" id="userRole">Loading...</div>
                 </div>
             </div>
         </header>
@@ -783,6 +794,7 @@
             <button class="filter-tab" onclick="filterNotifications('missing')" id="filterMissing">Missing Docs</button>
             <button class="filter-tab" onclick="filterNotifications('reminders')" id="filterReminders">Reminders</button>
             <button class="filter-tab" onclick="filterNotifications('updates')" id="filterUpdates">Updates</button>
+            <button class="filter-tab" onclick="filterNotifications('info')" id="filterInfo">Info Updates</button>
         </div>
 
         <!-- Notifications List -->
@@ -820,6 +832,11 @@
                             <input type="checkbox" id="emailReminders" checked>
                             <label for="emailReminders">Enrollment Reminders</label>
                             <small>Get reminders about enrollment deadlines</small>
+                        </div>
+                        <div class="preference-item">
+                            <input type="checkbox" id="emailInfoUpdates" checked>
+                            <label for="emailInfoUpdates">Information Updates</label>
+                            <small>Get emails when you update your information</small>
                         </div>
                     </div>
                     
@@ -860,6 +877,7 @@
         let notifications = [];
         let currentFilter = 'all';
         let userData = {};
+        let isStudent = true;
 
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
@@ -879,10 +897,23 @@
                 }
                 
                 userData = data.user;
+                isStudent = userData.role === 'STUDENT';
+                
                 document.getElementById('userName').textContent = userData.full_name || userData.username;
+                document.getElementById('userRole').textContent = userData.role === 'SUPER_ADMIN' ? 'Super Admin' : 
+                                                                  (userData.role === 'ADMISSIONS_STAFF' ? 'Staff' : 'Student');
                 
                 const initials = (userData.full_name || userData.username).substring(0, 2).toUpperCase();
                 document.getElementById('userAvatar').textContent = initials;
+                
+                // Show/hide navigation based on role
+                document.getElementById('homeLink').href = isStudent ? '/' : '/admin/dashboard';
+                document.getElementById('homeLink').innerHTML = isStudent ? 
+                    '<i class="fas fa-home"></i> <span>Home</span>' : 
+                    '<i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>';
+                
+                document.getElementById('recordsLink').style.display = isStudent ? 'inline-flex' : 'none';
+                document.getElementById('adminLink').style.display = isStudent ? 'none' : 'inline-flex';
                 
             } catch (error) {
                 console.error('Auth error:', error);
@@ -944,10 +975,13 @@
                     filtered = notifications.filter(n => n.type === 'MISSING_DOCUMENT');
                     break;
                 case 'reminders':
-                    filtered = notifications.filter(n => n.type === 'ENROLLMENT_REMINDER' || n.type === 'DEADLINE_REMINDER');
+                    filtered = notifications.filter(n => ['ENROLLMENT_REMINDER', 'DEADLINE_REMINDER'].includes(n.type));
                     break;
                 case 'updates':
                     filtered = notifications.filter(n => ['DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED'].includes(n.type));
+                    break;
+                case 'info':
+                    filtered = notifications.filter(n => ['INFO_NEEDS_REVIEW', 'INFO_UPDATED'].includes(n.type));
                     break;
             }
             
@@ -957,8 +991,8 @@
                         <i class="fas fa-bell-slash"></i>
                         <h3>No Notifications</h3>
                         <p>You don't have any ${currentFilter !== 'all' ? currentFilter : ''} notifications at the moment.</p>
-                        <a href="/" class="btn btn-primary">
-                            <i class="fas fa-qrcode"></i> Go to Scanner
+                        <a href="${isStudent ? '/' : '/admin/dashboard'}" class="btn btn-primary">
+                            <i class="fas fa-${isStudent ? 'home' : 'tachometer-alt'}"></i> Go to ${isStudent ? 'Home' : 'Dashboard'}
                         </a>
                     </div>
                 `;
@@ -973,8 +1007,9 @@
                 
                 let actionButtons = '';
                 if (n.data && n.data.record_id) {
+                    const link = isStudent ? `/my-records` : `/history.html?highlight=${n.data.record_id}`;
                     actionButtons = `
-                        <a href="/my-records" class="view-details-btn">
+                        <a href="${link}" class="view-details-btn">
                             <i class="fas fa-eye"></i> View Record
                         </a>
                     `;
@@ -1029,7 +1064,9 @@
                 'RECORD_REJECTED': 'type-rejected',
                 'ENROLLMENT_REMINDER': 'type-reminder',
                 'DEADLINE_REMINDER': 'type-reminder',
-                'SYSTEM': 'type-system'
+                'SYSTEM': 'type-system',
+                'INFO_NEEDS_REVIEW': 'type-updated',
+                'INFO_UPDATED': 'type-updated'
             };
             return map[type] || 'type-system';
         }
@@ -1042,7 +1079,9 @@
                 'RECORD_REJECTED': 'fa-times-circle',
                 'ENROLLMENT_REMINDER': 'fa-clock',
                 'DEADLINE_REMINDER': 'fa-hourglass-end',
-                'SYSTEM': 'fa-info-circle'
+                'SYSTEM': 'fa-info-circle',
+                'INFO_NEEDS_REVIEW': 'fa-edit',
+                'INFO_UPDATED': 'fa-user-edit'
             };
             return map[type] || 'fa-bell';
         }
@@ -1055,7 +1094,9 @@
                 'RECORD_REJECTED': 'Rejected',
                 'ENROLLMENT_REMINDER': 'Reminder',
                 'DEADLINE_REMINDER': 'Deadline',
-                'SYSTEM': 'System'
+                'SYSTEM': 'System',
+                'INFO_NEEDS_REVIEW': 'Needs Review',
+                'INFO_UPDATED': 'Info Updated'
             };
             return map[type] || type;
         }
@@ -1168,6 +1209,7 @@
                     document.getElementById('emailMissingDocs').checked = prefs.email_missing_docs !== false;
                     document.getElementById('emailApprovals').checked = prefs.email_approvals !== false;
                     document.getElementById('emailReminders').checked = prefs.email_reminders !== false;
+                    document.getElementById('emailInfoUpdates').checked = prefs.email_info_updates !== false;
                     document.getElementById('smsMissingDocs').checked = prefs.sms_missing_docs === true;
                     document.getElementById('smsReminders').checked = prefs.sms_reminders === true;
                     
@@ -1186,7 +1228,7 @@
                 email_missing_docs: document.getElementById('emailMissingDocs').checked,
                 email_approvals: document.getElementById('emailApprovals').checked,
                 email_reminders: document.getElementById('emailReminders').checked,
-                email_rejections: document.getElementById('emailApprovals').checked,
+                email_info_updates: document.getElementById('emailInfoUpdates').checked,
                 sms_missing_docs: document.getElementById('smsMissingDocs').checked,
                 sms_reminders: document.getElementById('smsReminders').checked,
                 mobile_number: document.getElementById('mobileNumber').value
