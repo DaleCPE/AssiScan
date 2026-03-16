@@ -102,7 +102,8 @@ PERMISSIONS = {
         'view_all_records', 'edit_records', 'archive_records',
         'view_archived_records', 'send_emails', 'view_dashboard', 
         'access_admin_panel', 'manage_settings', 'send_notifications',
-        'view_all_notifications', 'generate_reports', 'scan_documents'
+        'view_all_notifications', 'generate_reports', 'scan_documents',
+        'delete_records'
     ],
     'ADMISSIONS_STAFF': [  # NEW ROLE
         'scan_documents', 'view_all_records', 'send_notifications',
@@ -4901,12 +4902,17 @@ def index():
     user_role = user_role.upper()
     
     if user_role == 'STUDENT':
-        return render_template('index.html')
+        return render_template('student_records.html')
     elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/admin/dashboard')
     else:
         session.clear()
         return redirect('/login')
+
+@app.route('/index.html')
+def serve_index():
+    """Serve index.html - can be accessed directly or with user_id parameter"""
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -4938,7 +4944,7 @@ def admin_dashboard():
 
 @app.route('/admin/students')
 def admin_students():
-    """NEW: Student list page with scan buttons"""
+    """Student list page with scan buttons"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4950,7 +4956,7 @@ def admin_students():
 
 @app.route('/admin/scan/<int:user_id>')
 def admin_scan_student(user_id):
-    """NEW: Scan page for specific student"""
+    """Scan page for specific student"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4958,7 +4964,7 @@ def admin_scan_student(user_id):
     if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/')
     
-    return render_template('admin_scan_student.html', student_id=user_id)
+    return redirect(f'/index.html?user_id={user_id}')
 
 @app.route('/admin/users')
 def admin_users():
