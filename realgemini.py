@@ -45,7 +45,7 @@ if GEMINI_API_KEY:
             transport='rest'
         )
         print("✅ Google Generative AI Configured with REST transport")
-        print("✅ Using OPTIMIZED Gemini 2.5 Flash only")
+        print("✅ Using ULTRA OPTIMIZED Gemini 2.5 Flash with memory management")
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
 else:
@@ -2007,44 +2007,74 @@ def restore_from_archive(archive_path):
         print(f"❌ Error restoring file from archive: {e}")
         return archive_path
 
-# ================= OPTIMIZED EXTRACT WITH GEMINI 2.5 FLASH ONLY =================
+# ================= ULTRA OPTIMIZED EXTRACT WITH GEMINI 2.5 FLASH =================
 def extract_with_gemini(prompt, images):
     """
     Extract text from images using ONLY Gemini 2.5 Flash
-    Optimized for memory efficiency - no model looping
+    ULTRA OPTIMIZED - compresses images, limits to first 3 pages only, and manages memory
     """
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        # ONLY use Gemini 2.5 Flash - most efficient model
+        # ONLY use Gemini 2.5 Flash
         model_name = "gemini-2.5-flash"
         
-        print(f"🤖 Using optimized model: {model_name} (single model, no looping)")
+        print(f"🤖 Using ULTRA OPTIMIZED model: {model_name}")
         
-        # Direct REST API call para mas tipid sa memory
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+        # LIMIT TO FIRST 3 IMAGES ONLY (para tipid sa memory)
+        if len(images) > 3:
+            print(f"⚠️ Too many images ({len(images)}), limiting to first 3 only for memory efficiency")
+            images = images[:3]
         
-        # Prepare images
-        image_parts = []
-        for img in images:
+        # COMPRESS images to reduce memory usage
+        compressed_images = []
+        for i, img in enumerate(images):
+            print(f"  📦 Compressing image {i+1}/{len(images)}...")
+            
+            # Resize if too large (max 800px para mas tipid)
+            max_size = 800
+            if img.width > max_size or img.height > max_size:
+                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                print(f"     Resized to {img.width}x{img.height}")
+            
+            # Convert to RGB if necessary (remove alpha channel)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = rgb_img
+            
+            # Compress with high compression
             img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format='PNG')
+            img.save(img_byte_arr, format='JPEG', quality=70, optimize=True)
             img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-            image_parts.append({
+            
+            compressed_images.append({
                 "inline_data": {
-                    "mime_type": "image/png",
+                    "mime_type": "image/jpeg",  # Use JPEG instead of PNG for smaller size
                     "data": img_base64
                 }
             })
+            
+            # Clear memory
+            img_byte_arr.close()
+            
+            # Force garbage collection
+            if i % 2 == 0:
+                gc.collect()
+        
+        # Direct REST API call
+        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
         
         payload = {
             "contents": [{
-                "parts": [{"text": prompt}] + image_parts
+                "parts": [{"text": prompt}] + compressed_images
             }],
             "generationConfig": {
                 "temperature": 0.1,
-                "maxOutputTokens": 2048
+                "maxOutputTokens": 1024  # Binawasan para tipid
             },
             "safetySettings": [
                 {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
@@ -2054,11 +2084,15 @@ def extract_with_gemini(prompt, images):
             ]
         }
         
+        # Clear compressed images from memory before API call
+        compressed_images.clear()
+        gc.collect()
+        
         response = requests.post(
             url,
             json=payload,
             headers={"Content-Type": "application/json"},
-            timeout=30
+            timeout=60
         )
         
         if response.status_code == 200:
@@ -2066,6 +2100,10 @@ def extract_with_gemini(prompt, images):
             if 'candidates' in result and len(result['candidates']) > 0:
                 text = result['candidates'][0]['content']['parts'][0]['text']
                 print(f"✅ Success with {model_name}")
+                
+                # Clear response to free memory
+                result.clear()
+                
                 return text
             else:
                 print(f"⚠️ No candidates in response")
@@ -2078,9 +2116,12 @@ def extract_with_gemini(prompt, images):
         print(f"❌ Extraction failed: {e}")
         traceback.print_exc()
         raise Exception(f"Extraction failed: {str(e)[:200]}")
+    finally:
+        # Force garbage collection
+        gc.collect()
 
 def extract_direct_rest_api_fixed(prompt, images):
-    """Fallback function - pero same lang din para consistent"""
+    """Fallback function - same as extract_with_gemini"""
     return extract_with_gemini(prompt, images)
 
 def calculate_goodmoral_score(analysis_data):
@@ -2216,8 +2257,13 @@ def log_request_info():
 def test_gemini():
     return jsonify({
         "status": "success",
-        "message": "Using OPTIMIZED Gemini 2.5 Flash only (single model)",
-        "transport": "REST (memory optimized)"
+        "message": "Using ULTRA OPTIMIZED Gemini 2.5 Flash with memory management",
+        "features": [
+            "Image compression (JPEG, 70% quality)",
+            "Max 3 images only",
+            "Resize to 800px max",
+            "Memory cleanup after each request"
+        ]
     })
 
 # ================= DATABASE INITIALIZATION ENDPOINT =================
@@ -4080,7 +4126,7 @@ def scan_student_documents(user_id):
         conn.commit()
         conn.close()
         
-        # Process with AI if applicable
+        # Process with AI if applicable - using ULTRA OPTIMIZED version
         extracted_data = None
         if doc_type == 'psa' and pil_images:
             extracted_data = process_psa_extraction(pil_images, saved_paths)
@@ -4088,6 +4134,10 @@ def scan_student_documents(user_id):
             extracted_data = process_form137_extraction(pil_images, saved_paths)
         elif doc_type == 'goodmoral' and pil_images:
             extracted_data = process_goodmoral_extraction(pil_images, saved_paths)
+        
+        # Clear PIL images to free memory
+        pil_images.clear()
+        gc.collect()
         
         return jsonify({
             "success": True,
@@ -4188,7 +4238,7 @@ def update_student_info():
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= PROCESS EXTRACTIONS =================
+# ================= PROCESS EXTRACTIONS (OPTIMIZED) =================
 def process_psa_extraction(images, paths):
     """Process PSA extraction using optimized Gemini"""
     try:
@@ -4224,6 +4274,9 @@ def process_psa_extraction(images, paths):
             
         json_str = cleaned_text[start:end]
         data = json.loads(json_str)
+        
+        # Force garbage collection
+        gc.collect()
         
         return data
         
@@ -4263,6 +4316,9 @@ def process_form137_extraction(images, paths):
             
         json_str = cleaned_text[start:end]
         data = json.loads(json_str)
+        
+        # Force garbage collection
+        gc.collect()
         
         return data
         
@@ -4309,6 +4365,9 @@ def process_goodmoral_extraction(images, paths):
         
         data['goodmoral_score'] = score
         data['disciplinary_status'] = status
+        
+        # Force garbage collection
+        gc.collect()
         
         return data
         
@@ -5036,8 +5095,14 @@ def debug_goodmoral(record_id):
 def health_check():
     return jsonify({
         "status": "healthy",
-        "service": "AssiScan Backend (Optimized)",
-        "model": "Gemini 2.5 Flash only (single model)",
+        "service": "AssiScan Backend (Ultra Optimized)",
+        "model": "Gemini 2.5 Flash with memory management",
+        "features": [
+            "Image compression (JPEG, 70% quality)",
+            "Max 3 images per request",
+            "Resize to 800px max",
+            "Garbage collection after each request"
+        ],
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected",
         "roles": list(PERMISSIONS.keys())
@@ -5050,18 +5115,19 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH OPTIMIZED GEMINI 2.5 FLASH")
+    print("🚀 ASSISCAN WITH ULTRA OPTIMIZED GEMINI")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"🤖 Model: Gemini 2.5 Flash ONLY (no looping)")
+    print(f"🤖 Model: Gemini 2.5 Flash with memory management")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("📋 OPTIMIZED FEATURES:")
-    print("   • Single Gemini model - memory efficient")
-    print("   • Removed model looping - faster")
-    print("   • Fixed missing database columns")
-    print("   • Working scan functionality")
+    print("📋 MEMORY OPTIMIZATIONS:")
+    print("   • Images limited to 3 per request")
+    print("   • Compressed to 800px max")
+    print("   • JPEG at 70% quality")
+    print("   • Garbage collection after each request")
+    print("   • No model looping")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
