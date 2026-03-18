@@ -591,7 +591,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1200px; /* BINABAWASAN dahil tinanggal ang SCAN column */
+            min-width: 1200px;
         }
 
         thead {
@@ -1948,12 +1948,11 @@
                         <th>STATUS</th>
                         <th>MORAL</th>
                         <th>ACTIONS</th>
-                        <!-- TINANGGAL ANG SCAN COLUMN -->
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="8"> <!-- Naging 8 columns instead of 9 -->
+                        <td colspan="8">
                             <div class="loading">
                                 <div class="loading-spinner"></div>
                                 <p>Loading records...</p>
@@ -2265,6 +2264,7 @@
         let collegesData = [];
         let userData = {};
         let currentView = 'active';
+        let statusChart = null; // Store chart instance
 
         // College mapping for badges
         const collegeBadgeMap = {
@@ -2649,7 +2649,6 @@
                 const initials = r.name ? r.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '??';
                 const age = r.age ? `${r.age}y` : '';
                 const lrn = r.lrn ? r.lrn.slice(-4) : 'N/A';
-                const needsReview = r.needs_review ? '<span class="needs-review-badge">NEEDS REVIEW</span>' : '';
                 
                 let actionButtons = '';
                 if (currentView === 'active') {
@@ -2714,7 +2713,6 @@
 
                 const rowClass = currentView === 'archived' ? 'archived-row' : '';
 
-                // TINANGGAL ANG SCAN BUTTON - Records viewing lang ito
                 return `
                 <tr id="row-${r.id}" class="${rowClass}">
                     <td>
@@ -2725,7 +2723,6 @@
                                 <p>${age}</p>
                                 ${r.email_sent ? '<span class="email-status email-sent"><i class="fas fa-check"></i></span>' : ''}
                                 ${r.is_transferee ? '<span class="doc-status-badge" style="background:rgba(111,66,193,0.15);color:#b5a0ff;border-color:#b5a0ff;"><i class="fas fa-exchange-alt"></i> Transferee</span>' : ''}
-                                ${needsReview}
                             </div>
                         </div>
                     </td>
@@ -2736,7 +2733,6 @@
                     <td>${getStatusBadge(recordStatus)}</td>
                     <td>${getMoralBadge(r)}</td>
                     <td>${actionButtons}</td>
-                    <!-- TINANGGAL ANG SCAN COLUMN -->
                 </tr>
             `}).join('');
         }
@@ -2914,7 +2910,7 @@
             document.getElementById('approvedTotal').textContent = approved;
             document.getElementById('transfereeTotal').textContent = transferees;
             
-            // Update status chart
+            // Update status chart - FIXED VERSION
             updateStatusChart({
                 complete: complete,
                 incomplete: incomplete,
@@ -2935,11 +2931,13 @@
         function updateStatusChart(data) {
             const ctx = document.getElementById('statusChart').getContext('2d');
             
-            if (window.statusChart) {
-                window.statusChart.destroy();
+            // Destroy existing chart if it exists
+            if (statusChart) {
+                statusChart.destroy();
             }
             
-            window.statusChart = new Chart(ctx, {
+            // Create new chart
+            statusChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Complete', 'Incomplete', 'Pending', 'Approved'],
@@ -3481,7 +3479,6 @@
                                 '<span class="status-badge status-archived">ARCHIVED</span>' : 
                                 getStatusBadge(record.status || 'INCOMPLETE')
                             }
-                            ${record.needs_review ? '<span class="needs-review-badge" style="margin-left: 5px;">NEEDS REVIEW</span>' : ''}
                         </div>
                     </div>
                 </div>
@@ -3618,9 +3615,9 @@
             if (id === 'archiveModal') currentArchiveRecordId = null;
             if (id === 'restoreModal') currentRestoreRecordId = null;
             if (id === 'permanentDeleteModal') currentPermanentDeleteRecordId = null;
-            if (id === 'reportModal' && window.statusChart) {
-                window.statusChart.destroy();
-                window.statusChart = null;
+            if (id === 'reportModal' && statusChart) {
+                statusChart.destroy();
+                statusChart = null;
             }
         }
 
@@ -3653,4 +3650,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
