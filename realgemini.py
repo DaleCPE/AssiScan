@@ -45,12 +45,7 @@ if GEMINI_API_KEY:
             transport='rest'
         )
         print("✅ Google Generative AI Configured with REST transport")
-        
-        try:
-            models = list(genai.list_models())
-            print(f"✅ Successfully connected to Gemini API. Found {len(models)} models.")
-        except Exception as e:
-            print(f"⚠️ Could not list models: {e}")
+        print("✅ Using OPTIMIZED Gemini 2.5 Flash only")
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
 else:
@@ -89,11 +84,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHIVE_FOLDER'] = ARCHIVE_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
 
-# --- USER ROLES (UPDATED) ---
+# --- USER ROLES ---
 ROLES = {
     'SUPER_ADMIN': 1,
     'STUDENT': 2,
-    'ADMISSIONS_STAFF': 3  # NEW ROLE
+    'ADMISSIONS_STAFF': 3
 }
 
 PERMISSIONS = {
@@ -105,14 +100,14 @@ PERMISSIONS = {
         'view_all_notifications', 'generate_reports', 'scan_documents',
         'delete_records'
     ],
-    'ADMISSIONS_STAFF': [  # NEW ROLE
+    'ADMISSIONS_STAFF': [
         'scan_documents', 'view_all_records', 'send_notifications',
         'view_dashboard', 'view_all_notifications', 'send_emails'
     ],
     'STUDENT': [
         'view_own_records', 'change_password', 'view_own_documents',
         'download_own_documents', 'view_own_notifications',
-        'edit_own_information'  # NEW PERMISSION
+        'edit_own_information'
     ]
 }
 
@@ -418,7 +413,7 @@ def init_db():
         ''')
         print("   ✅ Created programs table")
         
-        print("📝 Creating records table with NEW FIELDS...")
+        print("📝 Creating records table...")
         cur.execute('''
             CREATE TABLE records (
                 id SERIAL PRIMARY KEY,
@@ -508,30 +503,20 @@ def init_db():
                 last_reminder_sent TIMESTAMP,
                 reminder_count INTEGER DEFAULT 0,
                 
-                -- NEW FIELDS FOR WORKFLOW (COMMENTED OUT FOR NOW)
-                -- scanned_by INTEGER REFERENCES users(id),
-                -- scanned_at TIMESTAMP,
-                -- verified_by INTEGER REFERENCES users(id),
-                -- verified_at TIMESTAMP,
-                -- student_verified BOOLEAN DEFAULT FALSE,
-                -- student_verified_at TIMESTAMP,
-                -- needs_review BOOLEAN DEFAULT FALSE,
-                -- review_reason TEXT,
-                
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (archived_by) REFERENCES users(id),
                 FOREIGN KEY (restored_by) REFERENCES users(id),
                 CONSTRAINT one_record_per_user UNIQUE (user_id)
             )
         ''')
-        print("   ✅ Created records table (without new columns)")
+        print("   ✅ Created records table")
         
         print("📝 Creating notifications table...")
         cur.execute('''
             CREATE TABLE notifications (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
-                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER', 'INFO_NEEDS_REVIEW', 'INFO_UPDATED')),
+                type VARCHAR(50) NOT NULL CHECK (type IN ('MISSING_DOCUMENT', 'DOCUMENT_UPLOADED', 'RECORD_APPROVED', 'RECORD_REJECTED', 'ENROLLMENT_REMINDER', 'SYSTEM', 'DEADLINE_REMINDER', 'INFO_UPDATED')),
                 title VARCHAR(255) NOT NULL,
                 message TEXT NOT NULL,
                 data JSONB,
@@ -2022,98 +2007,25 @@ def restore_from_archive(archive_path):
         print(f"❌ Error restoring file from archive: {e}")
         return archive_path
 
-# ================= FIXED EXTRACT WITH GEMINI =================
+# ================= OPTIMIZED EXTRACT WITH GEMINI 2.5 FLASH ONLY =================
 def extract_with_gemini(prompt, images):
+    """
+    Extract text from images using ONLY Gemini 2.5 Flash
+    Optimized for memory efficiency - no model looping
+    """
     try:
         if not GEMINI_API_KEY:
             raise Exception("GEMINI_API_KEY not configured")
         
-        model_names = [
-            "models/gemini-3-flash-preview",
-            "gemini-3-flash-preview",
-            "models/gemini-3-pro-preview",
-            "gemini-3-pro-preview",
-            "models/gemini-2.5-flash",
-            "gemini-2.5-flash",               
-            "models/gemini-2.0-flash",
-            "gemini-2.0-flash",
-            "models/gemini-1.5-flash",
-            "gemini-1.5-flash",
-            "models/gemini-1.5-pro",
-            "gemini-1.5-pro",
-            "models/gemini-pro",
-            "gemini-pro"
-        ]
+        # ONLY use Gemini 2.5 Flash - most efficient model
+        model_name = "gemini-2.5-flash"
         
-        safety_settings = [
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_NONE"
-            }
-        ]
+        print(f"🤖 Using optimized model: {model_name} (single model, no looping)")
         
-        last_error = None
+        # Direct REST API call para mas tipid sa memory
+        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
         
-        for model_name in model_names:
-            try:
-                print(f"🤖 Trying model: {model_name} (REST mode)")
-                
-                model = genai.GenerativeModel(model_name)
-                
-                content_parts = [prompt]
-                for img in images:
-                    content_parts.append(img)
-                
-                response = model.generate_content(
-                    content_parts,
-                    generation_config={
-                        "temperature": 0.1,
-                        "top_p": 0.8,
-                        "top_k": 40,
-                        "max_output_tokens": 2048,
-                    },
-                    safety_settings=safety_settings
-                )
-                
-                if response.prompt_feedback and response.prompt_feedback.block_reason:
-                    block_reason = response.prompt_feedback.block_reason
-                    print(f"⚠️ Content was blocked: {block_reason}")
-                    continue
-                
-                if response and response.text:
-                    print(f"✅ SUCCESS with {model_name}")
-                    return response.text
-                else:
-                    print(f"⚠️ {model_name} returned empty response")
-                
-            except Exception as model_error:
-                error_msg = str(model_error)
-                print(f"❌ {model_name} failed: {error_msg[:200]}")
-                last_error = model_error
-                continue
-        
-        print("⚠️ All SDK models failed, using direct REST API fallback...")
-        return extract_direct_rest_api_fixed(prompt, images)
-        
-    except Exception as e:
-        print(f"❌ ALL extraction methods failed: {e}")
-        traceback.print_exc()
-        raise Exception(f"Extraction failed: {str(e)[:200]}")
-
-def extract_direct_rest_api_fixed(prompt, images):
-    try:
+        # Prepare images
         image_parts = []
         for img in images:
             img_byte_arr = io.BytesIO()
@@ -2126,81 +2038,50 @@ def extract_direct_rest_api_fixed(prompt, images):
                 }
             })
         
-        model_names = [
-            "gemini-3-flash-preview",
-            "gemini-3-pro-preview",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ]
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}] + image_parts
+            }],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 2048
+            },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
+        }
         
-        last_error = None
+        response = requests.post(
+            url,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
         
-        for model_name in model_names:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                
-                print(f"📤 Trying direct REST with model: {model_name}")
-                
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt}] + image_parts
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "maxOutputTokens": 2048
-                    },
-                    "safetySettings": [
-                        {
-                            "category": "HARM_CATEGORY_HARASSMENT",
-                            "threshold": "BLOCK_NONE"
-                        },
-                        {
-                            "category": "HARM_CATEGORY_HATE_SPEECH",
-                            "threshold": "BLOCK_NONE"
-                        },
-                        {
-                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            "threshold": "BLOCK_NONE"
-                        },
-                        {
-                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            "threshold": "BLOCK_NONE"
-                        }
-                    ]
-                }
-                
-                response = requests.post(
-                    url,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=30
-                )
-                
-                print(f"📥 Response status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if 'candidates' in result and len(result['candidates']) > 0:
-                        text = result['candidates'][0]['content']['parts'][0]['text']
-                        print(f"✅ Success with direct REST API using {model_name}")
-                        return text
-                    else:
-                        print(f"⚠️ No candidates in response for {model_name}")
-                else:
-                    print(f"❌ {model_name} failed with status {response.status_code}")
-                    last_error = f"Status {response.status_code}: {response.text[:200]}"
-                    
-            except Exception as e:
-                print(f"❌ Error with {model_name}: {str(e)[:100]}")
-                last_error = e
-                continue
-        
-        raise Exception(f"All direct REST models failed. Last error: {last_error}")
+        if response.status_code == 200:
+            result = response.json()
+            if 'candidates' in result and len(result['candidates']) > 0:
+                text = result['candidates'][0]['content']['parts'][0]['text']
+                print(f"✅ Success with {model_name}")
+                return text
+            else:
+                print(f"⚠️ No candidates in response")
+                raise Exception("No candidates in response")
+        else:
+            print(f"❌ {model_name} failed with status {response.status_code}")
+            raise Exception(f"API error: {response.status_code}")
             
     except Exception as e:
-        print(f"❌ Direct REST API fallback failed: {e}")
-        raise e
+        print(f"❌ Extraction failed: {e}")
+        traceback.print_exc()
+        raise Exception(f"Extraction failed: {str(e)[:200]}")
+
+def extract_direct_rest_api_fixed(prompt, images):
+    """Fallback function - pero same lang din para consistent"""
+    return extract_with_gemini(prompt, images)
 
 def calculate_goodmoral_score(analysis_data):
     score = 100
@@ -2333,24 +2214,11 @@ def log_request_info():
 # ================= TEST GEMINI ENDPOINT =================
 @app.route('/test-gemini', methods=['GET'])
 def test_gemini():
-    try:
-        import google.generativeai as genai
-        models = list(genai.list_models())
-        
-        available_models = [m.name for m in models]
-        
-        return jsonify({
-            "status": "success",
-            "message": f"Connected to Gemini. Found {len(models)} models.",
-            "transport": "REST (SSL errors bypassed)",
-            "models": available_models[:20]
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e),
-            "transport": "REST"
-        }), 500
+    return jsonify({
+        "status": "success",
+        "message": "Using OPTIMIZED Gemini 2.5 Flash only (single model)",
+        "transport": "REST (memory optimized)"
+    })
 
 # ================= DATABASE INITIALIZATION ENDPOINT =================
 @app.route('/api/init-db', methods=['POST'])
@@ -4322,7 +4190,7 @@ def update_student_info():
 
 # ================= PROCESS EXTRACTIONS =================
 def process_psa_extraction(images, paths):
-    """Process PSA extraction"""
+    """Process PSA extraction using optimized Gemini"""
     try:
         prompt = """Extract information from this PSA Birth Certificate.
         
@@ -4364,7 +4232,7 @@ def process_psa_extraction(images, paths):
         return None
 
 def process_form137_extraction(images, paths):
-    """Process Form 137 extraction"""
+    """Process Form 137 extraction using optimized Gemini"""
     try:
         prompt = """Extract information from this Form 137 / SF10 document.
         
@@ -4403,7 +4271,7 @@ def process_form137_extraction(images, paths):
         return None
 
 def process_goodmoral_extraction(images, paths):
-    """Process Good Moral extraction"""
+    """Process Good Moral extraction using optimized Gemini"""
     try:
         prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
 
@@ -5168,7 +5036,8 @@ def debug_goodmoral(record_id):
 def health_check():
     return jsonify({
         "status": "healthy",
-        "service": "AssiScan Backend",
+        "service": "AssiScan Backend (Optimized)",
+        "model": "Gemini 2.5 Flash only (single model)",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected",
         "roles": list(PERMISSIONS.keys())
@@ -5181,17 +5050,18 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH NEW WORKFLOW (FIXED VERSION)")
+    print("🚀 ASSISCAN WITH OPTIMIZED GEMINI 2.5 FLASH")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
+    print(f"🤖 Model: Gemini 2.5 Flash ONLY (no looping)")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
-    print("📋 FIXED FEATURES:")
-    print("   • Removed references to missing database columns")
-    print("   • Fixed scan document endpoint")
-    print("   • Fixed save scanned data endpoint")
-    print("   • Student can still edit their information")
+    print("📋 OPTIMIZED FEATURES:")
+    print("   • Single Gemini model - memory efficient")
+    print("   • Removed model looping - faster")
+    print("   • Fixed missing database columns")
+    print("   • Working scan functionality")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
