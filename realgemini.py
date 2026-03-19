@@ -483,6 +483,7 @@ def init_db():
                 document_status JSONB DEFAULT '{"psa": false, "form137": false, "form138": false, "goodmoral": false}'::jsonb,
                 rejection_reason TEXT,
                 status VARCHAR(20) DEFAULT 'INCOMPLETE' CHECK (status IN ('INCOMPLETE', 'PENDING', 'APPROVED', 'REJECTED')),
+                needs_review BOOLEAN DEFAULT FALSE,
                 
                 is_transferee BOOLEAN DEFAULT FALSE,
                 previous_school VARCHAR(255),
@@ -1808,7 +1809,8 @@ def get_enrollment_report():
                 "approved": 0,
                 "rejected": 0,
                 "transferees": 0,
-                "regular": 0
+                "regular": 0,
+                "needs_review": 0
             },
             "by_college": {},
             "by_program": {},
@@ -1836,6 +1838,9 @@ def get_enrollment_report():
                 report_data['summary']['approved'] += 1
             elif status == 'REJECTED':
                 report_data['summary']['rejected'] += 1
+            
+            if record.get('needs_review'):
+                report_data['summary']['needs_review'] += 1
             
             # Check if complete (all required documents)
             doc_status = record.get('document_status', {})
@@ -1880,7 +1885,8 @@ def get_enrollment_report():
                     "incomplete": 0,
                     "pending": 0,
                     "approved": 0,
-                    "rejected": 0
+                    "rejected": 0,
+                    "needs_review": 0
                 }
             
             report_data['by_college'][college]['total'] += 1
@@ -1888,6 +1894,9 @@ def get_enrollment_report():
                 report_data['by_college'][college]['transferee'] += 1
             else:
                 report_data['by_college'][college]['regular'] += 1
+            
+            if record.get('needs_review'):
+                report_data['by_college'][college]['needs_review'] += 1
             
             if psa_ok and f137_ok and gm_ok:
                 report_data['by_college'][college]['complete'] += 1
@@ -1908,7 +1917,8 @@ def get_enrollment_report():
                     "total": 0,
                     "college": college,
                     "transferee": 0,
-                    "regular": 0
+                    "regular": 0,
+                    "needs_review": 0
                 }
             
             report_data['by_program'][program]['total'] += 1
@@ -1916,6 +1926,9 @@ def get_enrollment_report():
                 report_data['by_program'][program]['transferee'] += 1
             else:
                 report_data['by_program'][program]['regular'] += 1
+            
+            if record.get('needs_review'):
+                report_data['by_program'][program]['needs_review'] += 1
         
         # Update transferee document totals
         report_data['documents']['honorable_dismissal']['total'] = transferee_count
@@ -2489,7 +2502,8 @@ def check_session():
                 'username': user['username'],
                 'full_name': user['full_name'],
                 'email': user['email'],
-                'role': user['role'].upper()
+                'role': user['role'].upper(),
+                'requires_password_reset': user['requires_password_reset']
             },
             "unread_notifications": unread_count,
             "permissions": PERMISSIONS.get(user['role'].upper(), [])
@@ -2506,6 +2520,7 @@ def change_password():
         data = request.json
         current_password = data.get('current_password')
         new_password = data.get('new_password')
+        force_reset = data.get('force_reset', False)
         
         if not current_password or not new_password:
             return jsonify({"error": "Current and new password required"}), 400
@@ -2535,9 +2550,11 @@ def change_password():
             conn.close()
             return jsonify({"error": "User not found"}), 404
         
-        if not verify_password(user['password_hash'], current_password):
-            conn.close()
-            return jsonify({"error": "Current password is incorrect"}), 401
+        # Allow force reset without current password check
+        if not force_reset:
+            if not verify_password(user['password_hash'], current_password):
+                conn.close()
+                return jsonify({"error": "Current password is incorrect"}), 401
         
         new_hash = hash_password(new_password)
         cur.execute("""
@@ -2698,7 +2715,7 @@ def create_user():
             college_id,
             program_id,
             data.get('is_active', True),
-            True,
+            True,  # SET TO TRUE FOR NEW USERS
             session['user_id'],
             data.get('email_notifications', True),
             data.get('mobile_number')
@@ -2721,7 +2738,8 @@ def create_user():
             'role': new_user[4],
             'is_active': new_user[5],
             'created_at': new_user[6].isoformat() if new_user[6] else None,
-            'temp_password': temp_password
+            'temp_password': temp_password,
+            'requires_password_reset': True
         }
         
         return jsonify({
@@ -2843,6 +2861,7 @@ def update_user(user_id):
             'program_id': updated_user['program_id'],
             'email_notifications': updated_user['email_notifications'],
             'mobile_number': updated_user['mobile_number'],
+            'requires_password_reset': updated_user['requires_password_reset'],
             'updated_at': updated_user['updated_at'].isoformat() if updated_user['updated_at'] else None
         }
         
@@ -4123,6 +4142,10 @@ def scan_student_documents(user_id):
         if doc_type in ['psa', 'form137', 'goodmoral']:
             update_document_status(record_id, doc_type, True)
         
+        # Set needs_review flag if applicable
+        if doc_type == 'goodmoral':
+            cur.execute("UPDATE records SET needs_review = TRUE WHERE id = %s", (record_id,))
+        
         conn.commit()
         conn.close()
         
@@ -4438,6 +4461,9 @@ def save_scanned_data(user_id):
             updates.append("disciplinary_details = %s")
             values.append(data['disciplinary_details'])
         
+        # Clear needs_review flag
+        updates.append("needs_review = FALSE")
+        
         if record:
             # Update existing record
             values.append(record[0])
@@ -4511,14 +4537,16 @@ def update_record_status(record_id):
         if status == 'REJECTED' and reason:
             cur.execute("""
                 UPDATE records 
-                SET status = %s, rejection_reason = %s, updated_at = CURRENT_TIMESTAMP 
+                SET status = %s, rejection_reason = %s, updated_at = CURRENT_TIMESTAMP,
+                    needs_review = FALSE
                 WHERE id = %s
                 RETURNING id
             """, (status, reason, record_id))
         else:
             cur.execute("""
                 UPDATE records 
-                SET status = %s, updated_at = CURRENT_TIMESTAMP 
+                SET status = %s, updated_at = CURRENT_TIMESTAMP,
+                    needs_review = FALSE
                 WHERE id = %s
                 RETURNING id
             """, (status, record_id))
@@ -4824,7 +4852,16 @@ def index():
 
 @app.route('/index.html')
 def serve_index():
-    """Serve index.html - can be accessed directly or with user_id parameter"""
+    """Serve index.html - can be accessed directly or with user_id parameter (ADMIN ONLY)"""
+    # Check if user is admin/staff
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
+        # Students trying to access scanner get redirected
+        return redirect('/my-records')
+    
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -4833,7 +4870,7 @@ def login():
         if 'user_id' in session and 'role' in session:
             user_role = session['role'].upper()
             if user_role == 'STUDENT':
-                return redirect('/')
+                return redirect('/my-records')
             elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
                 return redirect('/admin/dashboard')
             else:
@@ -5095,14 +5132,7 @@ def debug_goodmoral(record_id):
 def health_check():
     return jsonify({
         "status": "healthy",
-        "service": "AssiScan Backend (Ultra Optimized)",
-        "model": "Gemini 2.5 Flash with memory management",
-        "features": [
-            "Image compression (JPEG, 70% quality)",
-            "Max 3 images per request",
-            "Resize to 800px max",
-            "Garbage collection after each request"
-        ],
+        "service": "AssiScan Backend (Fixed Password Reset + Ultra Optimized)",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected",
         "roles": list(PERMISSIONS.keys())
@@ -5115,19 +5145,25 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH ULTRA OPTIMIZED GEMINI")
+    print("🚀 ASSISCAN WITH FIXED PASSWORD RESET & ULTRA OPTIMIZED GEMINI")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"🤖 Model: Gemini 2.5 Flash with memory management")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
     print("="*60)
+    print("📋 FIXED ISSUES:")
+    print("   • Home button now goes to student_records.html (correct page)")
+    print("   • Password reset required flag properly saved in session")
+    print("   • New users created with requires_password_reset = TRUE")
+    print("   • Force reset option in change password")
+    print("   • needs_review flag for good moral review")
+    print("="*60)
     print("📋 MEMORY OPTIMIZATIONS:")
     print("   • Images limited to 3 per request")
     print("   • Compressed to 800px max")
     print("   • JPEG at 70% quality")
     print("   • Garbage collection after each request")
-    print("   • No model looping")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
