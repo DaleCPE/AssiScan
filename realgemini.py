@@ -2399,7 +2399,7 @@ def login_user():
         session['role'] = user['role'].upper()
         session['email'] = user['email']
         session['session_token'] = session_token
-        session['requires_password_reset'] = user['requires_password_reset']
+        session['requires_password_reset'] = user['requires_password_reset']  # ← IMPORTANT
         
         create_notification(
             user_id=user['id'],
@@ -2416,7 +2416,7 @@ def login_user():
             'full_name': user['full_name'],
             'email': user['email'],
             'role': user['role'].upper(),
-            'requires_password_reset': user['requires_password_reset'],
+            'requires_password_reset': user['requires_password_reset'],  # ← IMPORTANT
             'college_id': user['college_id'],
             'program_id': user['program_id']
         }
@@ -2503,7 +2503,7 @@ def check_session():
                 'full_name': user['full_name'],
                 'email': user['email'],
                 'role': user['role'].upper(),
-                'requires_password_reset': user['requires_password_reset']
+                'requires_password_reset': user['requires_password_reset']  # ← IMPORTANT
             },
             "unread_notifications": unread_count,
             "permissions": PERMISSIONS.get(user['role'].upper(), [])
@@ -2566,7 +2566,7 @@ def change_password():
         conn.commit()
         conn.close()
         
-        session['requires_password_reset'] = False
+        session['requires_password_reset'] = False  # ← IMPORTANT
         
         create_notification(
             user_id=session['user_id'],
@@ -2715,7 +2715,7 @@ def create_user():
             college_id,
             program_id,
             data.get('is_active', True),
-            True,  # SET TO TRUE FOR NEW USERS
+            True,  # ← SET TO TRUE FOR NEW USERS
             session['user_id'],
             data.get('email_notifications', True),
             data.get('mobile_number')
@@ -2739,7 +2739,7 @@ def create_user():
             'is_active': new_user[5],
             'created_at': new_user[6].isoformat() if new_user[6] else None,
             'temp_password': temp_password,
-            'requires_password_reset': True
+            'requires_password_reset': True  # ← IMPORTANT
         }
         
         return jsonify({
@@ -2861,7 +2861,7 @@ def update_user(user_id):
             'program_id': updated_user['program_id'],
             'email_notifications': updated_user['email_notifications'],
             'mobile_number': updated_user['mobile_number'],
-            'requires_password_reset': updated_user['requires_password_reset'],
+            'requires_password_reset': updated_user['requires_password_reset'],  # ← IMPORTANT
             'updated_at': updated_user['updated_at'].isoformat() if updated_user['updated_at'] else None
         }
         
@@ -4842,8 +4842,9 @@ def index():
     
     user_role = user_role.upper()
     
+    # ✅ FIXED: Students go to dashboard, not my-records
     if user_role == 'STUDENT':
-        return render_template('student_records.html')
+        return render_template('student_dashboard.html')  # ← CHANGED TO DASHBOARD
     elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/admin/dashboard')
     else:
@@ -4852,15 +4853,14 @@ def index():
 
 @app.route('/index.html')
 def serve_index():
-    """Serve index.html - can be accessed directly or with user_id parameter (ADMIN ONLY)"""
-    # Check if user is admin/staff
+    """Serve scanner page - for admin use only"""
     if 'user_id' not in session:
         return redirect('/login')
     
     user_role = session.get('role', '').upper()
     if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
-        # Students trying to access scanner get redirected
-        return redirect('/my-records')
+        # Students trying to access scanner get redirected to dashboard
+        return redirect('/')
     
     return render_template('index.html')
 
@@ -4870,7 +4870,7 @@ def login():
         if 'user_id' in session and 'role' in session:
             user_role = session['role'].upper()
             if user_role == 'STUDENT':
-                return redirect('/my-records')
+                return redirect('/')
             elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
                 return redirect('/admin/dashboard')
             else:
@@ -4880,6 +4880,15 @@ def login():
     
     elif request.method == 'POST':
         return redirect('/api/login')
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session_token = session.get('session_token')
+    if session_token:
+        logout_session(session_token)
+    
+    session.clear()
+    return redirect('/login')
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -4927,17 +4936,6 @@ def admin_users():
     
     return render_template('admin_users.html')
 
-@app.route('/history.html')
-def history_page():
-    if 'user_id' not in session:
-        return redirect('/login')
-    
-    user_role = session.get('role', '').upper()
-    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
-        return redirect('/')
-    
-    return render_template('history.html')
-
 @app.route('/admin/colleges')
 def admin_colleges():
     if 'user_id' not in session:
@@ -4952,6 +4950,7 @@ def admin_colleges():
 @app.route('/my-records')
 @login_required
 def my_records_page():
+    """Student records page - available as separate page if needed"""
     user_role = session.get('role', '').upper()
     if user_role != 'STUDENT':
         return redirect('/')
@@ -4968,6 +4967,17 @@ def notifications_page():
 @permission_required('view_all_records')
 def missing_documents_page():
     return render_template('admin_missing_docs.html')
+
+@app.route('/change-password', methods=['GET'])
+def change_password_page():
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role != 'STUDENT':
+        return redirect('/')
+    
+    return render_template('change_password.html')
 
 # ================= UPLOADS SERVING =================
 @app.route('/uploads/<path:filename>')
@@ -5085,6 +5095,17 @@ def view_form(record_id):
     except Exception as e:
         return f"Error loading form: {str(e)}", 500
 
+# ================= HEALTH CHECK =================
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "AssiScan Backend (Fixed Home Redirect & Password Reset)",
+        "timestamp": datetime.now().isoformat(),
+        "database": "connected" if get_db_connection() else "disconnected",
+        "roles": list(PERMISSIONS.keys())
+    })
+
 # ================= DEBUG ENDPOINTS =================
 @app.route('/debug-goodmoral/<int:record_id>', methods=['GET'])
 @login_required
@@ -5127,17 +5148,6 @@ def debug_goodmoral(record_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ================= HEALTH CHECK =================
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "service": "AssiScan Backend (Fixed Password Reset + Ultra Optimized)",
-        "timestamp": datetime.now().isoformat(),
-        "database": "connected" if get_db_connection() else "disconnected",
-        "roles": list(PERMISSIONS.keys())
-    })
-
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
@@ -5145,25 +5155,17 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN WITH FIXED PASSWORD RESET & ULTRA OPTIMIZED GEMINI")
+    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT & PASSWORD RESET")
+    print("="*60)
+    print("✅ FIXED: Home redirects to student_dashboard.html")
+    print("✅ FIXED: Password reset flag persists in session")
+    print("✅ FIXED: /api/check-session returns requires_password_reset")
+    print("✅ FIXED: New users created with requires_password_reset = TRUE")
+    print("✅ FIXED: Force reset option in change password endpoint")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
-    print(f"🤖 Model: Gemini 2.5 Flash with memory management")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
     print(f"🗄️ Database: {'✅ SET' if DATABASE_URL else '❌ NOT SET'}")
-    print("="*60)
-    print("📋 FIXED ISSUES:")
-    print("   • Home button now goes to student_records.html (correct page)")
-    print("   • Password reset required flag properly saved in session")
-    print("   • New users created with requires_password_reset = TRUE")
-    print("   • Force reset option in change password")
-    print("   • needs_review flag for good moral review")
-    print("="*60)
-    print("📋 MEMORY OPTIMIZATIONS:")
-    print("   • Images limited to 3 per request")
-    print("   • Compressed to 800px max")
-    print("   • JPEG at 70% quality")
-    print("   • Garbage collection after each request")
     print("="*60)
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Archive folder: {ARCHIVE_FOLDER}")
