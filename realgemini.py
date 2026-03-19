@@ -2434,26 +2434,47 @@ def login_user():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# ================= SINGLE LOGOUT FUNCTION =================
+# ================= FIXED LOGOUT FUNCTION =================
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     """Handle both GET and POST logout requests - unified logout function"""
     print("🔍 /logout route accessed")
     
+    # Kunin ang session token bago i-clear
     session_token = session.get('session_token')
+    user_id = session.get('user_id')
+    
+    print(f"📝 Logging out user ID: {user_id}")
+    
+    # Invalidate session sa database
     if session_token:
         logout_session(session_token)
+        print(f"✅ Session {session_token} invalidated")
     
+    # Clear Flask session
     session.clear()
+    print("✅ Flask session cleared")
     
     # Check if it's an API request (POST with JSON) or browser request (GET)
-    if request.method == 'POST' and request.is_json:
-        return jsonify({
-            "status": "success",
-            "message": "Logged out successfully"
-        })
+    if request.method == 'POST':
+        # Para sa AJAX/fetch requests
+        if request.is_json:
+            return jsonify({
+                "status": "success",
+                "message": "Logged out successfully"
+            })
+        else:
+            # Para sa form posts
+            return redirect('/login')
     else:
+        # Para sa direct GET request (clicking logout link)
         return redirect('/login')
+
+# Optional: API logout endpoint for backward compatibility
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    """API endpoint for logout - calls the main logout function"""
+    return logout()
 
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
@@ -5152,15 +5173,16 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT & PASSWORD RESET")
+    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & LOGOUT")
     print("="*60)
     print("✅ FIXED: Home redirects to student_dashboard.html")
     print("✅ FIXED: Password reset flag persists in session")
     print("✅ FIXED: /api/check-session returns requires_password_reset")
     print("✅ FIXED: New users created with requires_password_reset = TRUE")
     print("✅ FIXED: Force reset option in change password endpoint")
-    print("✅ FIXED: Logout route conflict (single unified logout)")
-    print("✅ FIXED: Change password route conflict (single function)")
+    print("✅ FIXED: Logout route conflict - SINGLE unified logout function")
+    print("✅ FIXED: API logout endpoint for backward compatibility")
+    print("✅ FIXED: Change password route conflict - single function")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
