@@ -2434,7 +2434,7 @@ def login_user():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# ================= SINGLE LOGOUT FUNCTION (FIXED CONFLICT) =================
+# ================= SINGLE LOGOUT FUNCTION =================
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     """Handle both GET and POST logout requests - unified logout function"""
@@ -2602,9 +2602,10 @@ def check_password_reset():
         print(f"❌ Password reset check error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ================= CHANGE PASSWORD PAGE =================
+# ================= CHANGE PASSWORD PAGE (SINGLE FUNCTION) =================
 @app.route('/change-password', methods=['GET'])
 def change_password_page():
+    """Single change password page function"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4954,17 +4955,6 @@ def notifications_page():
 def missing_documents_page():
     return render_template('admin_missing_docs.html')
 
-@app.route('/change-password', methods=['GET'])
-def change_password_page():
-    if 'user_id' not in session:
-        return redirect('/login')
-    
-    user_role = session.get('role', '').upper()
-    if user_role != 'STUDENT':
-        return redirect('/')
-    
-    return render_template('change_password.html')
-
 # ================= UPLOADS SERVING =================
 @app.route('/uploads/<path:filename>')
 @login_required
@@ -5170,6 +5160,7 @@ if __name__ == '__main__':
     print("✅ FIXED: New users created with requires_password_reset = TRUE")
     print("✅ FIXED: Force reset option in change password endpoint")
     print("✅ FIXED: Logout route conflict (single unified logout)")
+    print("✅ FIXED: Change password route conflict (single function)")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
