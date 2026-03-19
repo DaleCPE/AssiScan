@@ -2434,25 +2434,10 @@ def login_user():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/logout', methods=['POST'])
-@login_required
-def logout_user():
-    try:
-        session_token = session.get('session_token')
-        if session_token:
-            logout_session(session_token)
-        
-        session.clear()
-        
-        return jsonify({
-            "status": "success",
-            "message": "Logged out successfully"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+# ================= SINGLE LOGOUT FUNCTION (FIXED CONFLICT) =================
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
+    """Handle both GET and POST logout requests - unified logout function"""
     print("🔍 /logout route accessed")
     
     session_token = session.get('session_token')
@@ -2461,8 +2446,14 @@ def logout():
     
     session.clear()
     
-    print("✅ Session cleared, redirecting to login page")
-    return redirect('/login')
+    # Check if it's an API request (POST with JSON) or browser request (GET)
+    if request.method == 'POST' and request.is_json:
+        return jsonify({
+            "status": "success",
+            "message": "Logged out successfully"
+        })
+    else:
+        return redirect('/login')
 
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
@@ -4842,9 +4833,13 @@ def index():
     
     user_role = user_role.upper()
     
-    # ✅ FIXED: Students go to dashboard, not my-records
+    # ✅ FIXED: Students go to dashboard with error handling
     if user_role == 'STUDENT':
-        return render_template('student_dashboard.html')  # ← CHANGED TO DASHBOARD
+        try:
+            return render_template('student_dashboard.html')
+        except Exception as e:
+            print(f"⚠️ student_dashboard.html not found, using student_records.html: {e}")
+            return render_template('student_records.html')
     elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/admin/dashboard')
     else:
@@ -4880,15 +4875,6 @@ def login():
     
     elif request.method == 'POST':
         return redirect('/api/login')
-
-@app.route('/logout', methods=['GET', 'POST'])
-def logout():
-    session_token = session.get('session_token')
-    if session_token:
-        logout_session(session_token)
-    
-    session.clear()
-    return redirect('/login')
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -5148,6 +5134,27 @@ def debug_goodmoral(record_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ================= DEBUG TEMPLATES ENDPOINT =================
+@app.route('/debug-templates', methods=['GET'])
+def debug_templates():
+    """Debug endpoint to check available templates"""
+    templates_dir = os.path.join(BASE_DIR, 'templates')
+    available_templates = []
+    
+    if os.path.exists(templates_dir):
+        available_templates = os.listdir(templates_dir)
+    
+    return jsonify({
+        'templates_folder': templates_dir,
+        'exists': os.path.exists(templates_dir),
+        'templates': available_templates,
+        'session': {
+            'user_id': session.get('user_id'),
+            'role': session.get('role'),
+            'requires_password_reset': session.get('requires_password_reset')
+        }
+    })
+
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
@@ -5162,6 +5169,7 @@ if __name__ == '__main__':
     print("✅ FIXED: /api/check-session returns requires_password_reset")
     print("✅ FIXED: New users created with requires_password_reset = TRUE")
     print("✅ FIXED: Force reset option in change password endpoint")
+    print("✅ FIXED: Logout route conflict (single unified logout)")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
