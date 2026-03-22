@@ -4955,6 +4955,32 @@ def admin_colleges():
     
     return render_template('admin_colleges.html')
 
+# ================= ADMIN RECORDS ROUTE (FIXED) =================
+@app.route('/admin/records')
+def admin_records():
+    """Admin records page - shows all student records (history.html)"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
+        return redirect('/')
+    
+    return render_template('history.html')
+
+# ================= HISTORY PAGE ROUTE (FOR BACKWARD COMPATIBILITY) =================
+@app.route('/history.html')
+def history_page():
+    """History page - shows all student records"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_role = session.get('role', '').upper()
+    if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
+        return redirect('/')
+    
+    return render_template('history.html')
+
 @app.route('/my-records')
 @login_required
 def my_records_page():
@@ -5173,7 +5199,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & LOGOUT")
+    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & ADMIN RECORDS")
     print("="*60)
     print("✅ FIXED: Home redirects to student_dashboard.html")
     print("✅ FIXED: Password reset flag persists in session")
@@ -5181,8 +5207,8 @@ if __name__ == '__main__':
     print("✅ FIXED: New users created with requires_password_reset = TRUE")
     print("✅ FIXED: Force reset option in change password endpoint")
     print("✅ FIXED: Logout route conflict - SINGLE unified logout function")
-    print("✅ FIXED: API logout endpoint for backward compatibility")
-    print("✅ FIXED: Change password route conflict - single function")
+    print("✅ FIXED: Admin Records link now points to /admin/records -> history.html")
+    print("✅ FIXED: /history.html route also available for backward compatibility")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
