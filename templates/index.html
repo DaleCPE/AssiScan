@@ -1293,12 +1293,12 @@
                 </div>
                 
                 <!-- Good Moral Status Display -->
-                <div id="goodmoralStatusDisplay" class="goodmoral-status-container">
+                <div id="goodmoralStatusDisplay" class="goodmoral-status-container" style="display: none;">
                     <div class="goodmoral-header">
                         <div class="goodmoral-title">
                             <i class="fas fa-shield-alt"></i> GOOD MORAL STATUS
                         </div>
-                        <div id="goodmoralScoreDisplay" class="goodmoral-score score-excellent">0</div>
+                        <div id="goodmoralScoreDisplay" class="goodmoral-score">0</div>
                     </div>
                     <div class="goodmoral-details">
                         <strong>Status:</strong> <span id="goodmoralStatusText">Not Analyzed</span><br>
@@ -1855,70 +1855,79 @@
         // ==================== LOAD STUDENT FOR SCANNING ====================
         async function loadStudentForScan(userId) {
             try {
-                const response = await fetch(`/api/admin/scan/${userId}`, {
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
-                });
+                const response = await fetch(`/api/admin/scan/${userId}`);
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    const student = data.student;
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Expected JSON but got:', text.substring(0, 500));
+                    throw new Error('Server did not return JSON');
+                }
+                
+                const data = await response.json();
+                const student = data.student;
+                
+                // Display student info in sidebar
+                document.getElementById('scanStudentName').textContent = student.full_name || 'Unknown Student';
+                document.getElementById('scanStudentId').textContent = `ID: ${student.id}`;
+                document.getElementById('scanningStudentInfo').style.display = 'block';
+                
+                // If there's an existing record, load it
+                if (student.record_id) {
+                    currentRecordId = student.record_id;
+                    populateFormWithRecord(student);
                     
-                    // Display student info in sidebar
-                    document.getElementById('scanStudentName').textContent = student.full_name || 'Unknown Student';
-                    document.getElementById('scanStudentId').textContent = `ID: ${student.id}`;
-                    document.getElementById('scanningStudentInfo').style.display = 'block';
+                    // Load document paths
+                    psaImagePath = student.image_path || "";
+                    f137ImagePath = student.form137_path || "";
+                    goodmoralImagePath = student.goodmoral_path || "";
+                    honorableDismissalImagePath = student.honorable_dismissal_path || "";
+                    transferCredentialsImagePath = student.transfer_credentials_path || "";
                     
-                    // If there's an existing record, load it
-                    if (student.record_id) {
-                        currentRecordId = student.record_id;
-                        populateFormWithRecord(student);
+                    // Load transferee status
+                    if (student.is_transferee) {
+                        document.getElementById('isTransferee').checked = true;
+                        toggleTransfereeFields();
                         
-                        // Load document paths
-                        psaImagePath = student.image_path || "";
-                        f137ImagePath = student.form137_path || "";
-                        goodmoralImagePath = student.goodmoral_path || "";
-                        honorableDismissalImagePath = student.honorable_dismissal_path || "";
-                        transferCredentialsImagePath = student.transfer_credentials_path || "";
-                        
-                        // Load transferee status
-                        if (student.is_transferee) {
-                            document.getElementById('isTransferee').checked = true;
-                            toggleTransfereeFields();
-                            
-                            document.getElementById('previousSchool').value = student.previous_school || '';
-                            document.getElementById('previousSchoolAddress').value = student.previous_school_address || '';
-                            document.getElementById('previousSchoolYear').value = student.previous_school_year || '';
-                            document.getElementById('yearLevelToEnroll').value = student.year_level_to_enroll || '';
-                        }
-                        
-                        // Load document status
-                        if (student.document_status) {
-                            documentStatus = student.document_status;
-                        }
-                        
-                        recordStatus = student.status || "INCOMPLETE";
-                        
-                        // Load Good Moral data
-                        if (student.goodmoral_analysis) {
-                            goodmoralAnalysis = student.goodmoral_analysis;
-                            goodmoralData = {
-                                score: student.goodmoral_score || 0,
-                                status: student.disciplinary_status || "UNKNOWN",
-                                hasIssues: student.has_disciplinary_record || false,
-                                disciplinaryDetails: student.disciplinary_details || ""
-                            };
-                            displayGoodmoralStatus();
-                        }
-                        
-                        updateDocumentStatusUI();
-                        updateRecordStatusUI();
+                        document.getElementById('previousSchool').value = student.previous_school || '';
+                        document.getElementById('previousSchoolAddress').value = student.previous_school_address || '';
+                        document.getElementById('previousSchoolYear').value = student.previous_school_year || '';
+                        document.getElementById('yearLevelToEnroll').value = student.year_level_to_enroll || '';
                     }
-                } else {
-                    console.error('Failed to load student for scan');
-                    alert('Failed to load student data');
+                    
+                    // Load document status
+                    if (student.document_status) {
+                        documentStatus = student.document_status;
+                    }
+                    
+                    recordStatus = student.status || "INCOMPLETE";
+                    
+                    // Load Good Moral data
+                    if (student.goodmoral_analysis) {
+                        goodmoralAnalysis = student.goodmoral_analysis;
+                        goodmoralData = {
+                            score: student.goodmoral_score || 0,
+                            status: student.disciplinary_status || "UNKNOWN",
+                            hasIssues: student.has_disciplinary_record || false,
+                            disciplinaryDetails: student.disciplinary_details || ""
+                        };
+                        displayGoodmoralStatus();
+                    }
+                    
+                    updateDocumentStatusUI();
+                    updateRecordStatusUI();
                 }
             } catch (error) {
                 console.error('Error loading student for scan:', error);
+                alert('Failed to load student data: ' + error.message);
             }
         }
 
@@ -2195,29 +2204,24 @@
             container.style.display = 'block';
             
             scoreElement.textContent = goodmoralData.score;
-            scoreElement.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
             
             if (goodmoralData.score >= 90) {
-                scoreElement.classList.add('score-excellent');
                 statusElement.textContent = "EXCELLENT";
                 recordElement.textContent = "Good record - No past incidents";
                 warningElement.style.display = 'none';
                 successElement.style.display = 'flex';
             } else if (goodmoralData.score >= 70) {
-                scoreElement.classList.add('score-good');
                 statusElement.textContent = "GOOD";
                 recordElement.textContent = "Good record - No past incidents";
                 warningElement.style.display = 'none';
                 successElement.style.display = 'flex';
             } else if (goodmoralData.score >= 50) {
-                scoreElement.classList.add('score-fair');
                 statusElement.textContent = "FAIR";
                 recordElement.textContent = goodmoralData.disciplinaryDetails || "Some concerns noted";
                 warningText.textContent = goodmoralData.disciplinaryDetails || "Some concerns noted";
                 warningElement.style.display = 'flex';
                 successElement.style.display = 'none';
             } else {
-                scoreElement.classList.add('score-poor');
                 statusElement.textContent = "POOR";
                 recordElement.textContent = goodmoralData.disciplinaryDetails || "Significant concerns";
                 warningText.textContent = goodmoralData.disciplinaryDetails || "Significant concerns";
@@ -2271,9 +2275,24 @@
             try {
                 const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                    body: formData
                 });
+                
+                // Check if response is OK
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('Response status:', res.status);
+                    console.error('Response text:', text.substring(0, 500));
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                
+                // Check content type
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    console.error('Expected JSON but got:', text.substring(0, 500));
+                    throw new Error('Server did not return JSON');
+                }
                 
                 const data = await res.json();
                 document.getElementById('psaLaser').style.display = 'none';
@@ -2300,11 +2319,13 @@
                     
                 } else {
                     document.getElementById('psaStatus').innerText = "❌ Failed";
+                    alert(data.error || 'Failed to upload PSA');
                 }
             } catch (e) {
                 console.error("PSA processing error:", e);
                 document.getElementById('psaLaser').style.display = 'none';
                 document.getElementById('psaStatus').innerText = "❌ Error";
+                alert('Error processing PSA: ' + e.message);
             }
         }
 
@@ -2327,9 +2348,24 @@
             try {
                 const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                    body: formData
                 });
+                
+                // Check if response is OK
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('Response status:', res.status);
+                    console.error('Response text:', text.substring(0, 500));
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                
+                // Check content type
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    console.error('Expected JSON but got:', text.substring(0, 500));
+                    throw new Error('Server did not return JSON');
+                }
                 
                 const data = await res.json();
                 document.getElementById('f137Laser').style.display = 'none';
@@ -2350,11 +2386,13 @@
                     
                 } else {
                     document.getElementById('f137Status').innerText = "❌ Failed";
+                    alert(data.error || 'Failed to upload Form 137');
                 }
             } catch (e) {
                 console.error("Form 137 processing error:", e);
                 document.getElementById('f137Laser').style.display = 'none';
                 document.getElementById('f137Status').innerText = "❌ Error";
+                alert('Error processing Form 137: ' + e.message);
             }
         }
 
@@ -2377,9 +2415,24 @@
             try {
                 const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                    body: formData
                 });
+                
+                // Check if response is OK
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('Response status:', res.status);
+                    console.error('Response text:', text.substring(0, 500));
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                
+                // Check content type
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    console.error('Expected JSON but got:', text.substring(0, 500));
+                    throw new Error('Server did not return JSON');
+                }
                 
                 const data = await res.json();
                 document.getElementById('goodmoralLaser').style.display = 'none';
@@ -2404,11 +2457,13 @@
                     
                 } else {
                     document.getElementById('goodmoralStatus').innerText = "❌ Failed";
+                    alert(data.error || 'Failed to upload Good Moral');
                 }
             } catch (e) {
                 console.error("Good Moral processing error:", e);
                 document.getElementById('goodmoralLaser').style.display = 'none';
                 document.getElementById('goodmoralStatus').innerText = "❌ Error";
+                alert('Error processing Good Moral: ' + e.message);
             }
         }
 
@@ -2457,9 +2512,10 @@
             try {
                 const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                    body: formData
                 });
+                
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 
                 const data = await res.json();
                 document.getElementById('honorableDismissalLaser').style.display = 'none';
@@ -2470,10 +2526,12 @@
                     updateTransfereeDocumentStatus();
                 } else {
                     document.getElementById('honorableDismissalStatus').innerText = "❌ Failed";
+                    alert(data.error || 'Failed to upload Honorable Dismissal');
                 }
             } catch (e) {
                 document.getElementById('honorableDismissalLaser').style.display = 'none';
                 document.getElementById('honorableDismissalStatus').innerText = "❌ Error";
+                alert('Error: ' + e.message);
             }
         }
 
@@ -2496,9 +2554,10 @@
             try {
                 const res = await fetch(`/api/admin/scan/${scanUserId}/documents`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': localStorage.getItem('session_token') }
+                    body: formData
                 });
+                
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 
                 const data = await res.json();
                 document.getElementById('transferCredentialsLaser').style.display = 'none';
@@ -2509,10 +2568,12 @@
                     updateTransfereeDocumentStatus();
                 } else {
                     document.getElementById('transferCredentialsStatus').innerText = "❌ Failed";
+                    alert(data.error || 'Failed to upload Transfer Credentials');
                 }
             } catch (e) {
                 document.getElementById('transferCredentialsLaser').style.display = 'none';
                 document.getElementById('transferCredentialsStatus').innerText = "❌ Error";
+                alert('Error: ' + e.message);
             }
         }
 
@@ -2599,11 +2660,12 @@
                 const res = await fetch(`/api/admin/scan/${scanUserId}/save`, {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': localStorage.getItem('session_token')
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(recordData)
                 });
+                
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 
                 const result = await res.json();
                 
@@ -2627,7 +2689,7 @@
             } catch(e) {
                 console.error('Save Error:', e);
                 const statusEl = document.getElementById('saveStatus');
-                statusEl.textContent = '❌ Error saving record';
+                statusEl.textContent = '❌ Error saving record: ' + e.message;
                 statusEl.className = 'save-status error';
                 statusEl.style.display = 'block';
                 
@@ -2652,16 +2714,11 @@
             
             const newRow = table.insertRow();
             newRow.innerHTML = `
-                <td><input type="text" class="sib-name" placeholder="Full name" value="${name}"></td>
+                <td><input type="text" class="sib-name" placeholder="Full name" value="${name.replace(/"/g, '&quot;')}"></td>
                 <td><input type="number" class="sib-age" placeholder="Age" value="${age}"></td>
-                <td><input type="text" class="sib-occ" placeholder="School/Employer" value="${occupation}"></td>
-                <td><button type="button" class="sibling-remove-btn" onclick="this.closest('tr').remove()">×</button></td>
+                <td><input type="text" class="sib-occ" placeholder="School/Employer" value="${occupation.replace(/"/g, '&quot;')}"></td>
+                <td class="action-column"><button type="button" class="sibling-remove-btn" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
             `;
-        }
-
-        function removeSiblingRow(button) {
-            const row = button.closest('tr');
-            if (row) row.remove();
         }
 
         // ==================== COLLEGE FUNCTIONS ====================
@@ -2797,6 +2854,11 @@
             localStorage.clear();
             window.location.href = '/login';
         }
+        
+        // Add spin animation
+        const style = document.createElement('style');
+        style.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
