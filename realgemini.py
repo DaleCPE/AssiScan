@@ -2265,6 +2265,33 @@ def log_request_info():
         print(f"📱 IP: {request.remote_addr}")
         print(f"{'='*60}")
 
+# ================= ERROR HANDLERS =================
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors - return JSON for API requests, HTML for others"""
+    print(f"❌ 404 Error: {request.path}")
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "API endpoint not found", "path": request.path}), 404
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors - return JSON for API requests, HTML for others"""
+    print(f"❌ 500 Internal server error: {error}")
+    traceback.print_exc()
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Internal server error", "message": str(error)}), 500
+    return render_template('500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all exceptions - return JSON for API requests"""
+    print(f"❌ Unhandled exception: {e}")
+    traceback.print_exc()
+    if request.path.startswith('/api/'):
+        return jsonify({"error": str(e)}), 500
+    return render_template('error.html', error=str(e)), 500
+
 # ================= TEST GEMINI ENDPOINT =================
 @app.route('/test-gemini', methods=['GET'])
 def test_gemini():
@@ -5192,6 +5219,16 @@ def debug_templates():
         }
     })
 
+# ================= DEBUG TEST JSON ENDPOINT =================
+@app.route('/debug/test-json', methods=['GET'])
+def test_json():
+    """Test endpoint to verify JSON responses work"""
+    return jsonify({
+        "status": "success",
+        "message": "JSON response is working",
+        "timestamp": datetime.now().isoformat()
+    })
+
 # ================= APPLICATION START =================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
@@ -5199,7 +5236,7 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & ADMIN RECORDS")
+    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & ERROR HANDLERS")
     print("="*60)
     print("✅ FIXED: Home redirects to student_dashboard.html")
     print("✅ FIXED: Password reset flag persists in session")
@@ -5208,7 +5245,9 @@ if __name__ == '__main__':
     print("✅ FIXED: Force reset option in change password endpoint")
     print("✅ FIXED: Logout route conflict - SINGLE unified logout function")
     print("✅ FIXED: Admin Records link now points to /admin/records -> history.html")
-    print("✅ FIXED: /history.html route also available for backward compatibility")
+    print("✅ FIXED: Error handlers for 404, 500, and exceptions")
+    print("✅ FIXED: JSON response validation for API endpoints")
+    print("✅ FIXED: Debug endpoints for troubleshooting")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
