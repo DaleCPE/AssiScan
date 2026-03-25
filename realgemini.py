@@ -45,7 +45,7 @@ if GEMINI_API_KEY:
             transport='rest'
         )
         print("✅ Google Generative AI Configured with REST transport")
-        print("✅ Using ULTRA OPTIMIZED Gemini 2.5 Flash with memory management")
+        print("✅ Using OPTIMIZED Gemini 2.5 Flash with memory management")
     except Exception as e:
         print(f"⚠️ Error configuring Gemini: {e}")
 else:
@@ -82,7 +82,7 @@ if not os.path.exists(ARCHIVE_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHIVE_FOLDER'] = ARCHIVE_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20MB max
 
 # --- USER ROLES ---
 ROLES = {
@@ -275,9 +275,9 @@ def get_db_connection():
             if DATABASE_URL:
                 if DATABASE_URL.startswith("postgres://"):
                     DATABASE_URL_FIXED = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-                    conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require')
+                    conn = psycopg2.connect(DATABASE_URL_FIXED, sslmode='require', connect_timeout=10)
                 else:
-                    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+                    conn = psycopg2.connect(DATABASE_URL, sslmode='require', connect_timeout=10)
                 print(f"✅ Database connection successful (attempt {attempt + 1})")
                 return conn
             else:
@@ -2020,38 +2020,27 @@ def restore_from_archive(archive_path):
         print(f"❌ Error restoring file from archive: {e}")
         return archive_path
 
-# ================= ULTRA OPTIMIZED EXTRACT WITH GEMINI 2.5 FLASH =================
-def extract_with_gemini(prompt, images):
+# ================= OPTIMIZED EXTRACT WITH GEMINI =================
+def extract_with_gemini(prompt, images, timeout=12):
     """
-    Extract text from images using ONLY Gemini 2.5 Flash
-    ULTRA OPTIMIZED - compresses images, limits to first 3 pages only, and manages memory
+    Extract text from images using Gemini with timeout
     """
     try:
         if not GEMINI_API_KEY:
-            raise Exception("GEMINI_API_KEY not configured")
+            return None
         
-        # ONLY use Gemini 2.5 Flash
-        model_name = "gemini-2.5-flash"
+        # Limit to 1 image only for speed
+        if len(images) > 1:
+            images = images[:1]
         
-        print(f"🤖 Using ULTRA OPTIMIZED model: {model_name}")
-        
-        # LIMIT TO FIRST 3 IMAGES ONLY (para tipid sa memory)
-        if len(images) > 3:
-            print(f"⚠️ Too many images ({len(images)}), limiting to first 3 only for memory efficiency")
-            images = images[:3]
-        
-        # COMPRESS images to reduce memory usage
-        compressed_images = []
-        for i, img in enumerate(images):
-            print(f"  📦 Compressing image {i+1}/{len(images)}...")
+        # Compress image heavily
+        compressed = []
+        for img in images:
+            # Resize to max 500px for faster processing
+            if img.width > 500 or img.height > 500:
+                img.thumbnail((500, 500), Image.Resampling.LANCZOS)
             
-            # Resize if too large (max 800px para mas tipid)
-            max_size = 800
-            if img.width > max_size or img.height > max_size:
-                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-                print(f"     Resized to {img.width}x{img.height}")
-            
-            # Convert to RGB if necessary (remove alpha channel)
+            # Convert to RGB
             if img.mode in ('RGBA', 'LA', 'P'):
                 rgb_img = Image.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -2059,83 +2048,206 @@ def extract_with_gemini(prompt, images):
                 rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                 img = rgb_img
             
-            # Compress with high compression
+            # Compress with lower quality
             img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format='JPEG', quality=70, optimize=True)
+            img.save(img_byte_arr, format='JPEG', quality=50, optimize=True)
             img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-            
-            compressed_images.append({
-                "inline_data": {
-                    "mime_type": "image/jpeg",  # Use JPEG instead of PNG for smaller size
-                    "data": img_base64
-                }
-            })
-            
-            # Clear memory
+            compressed.append(img_base64)
             img_byte_arr.close()
-            
-            # Force garbage collection
-            if i % 2 == 0:
-                gc.collect()
         
-        # Direct REST API call
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+        # API call with timeout
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
         
         payload = {
             "contents": [{
-                "parts": [{"text": prompt}] + compressed_images
+                "parts": [{"text": prompt}] + [{"inline_data": {"mime_type": "image/jpeg", "data": img_base64}} for img_base64 in compressed]
             }],
             "generationConfig": {
                 "temperature": 0.1,
-                "maxOutputTokens": 1024  # Binawasan para tipid
-            },
-            "safetySettings": [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-            ]
+                "maxOutputTokens": 256
+            }
         }
         
-        # Clear compressed images from memory before API call
-        compressed_images.clear()
-        gc.collect()
-        
-        response = requests.post(
-            url,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=60
-        )
+        response = requests.post(url, json=payload, timeout=timeout)
         
         if response.status_code == 200:
             result = response.json()
             if 'candidates' in result and len(result['candidates']) > 0:
-                text = result['candidates'][0]['content']['parts'][0]['text']
-                print(f"✅ Success with {model_name}")
-                
-                # Clear response to free memory
-                result.clear()
-                
-                return text
-            else:
-                print(f"⚠️ No candidates in response")
-                raise Exception("No candidates in response")
-        else:
-            print(f"❌ {model_name} failed with status {response.status_code}")
-            raise Exception(f"API error: {response.status_code}")
-            
+                return result['candidates'][0]['content']['parts'][0]['text']
+        
+        return None
+        
+    except requests.exceptions.Timeout:
+        print(f"⚠️ Gemini API timeout after {timeout}s")
+        return None
     except Exception as e:
-        print(f"❌ Extraction failed: {e}")
-        traceback.print_exc()
-        raise Exception(f"Extraction failed: {str(e)[:200]}")
+        print(f"⚠️ Gemini extraction error: {e}")
+        return None
     finally:
-        # Force garbage collection
         gc.collect()
 
-def extract_direct_rest_api_fixed(prompt, images):
-    """Fallback function - same as extract_with_gemini"""
-    return extract_with_gemini(prompt, images)
+# ================= PROCESS EXTRACTIONS =================
+def process_psa_extraction(images, paths):
+    """Process PSA extraction - working"""
+    try:
+        if not images:
+            return None
+            
+        prompt = """Extract information from this PSA Birth Certificate.
+        
+        Return ONLY a valid JSON object with the following structure:
+        {
+            "Name": "Full Name Here",
+            "Sex": "Male or Female",
+            "Birthdate": "YYYY-MM-DD format",
+            "PlaceOfBirth": "City/Municipality, Province",
+            "BirthOrder": "1st, 2nd, 3rd, etc",
+            "Mother_MaidenName": "Mother's Maiden Name",
+            "Father_Name": "Father's Full Name"
+        }
+        
+        If unsure, use "Not Found". Return ONLY the JSON."""
+        
+        response_text = extract_with_gemini(prompt, images, timeout=15)
+        
+        if not response_text:
+            return None
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        gc.collect()
+        return data
+        
+    except Exception as e:
+        print(f"❌ PSA extraction error: {e}")
+        return None
+
+def process_form137_extraction(images, paths):
+    """Process Form 137 extraction - optimized with specific fields"""
+    try:
+        if not images:
+            return None
+            
+        prompt = """Extract the following information from this Philippine Form 137 / SF10 (Student Permanent Record):
+
+1. LRN (Learner Reference Number) - usually a 12-digit number
+2. School Name - the name of the school where the student studied
+3. School Address - the address of the school
+4. General Average - the final general average grade
+
+Return ONLY a valid JSON object with these exact keys:
+{
+    "lrn": "12-digit number or 'Not Found'",
+    "school_name": "full school name or 'Not Found'",
+    "school_address": "full address or 'Not Found'",
+    "final_general_average": "grade number or 'Not Found'"
+}
+
+If a field is not found, use "Not Found". Return ONLY the JSON, no other text."""
+        
+        response_text = extract_with_gemini(prompt, images, timeout=12)
+        
+        if not response_text:
+            return None
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        gc.collect()
+        return data
+        
+    except Exception as e:
+        print(f"❌ Form 137 extraction error: {e}")
+        return None
+
+def process_goodmoral_extraction(images, paths):
+    """Process Good Moral extraction - with specific fields"""
+    try:
+        if not images:
+            return None
+            
+        prompt = """Extract the following information from this Philippine Good Moral Certificate:
+
+1. School Name - the name of the school that issued the certificate
+2. School Address - the address of the school
+3. Issuing Officer - the name of the person who signed the certificate (counselor, principal, etc.)
+4. Student Name - the name of the student
+5. Disciplinary Record - check if there is any mention of disciplinary issues (true/false)
+6. Remarks - any additional notes or remarks
+
+Return ONLY a valid JSON object with these exact keys:
+{
+    "issuing_school": "school name or 'Not Found'",
+    "school_address": "school address or 'Not Found'",
+    "issuing_officer": "officer name or 'Not Found'",
+    "student_name": "student name or 'Not Found'",
+    "has_disciplinary_record": false,
+    "disciplinary_details": "",
+    "remarks": ""
+}
+
+If a field is not found, use "Not Found". Return ONLY the JSON, no other text."""
+        
+        response_text = extract_with_gemini(prompt, images, timeout=12)
+        
+        if not response_text:
+            return None
+        
+        cleaned_text = response_text.strip()
+        
+        if cleaned_text.startswith('```'):
+            lines = cleaned_text.split('\n')
+            if lines[0].startswith('```'):
+                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+        
+        start = cleaned_text.find('{')
+        end = cleaned_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            return None
+            
+        json_str = cleaned_text[start:end]
+        data = json.loads(json_str)
+        
+        # Calculate score
+        score, status = calculate_goodmoral_score(data)
+        
+        data['goodmoral_score'] = score
+        data['disciplinary_status'] = status
+        
+        gc.collect()
+        return data
+        
+    except Exception as e:
+        print(f"❌ Good Moral extraction error: {e}")
+        return None
 
 def calculate_goodmoral_score(analysis_data):
     score = 100
@@ -2145,15 +2257,17 @@ def calculate_goodmoral_score(analysis_data):
     
     serious_violations = ['suspended', 'expelled', 'disciplinary action', 'major violation']
     remarks = analysis_data.get('remarks', '').lower()
+    details = analysis_data.get('disciplinary_details', '').lower()
+    combined = remarks + details
     
     for violation in serious_violations:
-        if violation in remarks:
+        if violation in combined:
             score -= 30
             break
     
     conditional_phrases = ['conditional', 'subject to', 'pending', 'under review']
     for phrase in conditional_phrases:
-        if phrase in remarks:
+        if phrase in combined:
             score -= 20
             break
     
@@ -2272,7 +2386,7 @@ def not_found_error(error):
     print(f"❌ 404 Error: {request.path}")
     if request.path.startswith('/api/'):
         return jsonify({"error": "API endpoint not found", "path": request.path}), 404
-    return render_template('404.html'), 404
+    return "Page not found", 404
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -2281,7 +2395,7 @@ def internal_error(error):
     traceback.print_exc()
     if request.path.startswith('/api/'):
         return jsonify({"error": "Internal server error", "message": str(error)}), 500
-    return render_template('500.html'), 500
+    return "Internal server error", 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -2290,18 +2404,19 @@ def handle_exception(e):
     traceback.print_exc()
     if request.path.startswith('/api/'):
         return jsonify({"error": str(e)}), 500
-    return render_template('error.html', error=str(e)), 500
+    return "Internal server error", 500
 
 # ================= TEST GEMINI ENDPOINT =================
 @app.route('/test-gemini', methods=['GET'])
 def test_gemini():
     return jsonify({
         "status": "success",
-        "message": "Using ULTRA OPTIMIZED Gemini 2.5 Flash with memory management",
+        "message": "Using OPTIMIZED Gemini 2.5 Flash with memory management",
         "features": [
-            "Image compression (JPEG, 70% quality)",
-            "Max 3 images only",
-            "Resize to 800px max",
+            "Image compression (JPEG, 50% quality)",
+            "Max 1 image per request",
+            "Resize to 500px max",
+            "12 second timeout",
             "Memory cleanup after each request"
         ]
     })
@@ -2426,7 +2541,7 @@ def login_user():
         session['role'] = user['role'].upper()
         session['email'] = user['email']
         session['session_token'] = session_token
-        session['requires_password_reset'] = user['requires_password_reset']  # ← IMPORTANT
+        session['requires_password_reset'] = user['requires_password_reset']
         
         create_notification(
             user_id=user['id'],
@@ -2443,7 +2558,7 @@ def login_user():
             'full_name': user['full_name'],
             'email': user['email'],
             'role': user['role'].upper(),
-            'requires_password_reset': user['requires_password_reset'],  # ← IMPORTANT
+            'requires_password_reset': user['requires_password_reset'],
             'college_id': user['college_id'],
             'program_id': user['program_id']
         }
@@ -2467,37 +2582,29 @@ def logout():
     """Handle both GET and POST logout requests - unified logout function"""
     print("🔍 /logout route accessed")
     
-    # Kunin ang session token bago i-clear
     session_token = session.get('session_token')
     user_id = session.get('user_id')
     
     print(f"📝 Logging out user ID: {user_id}")
     
-    # Invalidate session sa database
     if session_token:
         logout_session(session_token)
         print(f"✅ Session {session_token} invalidated")
     
-    # Clear Flask session
     session.clear()
     print("✅ Flask session cleared")
     
-    # Check if it's an API request (POST with JSON) or browser request (GET)
     if request.method == 'POST':
-        # Para sa AJAX/fetch requests
         if request.is_json:
             return jsonify({
                 "status": "success",
                 "message": "Logged out successfully"
             })
         else:
-            # Para sa form posts
             return redirect('/login')
     else:
-        # Para sa direct GET request (clicking logout link)
         return redirect('/login')
 
-# Optional: API logout endpoint for backward compatibility
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
     """API endpoint for logout - calls the main logout function"""
@@ -2542,7 +2649,7 @@ def check_session():
                 'full_name': user['full_name'],
                 'email': user['email'],
                 'role': user['role'].upper(),
-                'requires_password_reset': user['requires_password_reset']  # ← IMPORTANT
+                'requires_password_reset': user['requires_password_reset']
             },
             "unread_notifications": unread_count,
             "permissions": PERMISSIONS.get(user['role'].upper(), [])
@@ -2589,7 +2696,6 @@ def change_password():
             conn.close()
             return jsonify({"error": "User not found"}), 404
         
-        # Allow force reset without current password check
         if not force_reset:
             if not verify_password(user['password_hash'], current_password):
                 conn.close()
@@ -2605,7 +2711,7 @@ def change_password():
         conn.commit()
         conn.close()
         
-        session['requires_password_reset'] = False  # ← IMPORTANT
+        session['requires_password_reset'] = False
         
         create_notification(
             user_id=session['user_id'],
@@ -2650,10 +2756,9 @@ def check_password_reset():
         print(f"❌ Password reset check error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ================= CHANGE PASSWORD PAGE (SINGLE FUNCTION) =================
+# ================= CHANGE PASSWORD PAGE =================
 @app.route('/change-password', methods=['GET'])
 def change_password_page():
-    """Single change password page function"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -2663,7 +2768,7 @@ def change_password_page():
     
     return render_template('change_password.html')
 
-# ================= USER MANAGEMENT ROUTES (SUPER ADMIN ONLY) =================
+# ================= USER MANAGEMENT ROUTES =================
 @app.route('/api/users', methods=['GET'])
 @login_required
 @permission_required('manage_users')
@@ -2755,7 +2860,7 @@ def create_user():
             college_id,
             program_id,
             data.get('is_active', True),
-            True,  # ← SET TO TRUE FOR NEW USERS
+            True,
             session['user_id'],
             data.get('email_notifications', True),
             data.get('mobile_number')
@@ -2779,7 +2884,7 @@ def create_user():
             'is_active': new_user[5],
             'created_at': new_user[6].isoformat() if new_user[6] else None,
             'temp_password': temp_password,
-            'requires_password_reset': True  # ← IMPORTANT
+            'requires_password_reset': True
         }
         
         return jsonify({
@@ -2901,7 +3006,7 @@ def update_user(user_id):
             'program_id': updated_user['program_id'],
             'email_notifications': updated_user['email_notifications'],
             'mobile_number': updated_user['mobile_number'],
-            'requires_password_reset': updated_user['requires_password_reset'],  # ← IMPORTANT
+            'requires_password_reset': updated_user['requires_password_reset'],
             'updated_at': updated_user['updated_at'].isoformat() if updated_user['updated_at'] else None
         }
         
@@ -3605,7 +3710,7 @@ def get_colleges_dropdown():
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= GET STUDENT RECORDS (ONE PER STUDENT) =================
+# ================= GET STUDENT RECORDS =================
 @app.route('/api/my-records', methods=['GET'])
 @login_required
 @role_required('STUDENT')
@@ -3799,7 +3904,7 @@ def get_student_documents(record_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= GET ALL RECORDS (ONE PER USER) =================
+# ================= GET ALL RECORDS =================
 @app.route('/get-records', methods=['GET'])
 @login_required
 def get_records():
@@ -3972,7 +4077,7 @@ def get_archived_records():
             conn.close()
         return jsonify({"records": [], "error": str(e)}), 500
 
-# ================= NEW: ADMIN STUDENT LIST WITH SCAN BUTTONS =================
+# ================= ADMIN STUDENT LIST =================
 @app.route('/api/admin/students', methods=['GET'])
 @login_required
 @permission_required('view_all_records')
@@ -4003,7 +4108,6 @@ def get_student_list():
         students = cur.fetchall()
         conn.close()
         
-        # Parse JSON fields
         for student in students:
             if student.get('document_status') and isinstance(student['document_status'], str):
                 try:
@@ -4021,7 +4125,7 @@ def get_student_list():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# ================= NEW: ADMIN SCAN FOR SPECIFIC STUDENT =================
+# ================= ADMIN SCAN FOR SPECIFIC STUDENT =================
 @app.route('/api/admin/scan/<int:user_id>', methods=['GET'])
 @login_required
 @permission_required('scan_documents')
@@ -4034,7 +4138,6 @@ def get_student_for_scan(user_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get student info
         cur.execute("""
             SELECT u.id, u.full_name, u.username, u.email,
                    r.id as record_id, r.*
@@ -4049,7 +4152,6 @@ def get_student_for_scan(user_id):
             conn.close()
             return jsonify({"error": "Student not found"}), 404
         
-        # Parse JSON fields
         if student.get('goodmoral_analysis') and isinstance(student['goodmoral_analysis'], str):
             try:
                 student['goodmoral_analysis'] = json.loads(student['goodmoral_analysis'])
@@ -4079,12 +4181,12 @@ def get_student_for_scan(user_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# ================= NEW: ADMIN SCAN DOCUMENTS FOR STUDENT (FIXED - REMOVED scanned_by) =================
+# ================= ADMIN SCAN DOCUMENTS =================
 @app.route('/api/admin/scan/<int:user_id>/documents', methods=['POST'])
 @login_required
 @permission_required('scan_documents')
 def scan_student_documents(user_id):
-    """Admin scans documents for a specific student - FIXED version without scanned_by column"""
+    """Admin scans documents for a specific student"""
     try:
         if 'doc_type' not in request.form:
             return jsonify({"error": "Document type required"}), 400
@@ -4100,7 +4202,7 @@ def scan_student_documents(user_id):
         if not os.path.exists(student_folder):
             os.makedirs(student_folder, exist_ok=True)
         
-        # Save files
+        # Save files and open images for AI extraction
         saved_paths = []
         pil_images = []
         
@@ -4140,7 +4242,6 @@ def scan_student_documents(user_id):
         db_column = column_map.get(doc_type)
         
         if record:
-            # Update existing record - REMOVED scanned_by and scanned_at
             if db_column:
                 cur.execute(f"SELECT {db_column} FROM records WHERE id = %s", (record[0],))
                 existing = cur.fetchone()[0]
@@ -4163,7 +4264,6 @@ def scan_student_documents(user_id):
             else:
                 record_id = record[0]
         else:
-            # Create new record - REMOVED scanned_by and scanned_at
             cur.execute("""
                 INSERT INTO records (
                     user_id, status
@@ -4172,7 +4272,6 @@ def scan_student_documents(user_id):
             """, (user_id,))
             record_id = cur.fetchone()[0]
             
-            # Update document path
             if db_column:
                 new_path_str = ','.join(saved_paths)
                 cur.execute(f"UPDATE records SET {db_column} = %s WHERE id = %s", 
@@ -4182,14 +4281,13 @@ def scan_student_documents(user_id):
         if doc_type in ['psa', 'form137', 'goodmoral']:
             update_document_status(record_id, doc_type, True)
         
-        # Set needs_review flag if applicable
         if doc_type == 'goodmoral':
             cur.execute("UPDATE records SET needs_review = TRUE WHERE id = %s", (record_id,))
         
         conn.commit()
         conn.close()
         
-        # Process with AI if applicable - using ULTRA OPTIMIZED version
+        # Process with AI if applicable
         extracted_data = None
         if doc_type == 'psa' and pil_images:
             extracted_data = process_psa_extraction(pil_images, saved_paths)
@@ -4213,14 +4311,14 @@ def scan_student_documents(user_id):
     except Exception as e:
         print(f"❌ Error scanning documents: {e}")
         traceback.print_exc()
+        gc.collect()
         return jsonify({"error": str(e)}), 500
 
-# ================= NEW: STUDENT CAN EDIT THEIR INFORMATION =================
+# ================= STUDENT UPDATE INFO =================
 @app.route('/api/student/update-info', methods=['PUT'])
 @login_required
 @permission_required('edit_own_information')
 def update_student_info():
-    """Allow student to correct information from scanned documents"""
     try:
         data = request.json
         
@@ -4233,7 +4331,6 @@ def update_student_info():
         
         cur = conn.cursor()
         
-        # Check if record exists for this user
         cur.execute("SELECT id FROM records WHERE user_id = %s", (session['user_id'],))
         record = cur.fetchone()
         
@@ -4241,7 +4338,6 @@ def update_student_info():
             conn.close()
             return jsonify({"error": "No record found"}), 404
         
-        # Build update query based on provided fields
         updates = []
         values = []
         
@@ -4263,7 +4359,6 @@ def update_student_info():
             conn.close()
             return jsonify({"error": "No fields to update"}), 400
         
-        # Add updated timestamp
         updates.append("updated_at = CURRENT_TIMESTAMP")
         values.append(session['user_id'])
         
@@ -4273,12 +4368,11 @@ def update_student_info():
         updated_id = cur.fetchone()[0]
         conn.commit()
         
-        # Notify admin that student updated their info
         cur.execute("SELECT full_name FROM users WHERE id = %s", (session['user_id'],))
         student_name = cur.fetchone()[0]
         
         create_notification(
-            user_id=1,  # Admin ID
+            user_id=1,
             notification_type='INFO_UPDATED',
             title="Student Information Updated",
             message=f"Student {student_name} has updated their information.",
@@ -4301,149 +4395,11 @@ def update_student_info():
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= PROCESS EXTRACTIONS (OPTIMIZED) =================
-def process_psa_extraction(images, paths):
-    """Process PSA extraction using optimized Gemini"""
-    try:
-        prompt = """Extract information from this PSA Birth Certificate.
-        
-        Return ONLY a valid JSON object with the following structure:
-        {
-            "Name": "Full Name Here",
-            "Sex": "Male or Female",
-            "Birthdate": "YYYY-MM-DD format",
-            "PlaceOfBirth": "City/Municipality, Province",
-            "BirthOrder": "1st, 2nd, 3rd, etc",
-            "Mother_MaidenName": "Mother's Maiden Name",
-            "Father_Name": "Father's Full Name"
-        }
-        
-        Return ONLY the JSON, no additional text."""
-        
-        response_text = extract_with_gemini(prompt, images)
-        
-        cleaned_text = response_text.strip()
-        
-        if cleaned_text.startswith('```'):
-            lines = cleaned_text.split('\n')
-            if lines[0].startswith('```'):
-                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-        
-        start = cleaned_text.find('{')
-        end = cleaned_text.rfind('}') + 1
-        
-        if start == -1 or end == 0:
-            return None
-            
-        json_str = cleaned_text[start:end]
-        data = json.loads(json_str)
-        
-        # Force garbage collection
-        gc.collect()
-        
-        return data
-        
-    except Exception as e:
-        print(f"❌ PSA extraction error: {e}")
-        return None
-
-def process_form137_extraction(images, paths):
-    """Process Form 137 extraction using optimized Gemini"""
-    try:
-        prompt = """Extract information from this Form 137 / SF10 document.
-        
-        Return ONLY a valid JSON object with the following structure:
-        {
-            "lrn": "12-digit Learner Reference Number",
-            "school_name": "Complete School Name",
-            "school_address": "Complete School Address",
-            "final_general_average": "Numerical grade"
-        }
-        
-        Return ONLY the JSON, no additional text."""
-        
-        response_text = extract_with_gemini(prompt, images)
-        
-        cleaned_text = response_text.strip()
-        
-        if cleaned_text.startswith('```'):
-            lines = cleaned_text.split('\n')
-            if lines[0].startswith('```'):
-                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-        
-        start = cleaned_text.find('{')
-        end = cleaned_text.rfind('}') + 1
-        
-        if start == -1 or end == 0:
-            return None
-            
-        json_str = cleaned_text[start:end]
-        data = json.loads(json_str)
-        
-        # Force garbage collection
-        gc.collect()
-        
-        return data
-        
-    except Exception as e:
-        print(f"❌ Form 137 extraction error: {e}")
-        return None
-
-def process_goodmoral_extraction(images, paths):
-    """Process Good Moral extraction using optimized Gemini"""
-    try:
-        prompt = """You are an expert at reading Philippine school documents. Extract information from this Good Moral Certificate.
-
-        Return ONLY this exact JSON format with no other text:
-        {
-          "issuing_school": "full school name or 'Not Found'",
-          "issuing_officer": "name of person who signed or 'Not Found'",
-          "issued_date": "YYYY-MM-DD format or 'Not Found'",
-          "student_name": "full student name or 'Not Found'",
-          "has_disciplinary_record": false,
-          "disciplinary_details": "any details about disciplinary records or ''",
-          "remarks": "any other remarks or ''"
-        }"""
-        
-        response_text = extract_with_gemini(prompt, images)
-        
-        cleaned_text = response_text.strip()
-        
-        if cleaned_text.startswith('```'):
-            lines = cleaned_text.split('\n')
-            if lines[0].startswith('```'):
-                cleaned_text = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
-        
-        start = cleaned_text.find('{')
-        end = cleaned_text.rfind('}') + 1
-        
-        if start == -1 or end == 0:
-            return None
-            
-        json_str = cleaned_text[start:end]
-        data = json.loads(json_str)
-        
-        # Calculate score
-        score, status = calculate_goodmoral_score(data)
-        
-        data['goodmoral_score'] = score
-        data['disciplinary_status'] = status
-        
-        # Force garbage collection
-        gc.collect()
-        
-        return data
-        
-    except Exception as e:
-        print(f"❌ Good Moral extraction error: {e}")
-        return None
-
-# ================= ADMIN: SAVE SCANNED DATA TO RECORD (FIXED - REMOVED new columns) =================
+# ================= ADMIN SAVE SCANNED DATA =================
 @app.route('/api/admin/scan/<int:user_id>/save', methods=['POST'])
 @login_required
 @permission_required('scan_documents')
 def save_scanned_data(user_id):
-    """Save extracted data to student record - FIXED version without new columns"""
     try:
         data = request.json
         
@@ -4456,11 +4412,9 @@ def save_scanned_data(user_id):
         
         cur = conn.cursor()
         
-        # Check if record exists
         cur.execute("SELECT id FROM records WHERE user_id = %s", (user_id,))
         record = cur.fetchone()
         
-        # Prepare update data
         updates = []
         values = []
         
@@ -4480,7 +4434,6 @@ def save_scanned_data(user_id):
                 updates.append(f"{field} = %s")
                 values.append(data[field])
         
-        # Handle good moral data
         if data.get('goodmoral_analysis'):
             updates.append("goodmoral_analysis = %s")
             values.append(json.dumps(data['goodmoral_analysis']))
@@ -4501,19 +4454,15 @@ def save_scanned_data(user_id):
             updates.append("disciplinary_details = %s")
             values.append(data['disciplinary_details'])
         
-        # Clear needs_review flag
         updates.append("needs_review = FALSE")
         
         if record:
-            # Update existing record
             values.append(record[0])
             query = f"UPDATE records SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING id"
             cur.execute(query, values)
             record_id = record[0]
         else:
-            # Create new record
             values.append(user_id)
-            
             placeholders = ', '.join(['%s'] * len(updates))
             insert_query = f"""
                 INSERT INTO records (
@@ -4527,7 +4476,6 @@ def save_scanned_data(user_id):
         conn.commit()
         conn.close()
         
-        # Notify student that record has been created/updated
         create_notification(
             user_id=user_id,
             notification_type='SYSTEM',
@@ -4551,7 +4499,7 @@ def save_scanned_data(user_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= UPDATE RECORD STATUS (APPROVE/REJECT) =================
+# ================= UPDATE RECORD STATUS =================
 @app.route('/api/record/<int:record_id>/status', methods=['PUT'])
 @login_required
 @permission_required('edit_records')
@@ -4842,33 +4790,7 @@ def permanent_delete_record(record_id):
             conn.close()
         return jsonify({"error": str(e)}), 500
 
-# ================= SAVE RECORD ENDPOINT (For backward compatibility) =================
-@app.route('/save-record', methods=['POST'])
-@login_required
-@permission_required('access_scanner')
-def save_record():
-    conn = None
-    try:
-        d = request.json
-        print(f"📥 Saving/UPDATING record for user: {session['user_id']}")
-        
-        # This endpoint is kept for backward compatibility
-        # But students should use /api/student/update-info instead
-        
-        return jsonify({
-            "status": "error", 
-            "error": "Please use the student update endpoint"
-        }), 400
-            
-    except Exception as e:
-        print(f"❌ SAVE ERROR: {e}")
-        traceback.print_exc()
-        if conn: 
-            conn.rollback()
-            conn.close()
-        return jsonify({"status": "error", "error": str(e)[:200]}), 500
-
-# ================= ROUTES WITH ROLE-BASED ACCESS =================
+# ================= ROUTES =================
 @app.route('/')
 def index():
     if 'user_id' not in session:
@@ -4882,12 +4804,11 @@ def index():
     
     user_role = user_role.upper()
     
-    # ✅ FIXED: Students go to dashboard with error handling
     if user_role == 'STUDENT':
         try:
             return render_template('student_dashboard.html')
         except Exception as e:
-            print(f"⚠️ student_dashboard.html not found, using student_records.html: {e}")
+            print(f"⚠️ student_dashboard.html not found: {e}")
             return render_template('student_records.html')
     elif user_role in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
         return redirect('/admin/dashboard')
@@ -4897,13 +4818,11 @@ def index():
 
 @app.route('/index.html')
 def serve_index():
-    """Serve scanner page - for admin use only"""
     if 'user_id' not in session:
         return redirect('/login')
     
     user_role = session.get('role', '').upper()
     if user_role not in ['SUPER_ADMIN', 'ADMISSIONS_STAFF']:
-        # Students trying to access scanner get redirected to dashboard
         return redirect('/')
     
     return render_template('index.html')
@@ -4938,7 +4857,6 @@ def admin_dashboard():
 
 @app.route('/admin/students')
 def admin_students():
-    """Student list page with scan buttons"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4950,7 +4868,6 @@ def admin_students():
 
 @app.route('/admin/scan/<int:user_id>')
 def admin_scan_student(user_id):
-    """Scan page for specific student"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4982,10 +4899,8 @@ def admin_colleges():
     
     return render_template('admin_colleges.html')
 
-# ================= ADMIN RECORDS ROUTE (FIXED) =================
 @app.route('/admin/records')
 def admin_records():
-    """Admin records page - shows all student records (history.html)"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -4995,10 +4910,8 @@ def admin_records():
     
     return render_template('history.html')
 
-# ================= HISTORY PAGE ROUTE (FOR BACKWARD COMPATIBILITY) =================
 @app.route('/history.html')
 def history_page():
-    """History page - shows all student records"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -5011,7 +4924,6 @@ def history_page():
 @app.route('/my-records')
 @login_required
 def my_records_page():
-    """Student records page - available as separate page if needed"""
     user_role = session.get('role', '').upper()
     if user_role != 'STUDENT':
         return redirect('/')
@@ -5034,20 +4946,16 @@ def missing_documents_page():
 @login_required
 def uploaded_file(filename):
     try:
-        # Security: Students can only access their own folder
         if session.get('role', '').upper() == 'STUDENT':
             expected_folder = f"student_{session['user_id']}"
             if not filename.startswith(expected_folder):
                 return jsonify({"error": "Access denied"}), 403
         
-        # Clean filename
         if '..' in filename or filename.startswith('/'):
             return "Invalid filename", 400
         
-        # Try upload folder first
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        # Try archive folder if not found
         if not os.path.exists(file_path):
             file_path = os.path.join(app.config['ARCHIVE_FOLDER'], filename)
         
@@ -5150,7 +5058,7 @@ def view_form(record_id):
 def health_check():
     return jsonify({
         "status": "healthy",
-        "service": "AssiScan Backend (Fixed Home Redirect & Password Reset)",
+        "service": "AssiScan Backend (Fixed Form137 & Good Moral Extraction)",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if get_db_connection() else "disconnected",
         "roles": list(PERMISSIONS.keys())
@@ -5198,10 +5106,8 @@ def debug_goodmoral(record_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ================= DEBUG TEMPLATES ENDPOINT =================
 @app.route('/debug-templates', methods=['GET'])
 def debug_templates():
-    """Debug endpoint to check available templates"""
     templates_dir = os.path.join(BASE_DIR, 'templates')
     available_templates = []
     
@@ -5219,10 +5125,8 @@ def debug_templates():
         }
     })
 
-# ================= DEBUG TEST JSON ENDPOINT =================
 @app.route('/debug/test-json', methods=['GET'])
 def test_json():
-    """Test endpoint to verify JSON responses work"""
     return jsonify({
         "status": "success",
         "message": "JSON response is working",
@@ -5236,18 +5140,12 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     
     print("\n" + "="*60)
-    print("🚀 ASSISCAN BACKEND - FIXED HOME REDIRECT, PASSWORD RESET & ERROR HANDLERS")
+    print("🚀 ASSISCAN BACKEND - FIXED EXTRACTION")
     print("="*60)
-    print("✅ FIXED: Home redirects to student_dashboard.html")
-    print("✅ FIXED: Password reset flag persists in session")
-    print("✅ FIXED: /api/check-session returns requires_password_reset")
-    print("✅ FIXED: New users created with requires_password_reset = TRUE")
-    print("✅ FIXED: Force reset option in change password endpoint")
-    print("✅ FIXED: Logout route conflict - SINGLE unified logout function")
-    print("✅ FIXED: Admin Records link now points to /admin/records -> history.html")
-    print("✅ FIXED: Error handlers for 404, 500, and exceptions")
-    print("✅ FIXED: JSON response validation for API endpoints")
-    print("✅ FIXED: Debug endpoints for troubleshooting")
+    print("✅ Form 137 Extraction: LRN, School Name, Address, General Average")
+    print("✅ Good Moral Extraction: School Name, Issuing Officer")
+    print("✅ PSA Extraction: Full Name, Sex, Birthdate, Place of Birth")
+    print("✅ Optimized with 12-second timeout, 50% quality, 500px max")
     print("="*60)
     print(f"🔑 Gemini API: {'✅ SET' if GEMINI_API_KEY else '❌ NOT SET'}")
     print(f"📧 Email: {'✅ SET' if EMAIL_SENDER else '❌ NOT SET'}")
